@@ -1,9 +1,9 @@
 <launch>
-	<group ns="usbl">
+	<!-- <group ns="usbl"> -->
 	<node pkg="seatrac" type="seatrac_core" name="usbl">
 		<rosparam command="load" file="$(find seatrac)/launch/usbl_runtime.yaml"/>
 	</node>
-	</group>
+	<!-- </group> -->
 	<!-- <group ns="modem">
         <node pkg="seatrac" type="seatrac_core" name="modem">
 		<rosparam command="load" file="$(find seatrac)/launch/modem_runtime.yaml"/>

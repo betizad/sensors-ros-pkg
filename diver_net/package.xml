@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
   <name>diver_net</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>
       The package contains the driver for the IMU network used to
       measure diver kinematics. 
   </description>
 
-  <maintainer email="dula.nad@gmail.com">Gyula Nagy</maintainer>
+  <maintainer email="ivor.rendulic@gmail.com">Ivor Rendulic</maintainer>
   <license>BSD</license>
   <!-- <url type="website">http://wiki.ros.org/diver_net</url> -->
   <author email="dula.nad@gmail.com">Gyula Nagy</author>

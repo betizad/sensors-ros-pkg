@@ -34,6 +34,7 @@
 #include <labust/seatrac/nav_listener.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/mediator.h>
+#include <labust/tools/GeoUtilities.hpp>
 #include <pluginlib/class_list_macros.h>
 
 #include <underwater_msgs/USBLFix.h>
@@ -79,6 +80,7 @@ bool NavListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 		}
 
 		//Initialize publisher
+		navsts_pub[tx[i]] = nh.advertise<auv_msgs::NavSts>(txnames[i]+"/usbl_navsts",1);
 		fix_pub[tx[i]] = nh.advertise<underwater_msgs::USBLFix>(txnames[i]+"/usbl_fix",1);
 		point_pub[tx[i]] = nh.advertise<geometry_msgs::Vector3Stamped>(
 						txnames[i]+"/position_usbl",1);
@@ -177,17 +179,36 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		fix_out->position.header.stamp = cur_time;
 		fix_out->sound_speed = vos;
 		fix_pub[fix.src].publish(fix_out);
+		navsts_pub[fix.src].publish(fix_out->position);
 	}
 }
 
 void NavListener::calculateNavSts(auv_msgs::NavSts& nav, const Eigen::Vector3d& pos,
 				const geometry_msgs::TransformStamped& trans)
 {
-	//TODO add latitude-longitude with ECEF and LTP updates
 	nav.header.frame_id = "local";
 	nav.position.north = trans.transform.translation.x + pos(0);
 	nav.position.east = trans.transform.translation.y + pos(1);
 	nav.position.depth = trans.transform.translation.z + pos(2);
+	
+	try
+	{
+		geometry_msgs::TransformStamped transformDeg;
+		transformDeg = buffer.lookupTransform("worldLatLon", "local", ros::Time(0));
+
+		std::pair<double, double> diffAngle = labust::tools::meter2deg(nav.position.north, 
+					nav.position.east,
+					//The latitude angle
+					transformDeg.transform.translation.y);
+		nav.origin.latitude = transformDeg.transform.translation.y;
+		nav.origin.longitude = transformDeg.transform.translation.x;
+		nav.global_position.latitude = transformDeg.transform.translation.y + diffAngle.first;
+		nav.global_position.longitude = transformDeg.transform.translation.x + diffAngle.second;
+	}
+	catch(tf2::TransformException& ex)
+	{
+		ROS_WARN("%s",ex.what());
+	}
 }
 
 void NavListener::onStatus(const StatusResp& resp)
