@@ -14,10 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 find_package(OpenCV REQUIRED)
 find_package(libfreenect REQUIRED)
-
+find_package(libusb-1.0 REQUIRED)
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -86,8 +86,10 @@ find_package(libfreenect REQUIRED)
 catkin_package(
   INCLUDE_DIRS 
 #include
+=======
+#  INCLUDE_DIRS include
 #  LIBRARIES image_processing_util
-  CATKIN_DEPENDS image_processing_util
+#  CATKIN_DEPENDS image_processing_util
   #CATKIN_DEPENDS snippets 
 #  DEPENDS system_lib
 )
@@ -99,12 +101,12 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
-  #/usr/local/include/libfreenect
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${FREENECT_INCLUDE_DIRS}
+  ${LIBUSB_1_INCLUDE_DIRS}
 )
+link_directories(${LINK_DIRECTORIES} ${FREENECT_LIBRARY_DIRS})
 
 ## Declare a cpp library
 # add_library(image_processing_util
@@ -123,6 +125,7 @@ target_link_libraries(kinect_ir_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${FREENECT_LIBRARIES}
+  ${LIBUSB_1_LIBRARIES}
 )
 
 

@@ -60,6 +60,9 @@ int main(int argc, char* argv[])
 	out.orientation.pitch = orientation[pitch];
 	out.orientation.yaw = orientation[yaw];
 
+  out.header.stamp = ros::Time::now();
+  out.header.frame_id = "local";
+
 	//Latch the position of the device.
 	ros::Rate rate(10);
 	while (ros::ok())
