@@ -207,7 +207,7 @@ int main(int argc, char** argv)
 						double min, max;
 						minMaxLoc(irMat, &min, &max);
 						imgThresholded=m1>(max-10);
-						imshow("Thresholded Image", imgThresholded);
+						//imshow("Thresholded Image", imgThresholded);
 		
 						findContours(imgThresholded, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 						Rect bounding_rect;
