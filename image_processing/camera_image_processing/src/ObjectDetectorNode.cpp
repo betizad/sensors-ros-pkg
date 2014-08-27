@@ -43,10 +43,9 @@
 #include <labust/sensors/image/ObjectDetectorNode.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 #include <labust/sensors/image/ColorObjectDetector.hpp>
+#include <labust/sensors/image/TemplateObjectDetector.hpp>
 
-#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 
 using namespace labust::sensors::image;
@@ -54,7 +53,8 @@ using namespace labust::sensors::image;
 /**
  * Creates a ROS node for object detection from camera image.
  */
-ObjectDetectorNode::ObjectDetectorNode() :
+template<class ObjDetect>
+ObjectDetectorNode<ObjDetect>::ObjectDetectorNode() :
     it_(nh_),
     camera_topic_("/camera/image_raw"),
     is_compressed_(false),
@@ -79,17 +79,25 @@ ObjectDetectorNode::ObjectDetectorNode() :
   detected_object_->data.resize(3);
 }
 
-ObjectDetectorNode::~ObjectDetectorNode() {}
+template<class ObjDetect>
+ObjectDetectorNode<ObjDetect>::~ObjectDetectorNode() {}
 
-void ObjectDetectorNode::setObjectDetector(ObjectDetector *object_detector) {
+template<class ObjDetect>
+void ObjectDetectorNode<ObjDetect>::setObjectDetector(ObjDetect *object_detector) {
   object_detector_ = object_detector;
+}
+
+template<class ObjDetect>
+ObjDetect& ObjectDetectorNode<ObjDetect>::getObjectDetector() {
+  return *object_detector_;
 }
 
 /**
  * Process image frame.
  * sensor_msgs::Image is converted to OpenCV format via cv_bridge and sent to ObjectDetector object.
  */
-void ObjectDetectorNode::processFrame(const sensor_msgs::ImageConstPtr &sensor_image) {
+template<class ObjDetect>
+void ObjectDetectorNode<ObjDetect>::processFrame(const sensor_msgs::ImageConstPtr &sensor_image) {
   cv_bridge::CvImagePtr cv_image_bgr;
   cv::Point2f center;
   double area;
@@ -111,16 +119,18 @@ void ObjectDetectorNode::processFrame(const sensor_msgs::ImageConstPtr &sensor_i
   detected_object_publisher_.publish(detected_object_);
 }
 
-void ObjectDetectorNode::setEnableVideoDisplay(bool enable_video_display) {
+template<class ObjDetect>
+void ObjectDetectorNode<ObjDetect>::setEnableVideoDisplay(bool enable_video_display) {
   enable_video_display_ = enable_video_display;
   object_detector_->setEnableVideoDisplay(enable_video_display);
   cv::namedWindow(opencv_window_); 
   cv::waitKey(1);
 }
 
+// TODO(irendulic): Choose object detector with cmd line args.
 int main(int argc, char **argv) {
   ros::init(argc, argv, "object_detector_node");
-  ObjectDetectorNode od;
+  ObjectDetectorNode<ColorObjectDetector> od;
   od.setObjectDetector(new ColorObjectDetector());
   od.setEnableVideoDisplay(true);
   ros::spin();
