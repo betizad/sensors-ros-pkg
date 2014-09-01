@@ -97,14 +97,14 @@ namespace labust
 		};
 
 		typedef boost::array<uint8_t,16> vec16u;
-		struct MMCMsg
+		struct MMCMsgShort
 		{
 			enum {ranged_payload_size=4,
 				ranged_payload=5,
 				payload_size=0,
 				payload=1};
 
-			MMCMsg():
+			MMCMsgShort():
 			 msgType(24),
 			 tx(0),
 			 rx(2),
@@ -115,6 +115,11 @@ namespace labust
 			//For modem replay messages with the first 4 bytes of payload are usually the range.
 			vec16u data;
 		};
+
+		struct MMCMsg : public MMCMsgShort
+		{
+			vec16u data;
+		};
 	}
 }
 
@@ -122,10 +127,16 @@ BOOST_CLASS_IMPLEMENTATION(labust::tritech::vec16u , boost::serialization::primi
 ///\todo Document the Modem message
 PP_LABUST_MAKE_BOOST_SERIALIZATOR_CLEAN(labust::tritech::MMCMsg,
 		(uint8_t, msgType)
-        (uint16_t, tx)
+    (uint16_t, tx)
 		(uint16_t, rx)
 		(uint16_t, rxTmo)
 		(vec16u, data))
+
+		PP_LABUST_MAKE_BOOST_SERIALIZATOR_CLEAN(labust::tritech::MMCMsgShort,
+				(uint8_t, msgType)
+		    (uint16_t, tx)
+				(uint16_t, rx)
+				(uint16_t, rxTmo))
 
 /* MMCMESSAGES_HPP_ */
 #endif

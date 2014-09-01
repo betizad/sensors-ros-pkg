@@ -78,7 +78,10 @@ void onMsg(labust::tritech::MTDevice& modem, const std_msgs::String::ConstPtr ms
 	tmsg->msgType = MTMsg::mtMiniModemCmd;
 
 	MMCMsg mmsg;
-	mmsg.msgType = labust::tritech::mmcSetRepBits;
+
+	//mmsg.msgType = labust::tritech::mmcSetRepBits;
+	//mmsg.msgType = labust::tritech::mmcGetRangeTxRxBits48;
+	mmsg.msgType = labust::tritech::mmcGetRangeSync;
 
 	///\todo Consider if network byte order is needed ?
 	//for (int i=0;i<6;++i) 	mmsg.data[i+1] = msg->data[i];
@@ -96,10 +99,31 @@ void onData(ros::Publisher& modemOut, labust::tritech::MTMsgPtr tmsg)
 	using namespace labust::tritech;
 
 	boost::archive::binary_iarchive dataSer(*tmsg->data, boost::archive::no_header);
-	MMCMsg data;
+	MMCMsgShort data;
 	dataSer>>data;
+	int32_t time;
+	dataSer>>time;
 
-	ROS_INFO("Received USBL message type %d.", data.msgType);
+	double soundspeed = 1475;
+	double zeroDelay = 61040;
+	double range(0);
+
+	if (time > zeroDelay)
+	{
+		range = 0.5 * (time - zeroDelay) * soundspeed * 1e-6;
+	}
+
+	std::istream in(tmsg->data.get());
+	std::cout<<"remaining:";
+	while(!in.eof())
+	{
+			uint8_t c;
+			in>>c;
+			std::cout<<int(c)<<",";
+	};
+	std::cout<<std::endl;
+
+	ROS_INFO("Timing=%d => range=%f", time,range);
 
 	/*
 	std::cout<<"Received datammcRangedRepByte package:";
@@ -146,7 +170,7 @@ int main(int argc, char* argv[])
 		if ((ros::Time::now() - lastMsg).toSec() > max_seconds)
 		{
 			std::cout<<"Reseting modem"<<std::endl;
-			reboot(modem);
+			//reboot(modem);
 			lastMsg = ros::Time::now();
 		}
 		loop.sleep();
