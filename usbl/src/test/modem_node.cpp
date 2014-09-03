@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2010, LABUST, UNIZG-FER
+ *  Copyright (c) 2014, LABUST, UNIZG-FER
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,149 +33,242 @@
  *
  *  Author: Dula Nad
  *  Created: 14.02.2013.
+ *
+ *  Modified by: Filip Mandic
+ *  Modified on: 02.09.2014.
  *********************************************************************/
 #include <labust/tritech/MTDevice.hpp>
 #include <labust/tritech/mtMessages.hpp>
 #include <labust/tritech/USBLMessages.hpp>
 #include <labust/tritech/DiverMsg_adv.hpp>
+#include <labust/tritech/mmcMessages.hpp>
 
 #include <std_msgs/String.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/UInt32.h>
 #include <ros/ros.h>
 
 #include <boost/bind.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-ros::Time lastMsg;
-int max_seconds(15);
+using namespace labust::tritech;
 
-void reboot(labust::tritech::MTDevice& modem)
-{
-	using namespace labust::tritech;
-	MTMsgPtr tmsg(new MTMsg());
-	tmsg->txNode = 255;
-	tmsg->rxNode = labust::tritech::Nodes::SlaveModem;
-	tmsg->node = labust::tritech::Nodes::SlaveModem;
-	tmsg->msgType = MTMsg::mtReboot;
-	modem.send(tmsg);
-	//Wait for modem to init
-	ros::Duration(0.2).sleep();
-}
+class AcousticModem{
 
-void onMsg(labust::tritech::MTDevice& modem, const std_msgs::String::ConstPtr msg)
-{
-	using namespace labust::tritech;
+public:
 
-	//Test if modem-lockup occured
-	//if ((ros::Time::now() - lastMsg).toSec() > max_seconds) reboot(modem);
-	//Remeber the last reply time
-	lastMsg = ros::Time::now();
+	AcousticModem(std::string port, int baud, int timeout, int mode):modem(port,baud), activeMode(mode),
+																		max_seconds(timeout), modemBusy(false), timeout(timeout){
 
-	MTMsgPtr tmsg(new MTMsg());
-	tmsg->txNode = 255;
-	tmsg->rxNode = labust::tritech::Nodes::SlaveModem;
-	tmsg->node = labust::tritech::Nodes::SlaveModem;
-	tmsg->msgType = MTMsg::mtMiniModemCmd;
+		switch(activeMode){
 
-	MMCMsg mmsg;
+			case commOnly:
+				setupCommOnly();
+				break;
 
-	//mmsg.msgType = labust::tritech::mmcSetRepBits;
-	//mmsg.msgType = labust::tritech::mmcGetRangeTxRxBits48;
-	mmsg.msgType = labust::tritech::mmcGetRangeSync;
+			case rangeOnly:
+				setupRangeOnly();
+				loop();
+				break;
 
-	///\todo Consider if network byte order is needed ?
-	//for (int i=0;i<6;++i) 	mmsg.data[i+1] = msg->data[i];
-	std::copy(msg->data.begin(), msg->data.end(), mmsg.data.begin());
+			default:
+				break;
+		}
+	}
 
-	boost::archive::binary_oarchive ar(*tmsg->data, boost::archive::no_header);
-	ar<<mmsg;
-	modem.send(tmsg);
+	~AcousticModem(){}
 
-	ROS_INFO("Send message.");
+	void setupCommOnly(){
+
+		ros::NodeHandle nh;
+		subMsg = nh.subscribe<std_msgs::String>("modem_in", 1, &AcousticModem::onTransmit, this);
+		pubMsg = nh.advertise<std_msgs::String>("modem_out",1);
+
+		map[MTMsg::mtMiniModemData] = boost::bind(&AcousticModem::onReceive, this, _1);
+
+		modem.registerHandlers(map);
+	}
+
+	void setupRangeOnly(){
+
+		ros::NodeHandle nh;
+		pubMsg = nh.advertise<std_msgs::Float32>("rangeMeas",1);
+		pubTime = nh.advertise<std_msgs::UInt32>("timeMeas",1);
+
+		map[MTMsg::mtMiniModemData] = boost::bind(&AcousticModem::onReceive, this, _1);
+
+		modem.registerHandlers(map);
+	}
+
+	void reboot(){
+
+		MTMsgPtr tmsg(new MTMsg());
+		tmsg->txNode = 255;
+		tmsg->rxNode = labust::tritech::Nodes::SlaveModem;
+		tmsg->node = labust::tritech::Nodes::SlaveModem;
+		tmsg->msgType = MTMsg::mtReboot;
+		modem.send(tmsg);
+		//Wait for modem to init
+		ros::Duration(0.5).sleep();
+	}
+
+	void onReceive(labust::tritech::MTMsgPtr tmsg){
+
+		boost::archive::binary_iarchive dataSer(*tmsg->data, boost::archive::no_header);
+
+		if(activeMode == commOnly){
+
+		} else if(activeMode == rangeOnly){
+
+			//boost::mutex::scoped_lock lock(pingLock);
+
+			MMCMsgShort data;
+			dataSer>>data;
+			uint32_t time;
+			dataSer>>time;
+
+			ROS_ERROR("%d",data.msgType);
+
+			double soundspeed = 1475;
+			double zeroDelay = 61015;
+			double range(0);
+
+			if (time > zeroDelay){
+				range = 0.5 * (time - zeroDelay) * soundspeed * 1e-6;
+
+
+				std::istream in(tmsg->data.get());
+				std::cout<<"remaining:";
+				while(!in.eof()){
+						uint8_t c;
+						in>>c;
+						std::cout<<int(c)<<",";
+				}
+				std::cout<<std::endl;
+
+				ROS_ERROR("Timing=%d => range=%f", time,range);
+
+				std_msgs::Float32 rangeData;
+				rangeData.data = range;
+				pubMsg.publish(rangeData);
+
+				std_msgs::UInt32 timeData;
+				timeData.data = time;
+				pubTime.publish(timeData);
+
+			} else {
+
+				ROS_ERROR("Zero measurement.");
+			}
+
+			lastMsg = ros::Time::now();
+			modemBusy = false;
+			modemCondition.notify_one();
+		}
+	}
+
+	void onTransmit(const std_msgs::String::ConstPtr& data){
+
+	}
+
+	void getRange(){
+
+		MTMsgPtr tmsg(new MTMsg());
+		tmsg->txNode = 255;
+		tmsg->rxNode = labust::tritech::Nodes::SlaveModem;
+		tmsg->node = labust::tritech::Nodes::SlaveModem;
+		tmsg->msgType = MTMsg::mtMiniModemCmd;
+
+		MMCMsg mmsg;
+		mmsg.msgType = labust::tritech::mmcGetRangeSync;
+		mmsg.rxTmo = 2000;
+
+		std_msgs::String::Ptr msg(new std_msgs::String);
+		std::copy(msg->data.begin(), msg->data.end(), mmsg.data.begin());
+		boost::archive::binary_oarchive ar(*tmsg->data, boost::archive::no_header);
+		ar<<mmsg;
+		modem.send(tmsg);
+
+		ROS_ERROR("Send message.");
+
+		/* Wait for response before continuing */
+		modemBusy = true;
+		boost::mutex::scoped_lock lock(pingLock);
+		boost::system_time const timeout=boost::get_system_time()+boost::posix_time::seconds(timeout);
+		while (modemBusy)
+		{
+			/* If there is no response from slave modem for timeout seconds reboot master modem??  */
+			if (!modemCondition.timed_wait(lock,timeout)){
+
+				ROS_ERROR("Rebooting modem");
+				reboot();
+				modemBusy = false;
+				break;
+			}
+		}
+	}
+
+	void loop(){
+		while(ros::ok()){
+
+			getRange();
+		}
+	}
+
+	/*****************************************************************
+	 *** Class variables
+	 ****************************************************************/
+
+	enum {commOnly = 0, rangeOnly};
+
+	ros::Subscriber subMsg;
+	ros::Publisher pubMsg, pubTime;
+	ros::Time lastMsg;
+
+
+	MTDevice modem;
+	MTDevice::HandlerMap map;
+
+	int activeMode;
+	int max_seconds;
+	int timeout;
+
+	/**
+	 * The USBL status.
+	 */
+	bool modemBusy;
+	/**
+	 * The lock condition variable.
+	 */
+	boost::condition_variable modemCondition;
+
+	/**
+	 * The data and condition mux.
+	 */
+	boost::mutex dataMux, pingLock;
+
+
+
 };
-
-void onData(ros::Publisher& modemOut, labust::tritech::MTMsgPtr tmsg)
-{
-	using namespace labust::tritech;
-
-	boost::archive::binary_iarchive dataSer(*tmsg->data, boost::archive::no_header);
-	MMCMsgShort data;
-	dataSer>>data;
-	int32_t time;
-	dataSer>>time;
-
-	double soundspeed = 1475;
-	double zeroDelay = 61040;
-	double range(0);
-
-	if (time > zeroDelay)
-	{
-		range = 0.5 * (time - zeroDelay) * soundspeed * 1e-6;
-	}
-
-	std::istream in(tmsg->data.get());
-	std::cout<<"remaining:";
-	while(!in.eof())
-	{
-			uint8_t c;
-			in>>c;
-			std::cout<<int(c)<<",";
-	};
-	std::cout<<std::endl;
-
-	ROS_INFO("Timing=%d => range=%f", time,range);
-
-	/*
-	std::cout<<"Received datammcRangedRepByte package:";
-	for (int i=0; i<data.data.size(); ++i)
-	{
-		std::cout<<int(data.data[i])<<",";
-	}
-	std::cout<<std::endl;*/
-
-	std_msgs::String modem;
-	modem.data.assign(data.data.begin(), data.data.end());
-	modemOut.publish(modem);
-}
 
 int main(int argc, char* argv[])
 {
-	using namespace labust::tritech;
 
 	ros::init(argc,argv,"modem_node");
+	ros::NodeHandle nh, ph("~");
 
-	ros::NodeHandle nh,ph("~");
-
-	std::string port("/dev/ttyUSB9");
+	std::string port("/dev/ttyUSB0");
 	int baud(57600);
+	int max_seconds(60);
 
 	ph.param("PortName",port,port);
 	ph.param("Baud",baud,baud);
 	ph.param("timeout",max_seconds,max_seconds);
 
-	MTDevice modem(port,baud);
+	AcousticModem AM(port,baud,max_seconds,AcousticModem::rangeOnly);
 
-	ros::Subscriber inMsg = nh.subscribe<std_msgs::String>("modem_out",	1,boost::bind(&onMsg,boost::ref(modem),_1));
-	ros::Publisher pub = nh.advertise<std_msgs::String>("modem_in",	1);
-
-	MTDevice::HandlerMap map;
-	map[MTMsg::mtMiniModemData] = boost::bind(&onData,boost::ref(pub), _1);
-	modem.registerHandlers(map);
-
-	ros::Rate loop(10);
-
-	while (ros::ok())
-	{
-		//Test if modem-lockup occured
-		if ((ros::Time::now() - lastMsg).toSec() > max_seconds)
-		{
-			std::cout<<"Reseting modem"<<std::endl;
-			//reboot(modem);
-			lastMsg = ros::Time::now();
-		}
-		loop.sleep();
-		ros::spinOnce();
-	}
+	ros::spin();
 
 	return 0;
 }
