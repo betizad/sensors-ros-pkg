@@ -38,6 +38,7 @@
 
 #include <underwater_msgs/ModemTransmission.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 #include <ros/ros.h>
 
 #include <boost/thread.hpp>
@@ -55,6 +56,8 @@ namespace labust
 		 * \todo Add CID type ID to structures
 		 * \todo Automatic detection of local ID, USBL/Modem, etc.
 		 * \todo Split the master/slave implementation into states for the State design pattern
+		 * \todo Remove backward capability.
+		 * \todo Optimization for ARM/UDOO ?
 		 */
 		class SeaTracNode
 		{
@@ -77,6 +80,10 @@ namespace labust
 			 */
 			void onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr& msg);
 			/**
+			 * Handles outgoing BW messages requests.
+			 */
+			void onOutgoingBW(const std_msgs::String::ConstPtr& msg);
+			/**
 			 * Handles outgoing messages requests.
 			 */
 			void onAutoMode(const std_msgs::Bool::ConstPtr& mode);
@@ -91,8 +98,10 @@ namespace labust
 
 			///Automatic interrogation runner
 			void autorun();
-			///Stop the interrogation
+			///Stop the auto-interrogation
 			void stop();
+			///Start the auto-interrogation
+			void start();
 
 			///Handler map
 			DispatchMap dispatch;
@@ -141,14 +150,18 @@ namespace labust
 			 */
 			boost::thread worker;
 
-			///Payload data
+			///Payload data for debugging
 			ros::Publisher dataPub;
+			///Payload data publishing for backward compatibility.
+			ros::Publisher dataPubBW;
 			///The timeout publisher.
 			ros::Publisher usblTimeout;
 			///The debug publisher
 			ros::Publisher allMsg;
 			///The modem transmission request subscription.
 			ros::Subscriber dataSub;
+			///The modem transmisson request subscription for backward compatibility.
+			ros::Subscriber dataSubBW;
 			///The modem operation mode.
 			ros::Subscriber opMode;
 			///Auto interrogate mode.

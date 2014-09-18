@@ -43,7 +43,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-
+#include <boost/archive/binary_iarchive.hpp>
 
 using namespace labust::seatrac;
 
@@ -66,15 +66,25 @@ SeaTracNode::~SeaTracNode()
 	this->stop();
 }
 
+void SeaTracNode::start()
+{
+	if (isMaster && autoMode)
+	{
+		ROS_INFO("Starting auto-mode interrogation.");
+		worker = boost::thread(boost::bind(&SeaTracNode::autorun,this));
+	}
+}
+
 void SeaTracNode::stop()
 {
+	ROS_INFO("Stopping auto-interrogation.");
 	{
 		boost::mutex::scoped_lock lock(pingLock);
 		this->isBusy = false;
 		this->autoMode = false;
 	}
 	usblCondition.notify_all();
-	worker.join();
+	if (worker.joinable()) worker.join();
 }
 
 void SeaTracNode::onInit()
@@ -115,13 +125,16 @@ void SeaTracNode::onInit()
 
 		dataSub = nh.subscribe<underwater_msgs::ModemTransmission>("outgoing_data",
 				0, &SeaTracNode::onOutgoing,this);
+		dataSubBW = nh.subscribe<std_msgs::String>("outgoing_data_bw",
+						0, &SeaTracNode::onOutgoingBW,this);
 		opMode = nh.subscribe<std_msgs::Bool>("auto_mode",	0,
 				&SeaTracNode::onAutoMode,this);
 		dataPub = nh.advertise<underwater_msgs::ModemTransmission>("incoming_data",1);
+		dataPubBW = nh.advertise<std_msgs::String>("incoming_data_bw",1);
 		allMsg = nh.advertise<std_msgs::UInt8MultiArray>("all_msgs",1);
 		usblTimeout = nh.advertise<std_msgs::Bool>("usbl_timeout",1);
 
-		if (isMaster && autoMode) worker = boost::thread(boost::bind(&SeaTracNode::autorun,this));
+		this->start();
 	}
 }
 
@@ -212,6 +225,35 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 	DispatchMap::iterator it = dispatch.find(cid);
 	if (it != dispatch.end()) it->second(cid, data);
 
+	//Publish data message separately for debugging purposes
+	///\todo Export this to a separate data in/out handler with buffer capabilities ?
+	if (cid == CID_DATA::receive)
+	{
+		std::istringstream in;
+		in.rdbuf()->pubsetbuf(reinterpret_cast<char*>(data.data()), data.size());
+		boost::archive::binary_iarchive inSer(in, boost::archive::no_header);
+
+		underwater_msgs::ModemTransmission::Ptr outmodem(
+				new underwater_msgs::ModemTransmission());
+		outmodem->receiver = transponderId;
+		outmodem->action = underwater_msgs::ModemTransmission::PAYLOAD_DATA;
+
+		uint8_t sender;
+		inSer >> sender;
+		outmodem->sender = sender;
+		inSer >> outmodem->payload;
+		outmodem->header.stamp = ros::Time::now();
+		dataPub.publish(outmodem);
+
+		//Backward compat
+		std_msgs::String::Ptr outstr(new std_msgs::String());
+		//Add the 48 bits indicator
+		outstr->data.push_back(48);
+		outstr->data.insert(outstr->data.begin()+1,
+				outmodem->payload.begin(), outmodem->payload.end());
+		dataPubBW.publish(outstr);
+	}
+
 	//Publish all messages
 	std_msgs::UInt8MultiArray::Ptr outarray(new std_msgs::UInt8MultiArray());
 	outarray->data.push_back(cid);
@@ -221,7 +263,16 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 
 void SeaTracNode::onAutoMode(const std_msgs::Bool::ConstPtr& mode)
 {
+	if (mode->data == autoMode) return;
 	autoMode = mode->data;
+	if (mode->data)
+	{
+		this->start();
+	}
+	else
+	{
+		this->stop();
+	}
 }
 
 void SeaTracNode::onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr& msg)
@@ -244,6 +295,8 @@ void SeaTracNode::onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr&
 	case underwater_msgs::ModemTransmission::SET_REPLY:
 		//Set modem auto-send/auto-reply
 		autoreply = msg;
+		//Return to avoid sending the data immediately
+		return;
 		break;
 	default:
 		break;
@@ -251,7 +304,32 @@ void SeaTracNode::onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr&
 
 	l.unlock();
 
+	//Only master send data
 	if (!autoMode && !isBusy)
+	{
+		sendPkg();
+	}
+}
+
+void SeaTracNode::onOutgoingBW(const std_msgs::String::ConstPtr& msg)
+{
+	underwater_msgs::ModemTransmission::Ptr newmsg(
+			new underwater_msgs::ModemTransmission());
+	//Setup message from string
+	newmsg->action = (isMaster?
+			underwater_msgs::ModemTransmission::RANGING_DATA:
+			underwater_msgs::ModemTransmission::SET_REPLY);
+	newmsg->sender = transponderId;
+	newmsg->receiver = (isMaster?2:1);
+	newmsg->payload.assign(msg->data.begin()+1, msg->data.end());
+
+	{
+		boost::mutex::scoped_lock l(dataMux);
+		autoreply = newmsg;
+	}
+
+	//Allow only the master to send
+	if (!autoMode && !isBusy && isMaster)
 	{
 		sendPkg();
 	}
@@ -295,6 +373,8 @@ void SeaTracNode::sendPkg()
 	}
 	else
 	{
+		//Slaves can not send ping
+		if (!isMaster) return;
 		//Change to next track id only when we ping
 		curTrackId = (++curTrackId)%trackId.size();
 		nextPingId = trackId[curTrackId];
@@ -320,6 +400,7 @@ void SeaTracNode::sendPkg()
 			ROS_WARN("USBL went into timeout.");
 			std_msgs::Bool data;
 			data.data = true;
+			isBusy = false;
 			usblTimeout.publish(data);
 			break;
 		}
