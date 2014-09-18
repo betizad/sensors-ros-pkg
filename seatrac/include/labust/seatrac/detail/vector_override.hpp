@@ -31,74 +31,47 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef SEATRACMESSAGES_HPP_
-#define SEATRACMESSAGES_HPP_
-#include <labust/preprocessor/mem_serialized_struct.hpp>
-#include <boost/serialization/level.hpp>
-#include <labust/seatrac/detail/vector_override.hpp>
-#include <boost/static_assert.hpp>
-#include <cstdint>
+#ifndef VECTOROVERRIDE_HPP_
+#define VECTOROVERRIDE_HPP_
+#include <boost/serialization/vector.hpp>
 
-namespace labust
+namespace boost
 {
-	namespace seatrac
-	{
-
-		struct StatusBits
-		{
-			bool ENVIRONMENT :1;
-			bool ATTITUDE :1;
-			bool MAG_CAL :1;
-			bool ACC_CAL :1;
-			bool AHRS_RAW_DATA :1;
-			bool AHRS_COMP_DATA :1;
-			bool reserved2 :1;
-			bool reserved :1;
+	namespace serialization{
+		template<class Archive, class Allocator>
+		inline void save(
+				Archive & ar,
+				const std::vector<uint8_t, Allocator> &t,
+				const unsigned int /* file_version */
+		){
+			// record number of elements
+			uint8_t count (t.size());
+			ar << BOOST_SERIALIZATION_NVP(count);
+			std::vector<uint8_t>::const_iterator it = t.begin();
+			while(count-- > 0){
+				uint8_t tb = *it++;
+				ar << boost::serialization::make_nvp("item", tb);
+			}
 		};
-		BOOST_STATIC_ASSERT(sizeof(StatusBits) == 1 && ("STATUS_BITS_T structure is assumed as size 1 byte."));
+
+		template<class Archive, class Allocator>
+		inline void load(
+				Archive & ar,
+				std::vector<uint8_t, Allocator> &t,
+				const unsigned int /* file_version */
+		){
+			// retrieve number of elements
+			uint8_t count;
+			ar >> BOOST_SERIALIZATION_NVP(count);
+			t.clear();
+			while(count-- > 0){
+				uint8_t i;
+				ar >> boost::serialization::make_nvp("item", i);
+				t.push_back(i);
+			}
+		};
 	}
 };
 
-///Define status bits as primitve type for easier deserialization
-BOOST_CLASS_IMPLEMENTATION(labust::seatrac::StatusBits, boost::serialization::primitive_type);
-
-PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac),StatusHeader,
-		(StatusBits, status_bits)
-		(uint64_t, timestamp))
-
-typedef std::vector<uint8_t> PayloadType;
-
-PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), DatSend,
-		(uint8_t, destId)
-		(uint8_t, flags)
-		(PayloadType, payload))
-
-PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), DatReceive,
-		(uint8_t, srcId)
-		(PayloadType, payload))
-
-
-
-typedef int16_t vec3si[3];
-typedef int32_t vec3i[3];
-PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), XcvrFix,
-		(uint64_t, timestamp)
-		(uint8_t, beaconId)
-		(vec3si, attitude1)
-		(uint16_t, vos)
-		(uint8_t, range_valid)
-		(uint32_t, range_count)
-		(int32_t, range_time)
-		(uint32_t, range_dist)
-		(uint16_t, depth_local)
-		(uint8_t, depth_valid)
-		(uint16_t, depth_remote)
-		(uint8_t, signal_valid)
-		(int16_t, signal_azimuth)
-		(int16_t, signal_elevation)
-		(uint8_t, position_valid)
-		(vec3i, position))
-
-
-/* SEATRACMESSAGES_HPP_ */
+/* VECTOROVERRIDE_HPP_ */
 #endif

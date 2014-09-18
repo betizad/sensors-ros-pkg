@@ -31,90 +31,44 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRACHANDLER_HPP_
-#define SEATRACHANDLER_HPP_
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
-#include <boost/function.hpp>
+#ifndef STATUSHANDLER_HPP_
+#define STATUSHANDLER_HPP_
+#include <ros/ros.h>
 
-#include <string>
+#include <map>
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the Seatrac USBL and modem node protocol handler.
+		 * The class implements the status handler publisher and decoder.
 		 * \todo Implement additional messages
-		 * \todo Join CID with class
+		 * \todo Add CID type ID to structures
 		 */
-		class SeaTracHandler
+		class StatusHandler
 		{
-			enum {cidStart=1, cidLen=1};
-			enum {dataStart = 1, dataTrunc=3};
-			enum {crcRemPos = 4};
-
 		public:
-			///Message callback type definition
-			typedef boost::function<void(int, std::vector<uint8_t>&)> CallbackType;
-
 			/**
 			 * Main constructor
 			 */
-			SeaTracHandler();
+			StatusHandler();
 			/**
-			 * Generic destructor.
+			 * Initialize and setup controller.
 			 */
-			~SeaTracHandler();
-			/**
-			 * Connect the handler to the com port.
-			 */
-			bool connect(const std::string& portName, int baud);
+			void onInit();
 
 			/**
-			 * Register message handler.
+			 * Main handling operator.
 			 */
-			void registerCallback(CallbackType callback){this->callback = callback;};
-			/**
-			 * Message send
-			 */
-			bool send(int cid, const std::vector<uint8_t>& binary);
-
-			///Resend last message
-			bool resend();
+			void operator()(int type, const std::vector<int>& payload);
 
 		private:
-			///Hepler method for binary conversion
-			void convertToBinary(const std::string& data, std::vector<uint8_t>& binary);
-			///Helper method for ascii conversion
-			void convertToAscii(const std::vector<uint8_t>& binary, std::string& data);
-
-			/**
-			 * Handle the incoming data stream.
-			 */
-			void onData(const boost::system::error_code& e, std::size_t size);
-
-			 ///Serial port setup.
-			bool setup_port();
-			///Receive startup helper function.
-			void start_receive();
-
-			///Hardware i/o service.
-			boost::asio::io_service io;
-			///The serial input port
-			boost::asio::serial_port port;
-			///The main operation thread.
-			boost::thread runner;
-			///The input buffer.
-			boost::asio::streambuf buffer;
-
-			///The message callback
-			CallbackType callback;
-			///Last encoded packet
-			std::string out;
+			///Attitude publisher
+			ros::Publisher attitude;
 		};
 	}
 }
 
-/* SEATRACHANDLER_HPP_ */
+/* STATUSHANDLER_HPP_ */
 #endif

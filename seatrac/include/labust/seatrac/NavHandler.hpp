@@ -31,90 +31,46 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRACHANDLER_HPP_
-#define SEATRACHANDLER_HPP_
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
-#include <boost/function.hpp>
+#ifndef NAVHANDLER_HPP_
+#define NAVHANDLER_HPP_
+#include <ros/ros.h>
 
-#include <string>
+#include <map>
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the Seatrac USBL and modem node protocol handler.
-		 * \todo Implement additional messages
-		 * \todo Join CID with class
+		 * The class implements the navigation handler and publisher.
+		 * \todo Add TF broadcast, etc.
 		 */
-		class SeaTracHandler
+		class NavHandler
 		{
-			enum {cidStart=1, cidLen=1};
-			enum {dataStart = 1, dataTrunc=3};
-			enum {crcRemPos = 4};
-
+			enum {east=0, north, depth};
 		public:
-			///Message callback type definition
-			typedef boost::function<void(int, std::vector<uint8_t>&)> CallbackType;
-
 			/**
 			 * Main constructor
 			 */
-			SeaTracHandler();
+			NavHandler();
 			/**
-			 * Generic destructor.
+			 * Initialize and setup controller.
 			 */
-			~SeaTracHandler();
-			/**
-			 * Connect the handler to the com port.
-			 */
-			bool connect(const std::string& portName, int baud);
+			void onInit();
 
 			/**
-			 * Register message handler.
+			 * Main handling operator.
 			 */
-			void registerCallback(CallbackType callback){this->callback = callback;};
-			/**
-			 * Message send
-			 */
-			bool send(int cid, const std::vector<uint8_t>& binary);
-
-			///Resend last message
-			bool resend();
+			void operator()(int type, std::vector<uint8_t>& payload);
 
 		private:
-			///Hepler method for binary conversion
-			void convertToBinary(const std::string& data, std::vector<uint8_t>& binary);
-			///Helper method for ascii conversion
-			void convertToAscii(const std::vector<uint8_t>& binary, std::string& data);
-
-			/**
-			 * Handle the incoming data stream.
-			 */
-			void onData(const boost::system::error_code& e, std::size_t size);
-
-			 ///Serial port setup.
-			bool setup_port();
-			///Receive startup helper function.
-			void start_receive();
-
-			///Hardware i/o service.
-			boost::asio::io_service io;
-			///The serial input port
-			boost::asio::serial_port port;
-			///The main operation thread.
-			boost::thread runner;
-			///The input buffer.
-			boost::asio::streambuf buffer;
-
-			///The message callback
-			CallbackType callback;
-			///Last encoded packet
-			std::string out;
+			///Local position publisher
+			ros::Publisher usblFix;
+			///Relative position publisher
+			ros::Publisher relativePos;
 		};
 	}
 }
 
-/* SEATRACHANDLER_HPP_ */
+/* STATUSHANDLER_HPP_ */
 #endif

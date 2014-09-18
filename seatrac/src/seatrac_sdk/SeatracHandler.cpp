@@ -36,6 +36,8 @@
  *********************************************************************/
 #include <labust/seatrac/SeatracHandler.hpp>
 #include <boost/bind.hpp>
+#include <boost/crc.hpp>
+
 using namespace labust::seatrac;
 
 SeaTracHandler::SeaTracHandler():
@@ -49,6 +51,7 @@ SeaTracHandler::~SeaTracHandler()
 }
 
 bool SeaTracHandler::connect(const std::string& portName, int baud)
+try
 {
 	using namespace boost::asio;
 	port.open(portName);
@@ -67,6 +70,12 @@ bool SeaTracHandler::connect(const std::string& portName, int baud)
 
 	return setupOk;
 }
+catch (std::exception& e)
+{
+	std::cerr<<e.what()<<std::endl;
+	return false;
+}
+
 
 void SeaTracHandler::start_receive()
 {
@@ -74,6 +83,70 @@ void SeaTracHandler::start_receive()
 	async_read_until(port, buffer,
 			"\r\n",
 			boost::bind(&SeaTracHandler::onData, this, _1,_2));
+}
+
+void SeaTracHandler::convertToBinary(const std::string& data, std::vector<uint8_t>& binary)
+{
+	binary.resize(data.size()/2,0);
+	for(int i=0; i<binary.size(); ++i)
+	{
+		std::stringstream d2;
+		d2<<data[2*i]<<data[2*i+1];
+		int temp;
+		d2>>std::hex>>temp;
+		binary[i] = temp;
+	}
+}
+
+void SeaTracHandler::convertToAscii(const std::vector<uint8_t>& binary, std::string& data)
+{
+	std::stringstream out;
+	for(int i=0; i<binary.size(); ++i)
+	{
+		out.width(2);
+		out.fill('0');
+		out<<std::hex<<std::fixed<<int(binary[i]);
+	}
+
+	data = out.str();
+}
+
+bool SeaTracHandler::send(int cid, const std::vector<uint8_t>& binary)
+try
+{
+	std::vector<uint8_t> data(binary);
+	data.insert(data.begin(),cid);
+	boost::crc_16_type checksum;
+	checksum.process_bytes(&data[0], data.size());
+	uint16_t chk = checksum.checksum();
+	uint8_t* pt = reinterpret_cast<uint8_t*>(&chk);
+	data.push_back(pt[0]);
+	data.push_back(pt[1]);
+
+	convertToAscii(data, out);
+	out.insert(out.begin(), '#');
+	out.push_back('\r');
+	out.push_back('\n');
+	std::cout<<"Sending data:"<<out<<std::endl;
+	boost::asio::write(port, boost::asio::buffer(out));
+	return true;
+}
+catch (std::exception& e)
+{
+	std::cerr<<e.what()<<std::endl;
+	return false;
+}
+
+bool SeaTracHandler::resend()
+try
+{
+	std::cout<<"Re-sending data:"<<out<<std::endl;
+	boost::asio::write(port, boost::asio::buffer(out));
+}
+catch (std::exception& e)
+{
+	std::cerr<<e.what()<<std::endl;
+	return false;
 }
 
 void SeaTracHandler::onData(const boost::system::error_code& e,
@@ -85,7 +158,31 @@ void SeaTracHandler::onData(const boost::system::error_code& e,
 		std::string data(size,'\0');
 		is.read(&data[0],size);
 
-		std::cout<<"Received data."<<std::endl;
+		std::cout<<"Received data:"<<data;
+
+		if (data[0] == '$')
+		{
+			//Skip '$' and '\r\n'
+			std::vector<uint8_t> binary;
+			convertToBinary(data.substr(dataStart, data.size()-dataTrunc), binary);
+			int cid = binary[0];
+			//Checksum
+			boost::crc_16_type checksum;
+			checksum.process_bytes(binary.data(), binary.size()-2);
+			uint16_t* chk = reinterpret_cast<uint16_t*>(&binary[binary.size()-2]);
+
+			if ((*chk) == checksum.checksum())
+			{
+				std::cout<<"Response received. Checksum ok."<<std::endl;
+				binary.erase(binary.begin());
+				binary.pop_back(); binary.pop_back();
+				if (!callback.empty()) callback(cid, binary);
+			}
+			else
+			{
+				std::cerr<<"Checksum failed."<<std::endl;
+			}
+		}
 	}
 
 	this->start_receive();

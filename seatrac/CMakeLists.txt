@@ -106,7 +106,9 @@ add_library(seatrac_sdk
 
 ## Declare a cpp executable
 add_executable(seatrac_serialization_test src/test/serialization_test.cpp)
-add_executable(seatrac_node src/seatrac_node/SeatracNode.cpp)
+add_executable(seatrac_node 
+    src/seatrac_node/SeatracNode.cpp
+    src/seatrac_node/NavHandler.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -121,12 +123,15 @@ target_link_libraries(seatrac_sdk
 
 target_link_libraries(seatrac_node
    ${catkin_LIBRARIES}
+   ${Boost_SERIALIZATION_LIBRARY}
+   ${Boost_THREAD_LIBRARY}
    seatrac_sdk
 )
 
 target_link_libraries(seatrac_serialization_test
    ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARY}
+   seatrac_sdk
 )
 
 #############
