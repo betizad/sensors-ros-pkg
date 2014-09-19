@@ -35,6 +35,7 @@
 #define SEATRACNODE_HPP_
 #include <labust/seatrac/SeatracHandler.hpp>
 #include <labust/seatrac/NavHandler.hpp>
+#include <labust/seatrac/StatusHandler.hpp>
 
 #include <underwater_msgs/ModemTransmission.h>
 #include <std_msgs/Bool.h>
@@ -109,11 +110,9 @@ namespace labust
 			SeaTracHandler comms;
 			///Navigation handler
 			NavHandler nav;
-
 			///Device status handler
-			//StatusHandler status;
-			///Device navigation handler
-			//NavHandler nav;
+			StatusHandler stats;
+
 			///Master processor of data
 			bool masterProcessor(int cid, std::vector<uint8_t>& data);
 			///Slave processor of data

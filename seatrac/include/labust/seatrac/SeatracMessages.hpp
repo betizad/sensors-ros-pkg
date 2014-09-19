@@ -99,6 +99,27 @@ PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), XcvrFix,
 		(uint8_t, position_valid)
 		(vec3i, position))
 
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), EnvStatus,
+		(uint16_t, supply)
+		(int16_t, temp)
+		(int32_t, pressure)
+		(int32_t, depth)
+		(uint16_t, vos))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), MagCalibrationStatus,
+		(uint8_t, cal_buf)
+		(uint8_t, cal_valid)
+		(uint32_t, cal_age)
+		(uint8_t, cal_fit))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AccCalibrationStatus,
+		(vec3si, lim_min)
+		(vec3si, lim_max))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AHRSData,
+		(vec3si, acc)
+		(vec3si, mag)
+		(vec3si, gyro))
 
 /* SEATRACMESSAGES_HPP_ */
 #endif

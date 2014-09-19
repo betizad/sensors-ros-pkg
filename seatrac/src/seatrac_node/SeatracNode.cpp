@@ -118,6 +118,7 @@ void SeaTracNode::onInit()
 
 		//Register message handlers
 		dispatch[CID_XCVR::fix] = boost::bind(&NavHandler::operator(), &nav,_1,_2);
+		dispatch[CID_STATUS::status] = boost::bind(&StatusHandler::operator(), &stats,_1,_2);
 
 		//Register main callback
 		comms.registerCallback(
@@ -316,9 +317,7 @@ void SeaTracNode::onOutgoingBW(const std_msgs::String::ConstPtr& msg)
 	underwater_msgs::ModemTransmission::Ptr newmsg(
 			new underwater_msgs::ModemTransmission());
 	//Setup message from string
-	newmsg->action = (isMaster?
-			underwater_msgs::ModemTransmission::RANGING_DATA:
-			underwater_msgs::ModemTransmission::SET_REPLY);
+	newmsg->action = (isMaster?underwater_msgs::ModemTransmission::RANGING_DATA:underwater_msgs::ModemTransmission::SET_REPLY);
 	newmsg->sender = transponderId;
 	newmsg->receiver = (isMaster?2:1);
 	newmsg->payload.assign(msg->data.begin()+1, msg->data.end());

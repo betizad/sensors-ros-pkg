@@ -33,7 +33,10 @@
 *********************************************************************/
 #ifndef STATUSHANDLER_HPP_
 #define STATUSHANDLER_HPP_
+#include <diagnostic_msgs/DiagnosticStatus.h>
 #include <ros/ros.h>
+
+#include <boost/archive/binary_iarchive.hpp>
 
 #include <map>
 
@@ -43,11 +46,13 @@ namespace labust
 	{
 		/**
 		 * The class implements the status handler publisher and decoder.
-		 * \todo Implement additional messages
-		 * \todo Add CID type ID to structures
+		 * \todo Extract message decoding from payload to a templated function
+		 * \todo Add verbose diagnostics and basic diagnostic options
+		 * \todo Add missing handlers
 		 */
 		class StatusHandler
 		{
+			enum {yaw=0, pitch, roll};
 		public:
 			/**
 			 * Main constructor
@@ -61,11 +66,32 @@ namespace labust
 			/**
 			 * Main handling operator.
 			 */
-			void operator()(int type, const std::vector<int>& payload);
+			void operator()(int type, std::vector<uint8_t>& payload);
 
 		private:
 			///Attitude publisher
 			ros::Publisher attitude;
+			///Diagnostics publisher
+			ros::Publisher diagnostic;
+			///The cumulative diagnostic status
+			diagnostic_msgs::DiagnosticStatus status;
+			///Calibration fit flag
+			bool calibFlag;
+			///Voltage supply flag
+			bool supplyFlag;
+
+			///Minimum voltage
+			double minVoltage;
+
+			///Helper function for attitude processing
+			void processAttitude(boost::archive::binary_iarchive& inSer);
+			///Helper function for environment processing
+			void processEnvironment(boost::archive::binary_iarchive& inSer);
+			///Helper function for magnetic calibration processing
+			void processMagneticCalibration(boost::archive::binary_iarchive& inSer);
+
+			///Helper function for adding data to diagnostics
+			void addToDiagnostics(const std::vector<std::string> names, const std::vector<double> values);
 		};
 	}
 }
