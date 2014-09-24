@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   snippets
   std_msgs
   underwater_msgs
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions

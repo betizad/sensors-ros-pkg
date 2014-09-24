@@ -37,6 +37,7 @@
 #include <labust/preprocessor/clean_serializator.hpp>
 
 #include <auv_msgs/RPY.h>
+#include <sensor_msgs/Temperature.h>
 
 
 #include <string>
@@ -58,6 +59,7 @@ void StatusHandler::onInit()
 	ros::NodeHandle nh;
 	//Configure desired outputs and rate
 	attitude = nh.advertise<auv_msgs::RPY>("usbl_attitude",1);
+	temperature = nh.advertise<sensor_msgs::Temperature>("temperature",1);
 	diagnostic = nh.advertise<diagnostic_msgs::DiagnosticStatus>("diagnostic",1);
 }
 
@@ -85,6 +87,10 @@ void StatusHandler::processEnvironment(boost::archive::binary_iarchive& inSer)
 	};
 
 	this->addToDiagnostics(names, values);
+
+	sensor_msgs::Temperature::Ptr temp(new sensor_msgs::Temperature());
+	temp->temperature = env.temp/10.;
+	temperature.publish(temp);
 
 	//Set flags
 	supplyFlag = (env.supply/1000.) < minVoltage;

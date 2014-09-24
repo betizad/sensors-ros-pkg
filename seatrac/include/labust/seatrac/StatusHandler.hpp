@@ -71,6 +71,8 @@ namespace labust
 		private:
 			///Attitude publisher
 			ros::Publisher attitude;
+			///Temperature publisher
+			ros::Publisher temperature;
 			///Diagnostics publisher
 			ros::Publisher diagnostic;
 			///The cumulative diagnostic status
