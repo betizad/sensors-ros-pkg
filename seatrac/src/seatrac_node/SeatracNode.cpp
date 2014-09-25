@@ -120,10 +120,6 @@ void SeaTracNode::onInit()
 		dispatch[CID_XCVR::fix] = boost::bind(&NavHandler::operator(), &nav,_1,_2);
 		dispatch[CID_STATUS::status] = boost::bind(&StatusHandler::operator(), &stats,_1,_2);
 
-		//Register main callback
-		comms.registerCallback(
-				boost::bind(&SeaTracNode::incomingMsg, this, _1, _2));
-
 		dataSub = nh.subscribe<underwater_msgs::ModemTransmission>("outgoing_data",
 				0, &SeaTracNode::onOutgoing,this);
 		dataSubBW = nh.subscribe<std_msgs::String>("outgoing_data_bw",
@@ -136,6 +132,10 @@ void SeaTracNode::onInit()
 		usblTimeout = nh.advertise<std_msgs::Bool>("usbl_timeout",1);
 
 		this->start();
+
+		//Register main callback
+		comms.registerCallback(
+				boost::bind(&SeaTracNode::incomingMsg, this, _1, _2));
 	}
 }
 
@@ -144,8 +144,11 @@ bool SeaTracNode::masterProcessor(int cid, std::vector<uint8_t>& data)
 	bool unlock = (cid == CID_PING::error);
   unlock = unlock || (cid == CID_DATA::dat_error);
 
-  ROS_INFO("Only ack:%d", onlyAck);
 
+	if (cid == CID_PING::error)
+	{
+  	  ROS_ERROR("Error code:%d", data[0]);
+	}
 	if (onlyAck)
 	{
 		//Unlock on acknowledge
@@ -208,12 +211,12 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 		//If error or successful reception allow new pings
 		if (unlock)
 		{
+			ROS_INFO("Turnaround: %f",(ros::Time::now()-lastUSBL).toSec());
 			{
 				boost::mutex::scoped_lock lock(pingLock);
 				isBusy = false;
 			}
 			usblCondition.notify_one();
-			ROS_INFO("Turnaround: %f",(ros::Time::now()-lastUSBL).toSec());
 		}
 	}
 	else
