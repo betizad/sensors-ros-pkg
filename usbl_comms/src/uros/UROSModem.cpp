@@ -199,7 +199,7 @@ void onGainIn(SharedData& data, const std_msgs::Int32::ConstPtr gain)
 
 void onAdcIn(SharedData& data, const std_msgs::Float32::ConstPtr adc)
 {
-  if (!data.inited && !data.useExtLatLon) return;
+  if (!data.inited)return;
 	//std::cout<<"New adc ok"<<std::endl;
 	data.lastSent = ros::Time::now();
 	data.outgoing_msg.data[DiverMsg::msg] = adc->data * pow(10,data.gain);
