@@ -52,7 +52,13 @@ struct SharedData
 {
 	enum {ABORT = 1};
 
-	SharedData():initCnt(0), waitForInit(true), useExtLatLon(false), inited(false), gain(0), sendPeriod(1.0)
+	SharedData():
+		initCnt(0),
+		waitForInit(true),
+		useExtLatLon(false),
+		inited(false),
+		gain(0),
+		sendPeriod(1.0)
 	{
 		dispatch[DiverMsg::PositionInit] = boost::bind(&SharedData::onPositionInit, this);
 		dispatch[DiverMsg::Position_18] = boost::bind(&SharedData::onNewPosition, this);
@@ -171,16 +177,16 @@ void onModem(SharedData& data, const std_msgs::String::ConstPtr msg)
 		ROS_ERROR("Exception caught on incoming msg: %s",e.what());
 	}
 	
-	if (data.inited)
-	{
-		std::cout<<"Send data"<<std::endl;
-		//Send back newest data
-		std_msgs::String out;
-		out.data = data.outgoing_msg.toString<DiverMsg::AutoDiver>();
-		std::cout<<"Latitude:"<<data.outgoing_msg.latitude<<", longitude:"<<data.outgoing_msg.longitude<<std::endl;
-		std::cout<<"Lat:"<<data.outgoing_msg.data[DiverMsg::lat]<<", lon:"<<data.outgoing_msg.data[DiverMsg::lon]<<std::endl;
-		data.msgOut.publish(out);
-	}
+//	if (data.inited)
+//	{
+//		std::cout<<"Send data"<<std::endl;
+//		//Send back newest data
+//		std_msgs::String out;
+//		out.data = data.outgoing_msg.toString<DiverMsg::AutoDiver>();
+//		std::cout<<"Latitude:"<<data.outgoing_msg.latitude<<", longitude:"<<data.outgoing_msg.longitude<<std::endl;
+//		std::cout<<"Lat:"<<data.outgoing_msg.data[DiverMsg::lat]<<", lon:"<<data.outgoing_msg.data[DiverMsg::lon]<<std::endl;
+//		data.msgOut.publish(out);
+//	}
 }
 
 void onNavSts(SharedData& data, const auv_msgs::NavSts::ConstPtr nav)
@@ -208,6 +214,15 @@ void onAdcIn(SharedData& data, const std_msgs::Float32::ConstPtr adc)
 	//std::cout<<"Packed adc + gain:"<<data.outgoing_msg.data[DiverMsg::msg]<<std::endl;
 	//std::cout<<"Gain:"<<data.gain<<std::endl;
 	data.outgoing_msg.data[DiverMsg::type] = DiverMsg::Rhodamine;
+
+	//Send new data
+	std::cout<<"Send data"<<std::endl;
+	//Send back newest data
+	std_msgs::String out;
+	out.data = data.outgoing_msg.toString<DiverMsg::AutoDiver>();
+	std::cout<<"Latitude:"<<data.outgoing_msg.latitude<<", longitude:"<<data.outgoing_msg.longitude<<std::endl;
+	std::cout<<"Lat:"<<data.outgoing_msg.data[DiverMsg::lat]<<", lon:"<<data.outgoing_msg.data[DiverMsg::lon]<<std::endl;
+	data.msgOut.publish(out);
 }
 
 int main(int argc, char* argv[])
