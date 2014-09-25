@@ -99,6 +99,18 @@ PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), XcvrFix,
 		(uint8_t, position_valid)
 		(vec3i, position))
 
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AcousticMsg,
+		(uint8_t, dest)
+		(int8_t, src)
+		(uint8_t, type)
+		(uint16_t, depth)
+		(uint8_t, payloadId)
+		(PayloadType, payload))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), XcvrRxMsg,
+		(AcousticMsg, acmsg)
+		(int16_t, rssi))
+
 PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), EnvStatus,
 		(uint16_t, supply)
 		(int16_t, temp)

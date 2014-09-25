@@ -40,6 +40,7 @@
 #include <labust/seatrac/SeatracMessages.hpp>
 
 #include <std_msgs/UInt8MultiArray.h>
+#include <std_msgs/Float32.h>
 
 #include <boost/bind.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -134,6 +135,7 @@ void SeaTracNode::onInit()
 		dataPubBW = nh.advertise<std_msgs::String>("incoming_data_bw",1);
 		allMsg = nh.advertise<std_msgs::UInt8MultiArray>("all_msgs",1);
 		usblTimeout = nh.advertise<std_msgs::Bool>("usbl_timeout",1);
+		remoteDepth = nh.advertise<std_msgs::Float32>("remote_depth",1);
 
 		this->start();
 	}
@@ -255,7 +257,23 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 		dataPubBW.publish(outstr);
 	}
 
-	//Publish all messages
+	//Extract this to another and add ID
+	if (cid == CID_XCVR::rx_msg)
+	{
+		std::istringstream in;
+		in.rdbuf()->pubsetbuf(reinterpret_cast<char*>(data.data()), data.size());
+		boost::archive::binary_iarchive inSer(in, boost::archive::no_header);
+
+		std_msgs::Float32::Ptr outremote(
+						new std_msgs::Float32());
+
+		XcvrRxMsg recMsg;
+		inSer>>recMsg;
+		outremote->data = recMsg.acmsg.depth;
+		remoteDepth.publish(outremote);
+	}
+
+	//Publish all messages for debugging
 	std_msgs::UInt8MultiArray::Ptr outarray(new std_msgs::UInt8MultiArray());
 	outarray->data.push_back(cid);
 	outarray->data.insert(outarray->data.end(),data.begin(),data.end());

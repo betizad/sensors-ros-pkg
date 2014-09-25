@@ -157,6 +157,8 @@ namespace labust
 			ros::Publisher usblTimeout;
 			///The debug publisher
 			ros::Publisher allMsg;
+			///The enhanced depth info publisher.
+			ros::Publisher remoteDepth;
 			///The modem transmission request subscription.
 			ros::Subscriber dataSub;
 			///The modem transmisson request subscription for backward compatibility.
