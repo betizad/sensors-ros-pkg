@@ -90,6 +90,7 @@ void StatusHandler::processEnvironment(boost::archive::binary_iarchive& inSer)
 
 	sensor_msgs::Temperature::Ptr temp(new sensor_msgs::Temperature());
 	temp->temperature = env.temp/10.;
+	temp->header.stamp = ros::Time::now();
 	temperature.publish(temp);
 
 	//Set flags
