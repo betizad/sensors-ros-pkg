@@ -10,6 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   underwater_msgs
   sensor_msgs
+  auv_msgs
+  geometry_msgs
+  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions

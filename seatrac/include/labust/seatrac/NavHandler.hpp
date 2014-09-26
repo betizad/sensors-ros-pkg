@@ -33,6 +33,8 @@
 *********************************************************************/
 #ifndef NAVHANDLER_HPP_
 #define NAVHANDLER_HPP_
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
 
 #include <map>
@@ -64,10 +66,16 @@ namespace labust
 			void operator()(int type, std::vector<uint8_t>& payload);
 
 		private:
-			///Local position publisher
+			///Position fix publisher
 			ros::Publisher usblFix;
-			///Relative position publisher
+			///NavSts publisher for debugging
+			ros::Publisher position;
+			///Relative position publisher for backward compatibility
 			ros::Publisher relativePos;
+			///TF2 transform buffer
+			tf2_ros::Buffer buffer;
+			///TF2 transform listener
+			tf2_ros::TransformListener listener;
 		};
 	}
 }

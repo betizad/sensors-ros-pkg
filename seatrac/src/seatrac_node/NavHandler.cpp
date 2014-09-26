@@ -38,9 +38,12 @@
 #include <labust/seatrac/SeatracCID.hpp>
 #include <labust/seatrac/SeatracMessages.hpp>
 #include <labust/preprocessor/clean_serializator.hpp>
+#include <labust/tools/GeoUtilities.hpp>
 
 #include <underwater_msgs/USBLFix.h>
+#include <auv_msgs/NavSts.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <boost/archive/binary_iarchive.hpp>
 
@@ -51,7 +54,8 @@ PP_LABUST_CLEAN_ARRAY_ISERIALIZATOR_IMPL(boost::archive::binary_iarchive)
 
 using namespace labust::seatrac;
 
-NavHandler::NavHandler()
+NavHandler::NavHandler():
+		listener(buffer)
 {
 	this->onInit();
 }
@@ -63,6 +67,7 @@ void NavHandler::onInit()
 	usblFix = nh.advertise<underwater_msgs::USBLFix>("usbl_fix",1);
 	//For backward compatibility
 	relativePos = nh.advertise<geometry_msgs::PointStamped>("usbl_nav",1);
+	position = nh.advertise<auv_msgs::NavSts>("usbl_navsts",1);
 }
 
 void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
@@ -91,11 +96,47 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 
 	if (isValid)
 	{
+		auv_msgs::NavSts::Ptr navmsg(new auv_msgs::NavSts());
+		//Try to get the usbl position in local frame
+		try
+		{
+			geometry_msgs::TransformStamped transformDeg;
+			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(0));
+
+			navmsg->position.north = transformDeg.transform.translation.x + fix.position[north]/1000;
+			navmsg->position.east = transformDeg.transform.translation.y + fix.position[east]/1000;
+			navmsg->position.north = transformDeg.transform.translation.z + fix.position[depth]/1000;
+		}
+		catch(tf2::TransformException& ex)
+		{
+			ROS_WARN("%s",ex.what());
+		}
+
+		//Try to get the global position
+		try
+		{
+			geometry_msgs::TransformStamped transformDeg;
+			transformDeg = buffer.lookupTransform("worldLatLon", "local", ros::Time(0));
+
+			std::pair<double, double> diffAngle = labust::tools::meter2deg(fix.position[north]/1000,
+					fix.position[east]/1000,
+					//The latitude angle
+					transformDeg.transform.translation.y);
+			navmsg->origin.latitude = transformDeg.transform.translation.y;
+			navmsg->origin.longitude = transformDeg.transform.translation.x;
+			navmsg->global_position.latitude = transformDeg.transform.translation.y + diffAngle.first;
+			navmsg->global_position.longitude = transformDeg.transform.translation.x + diffAngle.second;
+		}
+		catch(tf2::TransformException& ex)
+		{
+			ROS_WARN("%s",ex.what());
+		}
+
 		underwater_msgs::USBLFix::Ptr outfix(new underwater_msgs::USBLFix());
 		outfix->beacon = fix.beaconId;
-		outfix->position.x = fix.position[north]/1000.;
-		outfix->position.y = fix.position[east]/1000.;
-		outfix->position.z = fix.position[depth]/1000.;
+		outfix->relative_position.x = fix.position[north]/1000.;
+		outfix->relative_position.y = fix.position[east]/1000.;
+		outfix->relative_position.z = fix.position[depth]/1000.;
 
 		outfix->range = fix.range_dist/1000.;
 		outfix->sound_speed = fix.vos/10.;
@@ -112,13 +153,18 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			outfix->type = underwater_msgs::USBLFix::AZIMUTH_ONLY;
 		}
 
+		navmsg->header.frame_id="local";
+		outfix->position = *navmsg;
 		outfix->header.frame_id = "usbl_frame";
 		outfix->header.stamp = ros::Time::now();
+		outfix->position.header.stamp = outfix->header.stamp;
+		navmsg->header.stamp = ros::Time::now();
+		position.publish(navmsg);
 		usblFix.publish(outfix);
 
 		//Backward compatible
 		geometry_msgs::PointStamped::Ptr outpoint(new geometry_msgs::PointStamped());
-		outpoint->point = outfix->position;
+		outpoint->point = outfix->relative_position;
 		outpoint->header.frame_id = "usbl_frame";
 		outpoint->header.stamp = outfix->header.stamp;
 		relativePos.publish(outpoint);
