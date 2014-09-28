@@ -35,6 +35,7 @@
 #define NAVHANDLER_HPP_
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <std_msgs/Float32.h>
 #include <ros/ros.h>
 
 #include <map>
@@ -66,16 +67,28 @@ namespace labust
 			void operator()(int type, std::vector<uint8_t>& payload);
 
 		private:
+
+			void onExDepth(const std_msgs::Float32::ConstPtr& depth)
+			{
+				exDepth = depth->data;
+			}
+
+			///Depth aiding subscription
+			ros::Subscriber depthAiding;
 			///Position fix publisher
 			ros::Publisher usblFix;
 			///NavSts publisher for debugging
 			ros::Publisher position;
+			///Depth aided NavSts publisher for debugging
+			ros::Publisher positionDA;
 			///Relative position publisher for backward compatibility
 			ros::Publisher relativePos;
 			///TF2 transform buffer
 			tf2_ros::Buffer buffer;
 			///TF2 transform listener
 			tf2_ros::TransformListener listener;
+			///Remote depth variable
+			double exDepth;
 		};
 	}
 }
