@@ -103,9 +103,9 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			geometry_msgs::TransformStamped transformDeg;
 			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(0));
 
-			navmsg->position.north = transformDeg.transform.translation.x + fix.position[north]/1000;
-			navmsg->position.east = transformDeg.transform.translation.y + fix.position[east]/1000;
-			navmsg->position.north = transformDeg.transform.translation.z + fix.position[depth]/1000;
+			navmsg->position.north = transformDeg.transform.translation.x + fix.position[north]/1000.;
+			navmsg->position.east = transformDeg.transform.translation.y + fix.position[east]/1000.;
+			navmsg->position.depth = transformDeg.transform.translation.z + fix.position[depth]/1000.;
 		}
 		catch(tf2::TransformException& ex)
 		{
@@ -118,8 +118,8 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			geometry_msgs::TransformStamped transformDeg;
 			transformDeg = buffer.lookupTransform("worldLatLon", "local", ros::Time(0));
 
-			std::pair<double, double> diffAngle = labust::tools::meter2deg(fix.position[north]/1000,
-					fix.position[east]/1000,
+			std::pair<double, double> diffAngle = labust::tools::meter2deg(navmsg->position.north,
+					navmsg->position.east,
 					//The latitude angle
 					transformDeg.transform.translation.y);
 			navmsg->origin.latitude = transformDeg.transform.translation.y;
@@ -140,8 +140,8 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 
 		outfix->range = fix.range_dist/1000.;
 		outfix->sound_speed = fix.vos/10.;
-		outfix->elevation = fix.signal_elevation;
-		outfix->bearing = fix.signal_azimuth;
+		outfix->elevation = fix.signal_elevation/10.;
+		outfix->bearing = fix.signal_azimuth/10.;
 
 		outfix->type = underwater_msgs::USBLFix::FULL_FIX;
 		if (fix.range_valid && !fix.signal_valid)
