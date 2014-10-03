@@ -67,6 +67,7 @@ void USBLFilter::onInit()
 	navPub = nh.advertise<auv_msgs::NavSts>("usblFiltered",1);
 
 	ph.param("pass_through", isPassThrough, isPassThrough);
+	ph.param("max_speed",maxSpeed, maxSpeed);
 	if (!isPassThrough)
 	{
 		filter.initModel();

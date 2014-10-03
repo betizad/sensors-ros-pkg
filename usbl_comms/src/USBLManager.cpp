@@ -121,10 +121,12 @@ void USBLManager::init_diver()
 	   return;
 	}
 	
+	///\todo Remove this if the new usbl driver knows how to keep
+	/// track of extra messages
 	//Turn off auto-interrogation	
-	std_msgs::Bool data;
-	data.data = false;
-	auto_mode.publish(data);
+//	std_msgs::Bool data;
+//	data.data = false;
+//	auto_mode.publish(data);
 
 	if ((state == initDiver) && (validNav))
 	{
@@ -253,6 +255,12 @@ void USBLManager::incoming_rhodamine()
 	rpos->global_position.latitude = posDecoder.latitude;
 	rpos->global_position.longitude = posDecoder.longitude;
 	outRhodaminePos.publish(rpos);
+
+	std_msgs::String::Ptr outmsg(new std_msgs::String());
+	std::stringstream sout;
+	sout<<"Rhodamine: "<<adcout->data<<"\n";
+	outmsg->data = sout.str();
+	diverText.publish(outmsg);
 }
 
 std::string USBLManager::intToMsg(int len)
@@ -611,7 +619,15 @@ void USBLManager::onIncomingForceState(const std_msgs::Int32::ConstPtr msg)
 	//Do some checking on the default messages
 	if (msg->data < lastStateNum)
 	{
+		this->changeState(msg->data);
 		this->lastState = msg->data;
+//		if (msg->data == idle)
+//		{
+//			//Turn on auto-interrogation
+//			std_msgs::Bool data;
+//			data.data = true;
+//			auto_mode.publish(data);
+//		}
 	}
 	else
 	{
