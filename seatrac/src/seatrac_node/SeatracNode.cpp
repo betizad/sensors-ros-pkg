@@ -362,6 +362,7 @@ void SeaTracNode::sendPkg()
 	int cid = CID_PING::send;
 	std::vector<uint8_t> data;
 	data.push_back(nextPingId);
+	data.push_back(AMsgType::msg_reqx);
 
 	if (autoreply != 0)
 	{

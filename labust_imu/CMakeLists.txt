@@ -74,8 +74,8 @@ include_directories(
 # add_library(labust_imu
 #   src/${PROJECT_NAME}/labust_imu.cpp
 # )
-add_executable(imu_node src/imu_node.cpp)
-add_dependencies(imu_node ${catkin_EXPORTED_TARGETS})
+add_executable(labust_imu_node src/imu_node.cpp)
+add_dependencies(labust_imu_node ${catkin_EXPORTED_TARGETS})
 
 ## Declare a cpp executable
 # add_executable(labust_imu_node src/labust_imu_node.cpp)
@@ -89,7 +89,7 @@ add_dependencies(imu_node ${catkin_EXPORTED_TARGETS})
 #   ${catkin_LIBRARIES}
 # )
 
-target_link_libraries(imu_node
+target_link_libraries(labust_imu_node
    ${catkin_LIBRARIES}
 )
 
