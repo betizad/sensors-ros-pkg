@@ -56,7 +56,8 @@ using namespace labust::seatrac;
 
 NavHandler::NavHandler():
 		listener(buffer),
-		exDepth(0)
+		exDepth(0),
+		useVehicleAHRS(false)
 {
 	this->onInit();
 }
@@ -64,6 +65,8 @@ NavHandler::NavHandler():
 void NavHandler::onInit()
 {
 	ros::NodeHandle nh, ph("~");
+
+	ph.param("vehicle_ahrs", useVehicleAHRS, useVehicleAHRS);
 
 	depthAiding = nh.subscribe<std_msgs::Float32>("ex_depth",1, &NavHandler::onExDepth, this);
 	usblFix = nh.advertise<underwater_msgs::USBLFix>("usbl_fix",1);
@@ -105,6 +108,12 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 
 	if (isValid)
 	{
+		enum {n=0,e,d};
+		Eigen::Vector3d fixpos(fix.position[north]/10.,
+				fix.position[east]/10.,
+				fix.position[depth]/10.);
+
+
 		auv_msgs::NavSts::Ptr navmsg(new auv_msgs::NavSts());
 		auv_msgs::NavSts::Ptr navmsg_da(new auv_msgs::NavSts());
 		//Try to get the usbl position in local frame
@@ -113,9 +122,19 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			geometry_msgs::TransformStamped transformDeg;
 			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(0));
 
-			navmsg->position.north = transformDeg.transform.translation.x + fix.position[north]/10.;
-			navmsg->position.east = transformDeg.transform.translation.y + fix.position[east]/10.;
-			navmsg->position.depth = transformDeg.transform.translation.z + fix.position[depth]/10.;
+			if (useVehicleAHRS)
+			{
+
+				Eigen::Quaternion<double> quat(transformDeg.transform.rotation.w,
+						transformDeg.transform.rotation.x,
+						transformDeg.transform.rotation.y,
+						transformDeg.transform.rotation.z);
+				fixpos = quat.matrix()*fixpos;
+			}
+
+			navmsg->position.north = transformDeg.transform.translation.x + fixpos(n);
+			navmsg->position.east = transformDeg.transform.translation.y + fixpos(e);
+			navmsg->position.depth = transformDeg.transform.translation.z + fixpos(d);
 
 			double range = fix.range_data.range_dist/1000.;
 			//double azimuth = M_PI*(fix.signal_azimuth + fix.attitude1[0])/1800.;
@@ -162,9 +181,9 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 
 		underwater_msgs::USBLFix::Ptr outfix(new underwater_msgs::USBLFix());
 		outfix->beacon = fix.header.src;
-		outfix->relative_position.x = fix.position[north]/10.;
-		outfix->relative_position.y = fix.position[east]/10.;
-		outfix->relative_position.z = fix.position[depth]/10.;
+		outfix->relative_position.x = fixpos(n);
+		outfix->relative_position.y = fixpos(e);
+		outfix->relative_position.z = fixpos(d);
 
 		outfix->range = fix.range_data.range_dist/10.;
 		outfix->sound_speed = fix.header.vos/10.;
