@@ -46,6 +46,7 @@
 #include <geometry_msgs/TransformStamped.h>
 
 #include <boost/archive/binary_iarchive.hpp>
+#include <Eigen/Dense>
 
 #include <iosfwd>
 
