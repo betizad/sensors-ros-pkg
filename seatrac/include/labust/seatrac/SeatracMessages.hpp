@@ -72,7 +72,7 @@ namespace labust
 	}
 };
 
-///Define status bits as primitve type for easier deserialization
+///Define status bits as primitive type for easier deserialization
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::StatusBits, boost::serialization::primitive_type);
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::AcoFixBits, boost::serialization::primitive_type);
 

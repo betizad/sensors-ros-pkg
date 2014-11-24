@@ -1,0 +1,3 @@
+comms_plugin: "labust::seatrac::SeatracSim"
+listener_plugins: ["labust::seatrac::StatusListener"]
+
