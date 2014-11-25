@@ -34,7 +34,6 @@ void DiverNetTransformAndJointPublisher::onInit() {
   ros::Rate r(1);
   //Setup publisher
   jointsPub = nh.advertise<sensor_msgs::JointState>("joint_states",1);
-  
   rpy = nh.subscribe(_rpy_topic, 1, &DiverNetTransformAndJointPublisher::publishTransformAndJoints, this);
   offset = zeroState - currentMeas;
   configureNet();
@@ -59,7 +58,7 @@ void DiverNetTransformAndJointPublisher::configureNet() {
   names.push_back("left_hand");
   names.push_back("upper_body");
 
-  names.push_back("placehodler_1");
+  names.push_back("placeholder_1");
 
   names.push_back("left_foot");
   names.push_back("left_calf");
@@ -96,7 +95,30 @@ void DiverNetTransformAndJointPublisher::configureNet() {
       0.0, 0.0, 0.0,	//"right_foot"
       0.0, 0.0, 0.0;		//"placeholder_3"
 }
-
+/*zeroState<<M_PI, 0.0, M_PI/2, 	//"right_shoulder"
+				M_PI/2, 0.0, 0.0,					//"right_upper_arm"
+				0.0, 0.0, 0.0,						//"right_forearm"
+				0.0, -M_PI/2, M_PI,				//"head"
+				0.0, 0.0, 0.0,						//"right_hand"
+				M_PI, 0.0, -M_PI/2, 			//"left_shoulder"
+			  M_PI/2, 0.0, 0.0,					//"left_upper_arm"
+				0.0, 0.0, 0.0, 						//"left_forearm"
+				0.0, 0.0, 0.0,						//"left_hand"
+				-M_PI, 0.0, -0.0,				  //"upper_body"
+				M_PI/2, 0.0, 0.0,					//"placehodler_1"
+				0.0, -M_PI/2, 0.0,					//"left_foot"
+				M_PI/2, 0.0, 0.0,					//"left_calf"
+				M_PI/2, 0.0, -M_PI,				//"left_thigh"
+				0.0, -M_PI/2, 0.0,			  //"lower_back"
+				0.0, 0.0, 0.0,						//"placeholder_2"
+				-M_PI/2, 0.0, -M_PI,			//"right_thigh"
+				-M_PI/2, 0.0, 0.0,				//"right_calf"
+				0.0, -M_PI/2, 0.0,					//"right_foot"
+				0.0, 0.0, 0.0;						//"placeholder_3"
+	//Setup acc,gyro,mag ranges
+	//0.0, 1.5707963267948966, 0.0, 0.0, 1.5707963267948966, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.5707963267948966, 0.0, -0.0012566370614357503, 1.5707963267948966, 0.0, 0.0, 0.0, 0.0, 1.5707963267948966, 0.0, 0.0, 1.5707963267948966, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+}
+*/
 void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &rpy) {
 	enum {ax,ay,az,mx,my,mz,gx,gy,gz};
  
@@ -109,15 +131,13 @@ void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msg
 	std::vector<geometry_msgs::TransformStamped> transforms(nodeCount);
 
         for (int i=0; i<nodeCount; ++i) {
-          Eigen::VectorXd sensor_orientation = zeroState.row(i);
-          std::cout<<sensor_orientation<<std::endl;
           transforms[i].transform.translation.x = 0;
           transforms[i].transform.translation.y = 0;
           transforms[i].transform.translation.z = 0;
           labust::tools::quaternionFromEulerZYX(
-              rpy->data[3*i]+sensor_orientation[0], 
-              rpy->data[3*i+1]+sensor_orientation[1], 
-              rpy->data[3*i+2]+sensor_orientation[2],
+              rpy->data[3*i],//+zeroState(i,0), 
+              rpy->data[3*i+1],//+zeroState(i,1),
+              rpy->data[3*i+2],//+zeroState(i,0),
               transforms[i].transform.rotation);
           transforms[i].child_frame_id = "abs_" + names[i];
           transforms[i].header.frame_id = "local";
@@ -160,9 +180,9 @@ void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msg
       joints->name[3*i+1] = names[i] + "_y";
       joints->name[3*i+2] = names[i] + "_z";
       boost::mutex::scoped_lock l(dataMux);
-      joints->position[3*i] = roll + offset(i,0);
-      joints->position[3*i+1] = pitch + offset(i,1);
-      joints->position[3*i+2] = yaw + offset(i,2);
+      joints->position[3*i] = roll;// + zeroState(i,0);
+      joints->position[3*i+1] = pitch;// + zeroState(i,1);
+      joints->position[3*i+2] = yaw;// + zeroState(i,2);
       /*joints->position[3*i] = zeroState(i,0);
       joints->position[3*i+1] = zeroState(i,1);
       joints->position[3*i+2] = zeroState(i,2);*/

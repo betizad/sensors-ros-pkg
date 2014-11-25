@@ -1,6 +1,7 @@
 #ifndef DIVERNETFILTERNODE_HPP_
 #define DIVERNETFILTERNODE_HPP_
 #include <ros/ros.h>
+#include <labust/sensors/ImuComplementaryQuaternionFilter.hpp>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <Eigen/Dense>
@@ -26,9 +27,6 @@ namespace labust
          * Generic destructor.
          */
         ~DiverNetFilterNode();
-        /**
-         * Initialize filter.
-         */
 
       private:
         void onInit();
@@ -37,8 +35,8 @@ namespace labust
         void complementaryFilter(const Eigen::MatrixXd raw);
         ros::Subscriber raw_data;
         ros::Publisher raw_angles_publisher, filtered_angles_publisher;
-        Eigen::MatrixXd unwrap_count;
         std_msgs::Float64MultiArrayPtr rpy_raw, rpy_filtered;
+        ImuComplementaryQuaternionFilter *filter;
         const double dT, fs;
         int node_count, data_per_node;
         bool is_initialized;
