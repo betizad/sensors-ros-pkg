@@ -115,6 +115,12 @@ add_executable(seatrac_node
     src/seatrac_node/NavHandler.cpp
     src/seatrac_node/StatusHandler.cpp)
 
+if (DEFINED catkin_EXPORTED_TARGETS)
+ add_dependencies(seatrac_node ${catkin_EXPORTED_TARGETS})
+ add_dependencies(seatrac_serialization_test ${catkin_EXPORTED_TARGETS})
+ add_dependencies(seatrac_sdk ${catkin_EXPORTED_TARGETS})
+endif()
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(seatrac_node seatrac_generate_messages_cpp)

@@ -56,17 +56,32 @@ namespace labust
 			bool reserved :1;
 		};
 		BOOST_STATIC_ASSERT(sizeof(StatusBits) == 1 && ("STATUS_BITS_T structure is assumed as size 1 byte."));
+
+		struct AcoFixBits
+		{
+			bool RANGE_VALID:1;
+			bool USBL_VALID :1;
+			bool POSITION_VALID :1;
+			bool POSITION_ENHANCED :1;
+			bool POSITION_FLT_ERROR :1;
+			bool reserved3 :1;
+			bool reserved2 :1;
+			bool reserved :1;
+		};
+		BOOST_STATIC_ASSERT(sizeof(AcoFixBits) == 1 && ("AcoFixBits structure is assumed as size 1 byte."));
 	}
 };
 
 ///Define status bits as primitve type for easier deserialization
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::StatusBits, boost::serialization::primitive_type);
+BOOST_CLASS_IMPLEMENTATION(labust::seatrac::AcoFixBits, boost::serialization::primitive_type);
 
 PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac),StatusHeader,
 		(StatusBits, status_bits)
 		(uint64_t, timestamp))
 
 typedef std::vector<uint8_t> PayloadType;
+typedef std::vector<int16_t> USBLRSSIVec;
 
 PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), DatSend,
 		(uint8_t, destId)
@@ -76,7 +91,6 @@ PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), DatSend,
 PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), DatReceive,
 		(uint8_t, srcId)
 		(PayloadType, payload))
-
 
 
 typedef int16_t vec3si[3];
@@ -132,6 +146,60 @@ PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AHRSData,
 		(vec3si, acc)
 		(vec3si, mag)
 		(vec3si, gyro))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AcoFixHeader,
+		(uint8_t, dest)
+		(uint8_t, src)
+		(AcoFixBits, flags)
+		(uint8_t, msg_type)
+		(vec3si, attitude)
+		(uint16_t, depth_local)
+		(uint16_t, vos)
+		(int16_t, rssi))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AcoFixRange,
+		(uint32_t, range_count)
+		(int32_t, range_time)
+		(uint16_t, range_dist))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN((labust)(seatrac), AcoFixUSBL,
+		(USBLRSSIVec, usbl_rssi)
+		(int16_t, usbl_azimuth)
+		(int16_t, usbl_elevation)
+		(int16_t, usbl_fit_error))
+
+namespace labust
+{
+	namespace seatrac
+	{
+		struct AcoFix
+		{
+			AcoFixHeader header;
+			AcoFixRange range_data;
+			AcoFixUSBL usbl_data;
+			vec3si position;
+		};
+	};
+};
+
+namespace boost
+{
+	namespace serialization
+	{
+		template<class Archive>
+	  void serialize(Archive & ar, labust::seatrac::AcoFix & object, const unsigned int version)
+	  {
+			object.header.dest = 0;
+			ar & object.header;
+			labust::seatrac::AcoFixBits flags = object.header.flags;
+			if (flags.RANGE_VALID) ar & object.range_data;
+			if (flags.USBL_VALID) ar & object.usbl_data;
+			if (flags.POSITION_VALID) ar & object.position;
+	  }
+	}
+}
+
+BOOST_CLASS_IMPLEMENTATION(labust::seatrac::AcoFix, boost::serialization::object_serializable)
 
 /* SEATRACMESSAGES_HPP_ */
 #endif

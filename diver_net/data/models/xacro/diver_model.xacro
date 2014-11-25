@@ -69,7 +69,7 @@
 	</xacro:macro>
 	
 	<xacro:OldJoint node="lower_back" parent="local">
-		<origin xyz="0.1 0 -0.15" rpy="0 1.57 0" />
+		<origin xyz="0.1 0 -0.15" rpy="0 -1.57 0" />
     <box size="0.1 0.2 0.05"/>
     <color rgba="1 0 0 1" />
     <origin xyz="0 0 0.3"/>
@@ -90,13 +90,13 @@
 	<xacro:Joint3d node="left_thigh" parent="lower_back">
     <origin xyz="-0.1 0 0" rpy="0 -1.57 0"/>
 		<mesh filename="package://diver_net/data/models/dae/left_thigh.dae" />
-    <origin xyz="-0.05 0.12 -0.15" />
+    <origin xyz="-0.05 0.08 -0.15" />
 	</xacro:Joint3d>
 	
 	<xacro:Joint3d node="right_thigh" parent="lower_back">
 		<origin xyz="-0.1 0 0" rpy="0 -1.57 0"/>
     <mesh filename="package://diver_net/data/models/dae/right_thigh.dae" />
-		<origin xyz="-0.05 -0.12 -0.15" />
+		<origin xyz="-0.05 -0.08 -0.15" />
 	</xacro:Joint3d>
 	
 	<xacro:Joint3d node="right_calf" parent="right_thigh">
@@ -112,41 +112,41 @@
 	</xacro:Joint3d>
 
 	<xacro:Joint3d node="right_foot" parent="right_calf">
-		<origin xyz="-0.03 0 0" rpy="0 0 0"/>
+		<origin xyz="0 0 0" rpy="0 0 0"/>
 		<mesh filename="package://diver_net/data/models/dae/right_flipper.dae" />
-    <origin xyz="0.47 0 0" />	
+    <origin xyz="0.42 0 0" />	
 	</xacro:Joint3d>
 	
 	<xacro:Joint3d node="left_foot" parent="left_calf">
-		<origin xyz="-0.03 0 0" rpy="0 0 0"/>
+		<origin xyz="0 0 0" rpy="0 0 0"/>
 		<mesh filename="package://diver_net/data/models/dae/left_flipper.dae" />
-    <origin xyz="0.47 0 0" />	
+    <origin xyz="0.42 0 0" />	
 	</xacro:Joint3d>
 	
 	<xacro:OldJoint node="left_shoulder" parent="upper_body">
 		<origin xyz="0 0 0" rpy="0 0 0"/>
 		<box size="0.1 0.1 0.1" />
 		<color rgba="0 1 1 1" />
-		<origin xyz="0.15 -0.15 -0.15" />
+		<origin xyz="0.15 -0.15 -0.1" />
 	</xacro:OldJoint>
 	
 		<xacro:OldJoint node="right_shoulder" parent="upper_body">
 		<origin xyz="0 0 0" rpy="0 0 0"/>
 		<box size="0.1 0.1 0.1" />
 		<color rgba="0 1 0 1" />
-	  <origin xyz="0.15 0.15 -0.15" />
+	  <origin xyz="0.15 0.15 -0.1" />
   </xacro:OldJoint>
 		
-	<xacro:Joint3d node="left_upper_arm" parent="left_shoulder">
+	<xacro:Joint3d node="left_upper_arm" parent="upper_body">
 		<origin xyz="0 0 0" rpy="0 0 -1.57"/>
 		<mesh filename="package://diver_net/data/models/dae/left_biceps.dae" />
-	  <origin xyz="0.05 0 0.0" />
+	  <origin xyz="0.15 -0.2 -0.1" />
   </xacro:Joint3d>
 	
-	<xacro:Joint3d node="right_upper_arm" parent="right_shoulder">
+	<xacro:Joint3d node="right_upper_arm" parent="upper_body">
 		<origin xyz="0 0 0" rpy="0 0 1.57"/>
 		<mesh filename="package://diver_net/data/models/dae/right_biceps.dae" />
-	  <origin xyz="0.05 0 0.0" />
+	  <origin xyz="0.15 0.2 -0.1" />
   </xacro:Joint3d>
 	
 	<xacro:Joint3d node="left_forearm" parent="left_upper_arm">
@@ -162,13 +162,13 @@
 	</xacro:Joint3d>
 	
 	<xacro:Joint3d node="left_hand" parent="left_forearm">
-		<origin xyz="0 0 0" rpy="0 0 -1.57"/>
+		<origin xyz="0 0 0" rpy="0 1.57 -1.57"/>
 		<mesh filename="package://diver_net/data/models/dae/left_hand.dae" />
 		<origin xyz="0.25 0 0" />
 	</xacro:Joint3d>
 	
 	<xacro:Joint3d node="right_hand" parent="right_forearm">
-		<origin xyz="0 0 0" rpy="0 0 1.57"/>
+		<origin xyz="0 0 0" rpy="0 1.57 1.57"/>
 		<mesh filename="package://diver_net/data/models/dae/right_hand.dae" />
 		<origin xyz="0.25 0 0" />
 	</xacro:Joint3d>

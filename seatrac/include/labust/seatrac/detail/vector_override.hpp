@@ -70,6 +70,38 @@ namespace boost
 				t.push_back(i);
 			}
 		};
+		template<class Archive, class Allocator>
+		inline void save(
+				Archive & ar,
+				const std::vector<int16_t, Allocator> &t,
+				const unsigned int /* file_version */
+		){
+			// record number of elements
+			uint8_t count (t.size());
+			ar << BOOST_SERIALIZATION_NVP(count);
+			std::vector<int16_t>::const_iterator it = t.begin();
+			while(count-- > 0){
+				uint8_t tb = *it++;
+				ar << boost::serialization::make_nvp("item", tb);
+			}
+		};
+
+		template<class Archive, class Allocator>
+		inline void load(
+				Archive & ar,
+				std::vector<int16_t, Allocator> &t,
+				const unsigned int /* file_version */
+		){
+			// retrieve number of elements
+			uint8_t count;
+			ar >> BOOST_SERIALIZATION_NVP(count);
+			t.clear();
+			while(count-- > 0){
+				int16_t i;
+				ar >> boost::serialization::make_nvp("item", i);
+				t.push_back(i);
+			}
+		};
 	}
 };
 

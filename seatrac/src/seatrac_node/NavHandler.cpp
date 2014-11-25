@@ -46,6 +46,7 @@
 #include <geometry_msgs/TransformStamped.h>
 
 #include <boost/archive/binary_iarchive.hpp>
+#include <Eigen/Dense>
 
 #include <iosfwd>
 
@@ -56,7 +57,8 @@ using namespace labust::seatrac;
 
 NavHandler::NavHandler():
 		listener(buffer),
-		exDepth(0)
+		exDepth(0),
+		useVehicleAHRS(false)
 {
 	this->onInit();
 }
@@ -64,6 +66,8 @@ NavHandler::NavHandler():
 void NavHandler::onInit()
 {
 	ros::NodeHandle nh, ph("~");
+
+	ph.param("vehicle_ahrs", useVehicleAHRS, useVehicleAHRS);
 
 	depthAiding = nh.subscribe<std_msgs::Float32>("ex_depth",1, &NavHandler::onExDepth, this);
 	usblFix = nh.advertise<underwater_msgs::USBLFix>("usbl_fix",1);
@@ -81,24 +85,36 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 	std::istringstream in;
 	in.rdbuf()->pubsetbuf(reinterpret_cast<char*>(payload.data()), payload.size());
 	boost::archive::binary_iarchive inSer(in, boost::archive::no_header);
-	XcvrFix fix;
+	AcoFix fix;
+	uint8_t dest;
+	//inSer >> dest;
 	inSer >> fix;
 	ROS_INFO("Fix:");
-	ROS_INFO("\t Beacon ID:%d", fix.beaconId);
-	ROS_INFO("\t Signal valid:%d", fix.signal_valid);
-	ROS_INFO("\t Depth valid:%d", fix.depth_valid);
-	ROS_INFO("\t Range valid:%d", fix.range_valid);
-	ROS_INFO("\t Range:%d", fix.range_dist);
-	ROS_INFO("\t Remote depth:%d", fix.depth_remote);
+	ROS_INFO("\t Destination:%d", dest);
+	ROS_INFO("\t Beacon ID:%d", fix.header.src);
+	ROS_INFO("\t Signal valid:%d", fix.header.flags.USBL_VALID);
+	ROS_INFO("\t Depth valid:%d", fix.header.flags.POSITION_ENHANCED);
+	ROS_INFO("\t Range valid:%d", fix.header.flags.RANGE_VALID);
+	ROS_INFO("\t Range:%d", fix.range_data.range_count);
+	ROS_INFO("\t Count rssi:%d", fix.usbl_data.usbl_rssi.size());
+	ROS_INFO("\t Remote depth:%d", fix.position[2]);
 	ROS_INFO("\t East:%d, North:%d, Depth:%d", fix.position[0], fix.position[1], fix.position[2]);
 
-	if (fix.depth_valid)	ROS_WARN("Depth aided positioning not implemented.");
+	if (fix.header.flags.POSITION_ENHANCED)	ROS_WARN("Depth aided positioning not implemented.");
 
 	//Is anything valid ?
-	bool isValid = fix.range_valid || fix.signal_valid || fix.position_valid;
+	bool isValid = fix.header.flags.RANGE_VALID || fix.header.flags.USBL_VALID || fix.header.flags.POSITION_VALID;
+
+	if (fix.header.flags.POSITION_FLT_ERROR) ROS_WARN("Faulty position error detected by the USBL.");
 
 	if (isValid)
 	{
+		enum {n=0,e,d};
+		Eigen::Vector3d fixpos(fix.position[north]/10.,
+				fix.position[east]/10.,
+				fix.position[depth]/10.);
+
+
 		auv_msgs::NavSts::Ptr navmsg(new auv_msgs::NavSts());
 		auv_msgs::NavSts::Ptr navmsg_da(new auv_msgs::NavSts());
 		//Try to get the usbl position in local frame
@@ -107,12 +123,23 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			geometry_msgs::TransformStamped transformDeg;
 			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(0));
 
-			navmsg->position.north = transformDeg.transform.translation.x + fix.position[north]/1000.;
-			navmsg->position.east = transformDeg.transform.translation.y + fix.position[east]/1000.;
-			navmsg->position.depth = transformDeg.transform.translation.z + fix.position[depth]/1000.;
+			if (useVehicleAHRS)
+			{
 
-			double range = fix.range_dist/1000.;
-			double azimuth = M_PI*fix.signal_azimuth/1800.;
+				Eigen::Quaternion<double> quat(transformDeg.transform.rotation.w,
+						transformDeg.transform.rotation.x,
+						transformDeg.transform.rotation.y,
+						transformDeg.transform.rotation.z);
+				fixpos = quat.matrix()*fixpos;
+			}
+
+			navmsg->position.north = transformDeg.transform.translation.x + fixpos(n);
+			navmsg->position.east = transformDeg.transform.translation.y + fixpos(e);
+			navmsg->position.depth = transformDeg.transform.translation.z + fixpos(d);
+
+			double range = fix.range_data.range_dist/1000.;
+			//double azimuth = M_PI*(fix.signal_azimuth + fix.attitude1[0])/1800.;
+			double azimuth = atan2(fix.position[east], fix.position[north]);
 			double crange = sqrt(range*range - exDepth*exDepth);
 			///\todo Check these equations
 			navmsg_da->position.north = transformDeg.transform.translation.x + crange * cos(azimuth);
@@ -154,23 +181,23 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 		}
 
 		underwater_msgs::USBLFix::Ptr outfix(new underwater_msgs::USBLFix());
-		outfix->beacon = fix.beaconId;
-		outfix->relative_position.x = fix.position[north]/1000.;
-		outfix->relative_position.y = fix.position[east]/1000.;
-		outfix->relative_position.z = fix.position[depth]/1000.;
+		outfix->beacon = fix.header.src;
+		outfix->relative_position.x = fixpos(n);
+		outfix->relative_position.y = fixpos(e);
+		outfix->relative_position.z = fixpos(d);
 
-		outfix->range = fix.range_dist/1000.;
-		outfix->sound_speed = fix.vos/10.;
-		outfix->elevation = fix.signal_elevation/10.;
-		outfix->bearing = fix.signal_azimuth/10.;
-		outfix->remote_depth = fix.depth_remote/10.;
+		outfix->range = fix.range_data.range_dist/10.;
+		outfix->sound_speed = fix.header.vos/10.;
+		outfix->elevation = fix.usbl_data.usbl_elevation/10.;
+		outfix->bearing = fix.usbl_data.usbl_azimuth/10.;
+		outfix->remote_depth = fix.position[2]/10.;
 
 		outfix->type = underwater_msgs::USBLFix::FULL_FIX;
-		if (fix.range_valid && !fix.signal_valid)
+		if (fix.header.flags.RANGE_VALID && !fix.header.flags.USBL_VALID)
 		{
 			outfix->type = underwater_msgs::USBLFix::RANGE_ONLY;
 		}
-		else if (fix.signal_valid && !fix.range_valid)
+		else if (fix.header.flags.USBL_VALID && !fix.header.flags.RANGE_VALID)
 		{
 			outfix->type = underwater_msgs::USBLFix::AZIMUTH_ONLY;
 		}

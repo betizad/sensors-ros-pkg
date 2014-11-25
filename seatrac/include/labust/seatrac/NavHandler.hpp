@@ -89,6 +89,8 @@ namespace labust
 			tf2_ros::TransformListener listener;
 			///Remote depth variable
 			double exDepth;
+			///Use vehicle AHRS
+			bool useVehicleAHRS;
 		};
 	}
 }
