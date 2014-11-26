@@ -2,39 +2,46 @@
 #define IMUCOMPLEMENTARYQUATERNIONFILTER_HPP_
 
 #include <ros/ros.h>
-#include <Eigen/Dense>
 #include <vector>
+#include <Eigen/Dense>
+
 
 namespace labust 
 {
   namespace sensors 
   {
     /**
-    * This class implements the complementary quaternion-based IMU filter designed by SOH Madgwick.
+    * This class implements the complementary quaternion-based IMU filter 
+    * based on paper by SOH Madgwick.
+    * Paper: http://www.x-io.co.uk/res/doc/madgwick_internal_report.pdf
     */
     class ImuComplementaryQuaternionFilter {
 
       public:
         /**
-         * Main constructor
+         * Main constructor.
+         *  node_count - number of nodes (IMUs);
+         *  dT - sampling period;
+         *  beta - filter coefficient, consult paper for details;
+         *  gyro_gain - scaling factor for converting gyro data to rad/s.
          */
-        ImuComplementaryQuaternionFilter(const int num_nodes, const double dT, const double beta, const double gyro_gain);
+        ImuComplementaryQuaternionFilter(const int node_count, const double dT, const double beta, const double gyro_gain);
+        
         /**
          * Generic destructor.
          */
         ~ImuComplementaryQuaternionFilter();
         
         void processFrame(const Eigen::MatrixXd data);
-        std::vector<std::vector<double> > getQuaternionOrientation();
-        void printQuaternionOrientation();
+        std::vector<Eigen::Quaternion<double> > getQuaternionOrientation();
 
       private:
         void initialOrientation(const Eigen::MatrixXd data);
         const double dT, fs;
         const double beta, gyro_gain;
-        const int num_nodes;
+        const int node_count;
         bool is_initialized;
-        std::vector<std::vector<double> > q;
+        std::vector<Eigen::Quaternion<double> > q;
     };
   }
 }
