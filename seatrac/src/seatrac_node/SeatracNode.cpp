@@ -242,7 +242,7 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 		underwater_msgs::ModemTransmission::Ptr outmodem(
 				new underwater_msgs::ModemTransmission());
 		outmodem->receiver = transponderId;
-		//outmodem->action = underwater_msgs::ModemTransmission::PAYLOAD_DATA;
+		outmodem->action = underwater_msgs::ModemTransmission::SEND_DATA;
 
 		uint8_t sender;
 		inSer >> sender;

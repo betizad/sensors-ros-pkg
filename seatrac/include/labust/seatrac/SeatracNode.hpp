@@ -143,7 +143,6 @@ namespace labust
 			/// The ping lock mutex
 			boost::mutex pingLock;
 
-
 			/**
 			 * The worker thread.
 			 */

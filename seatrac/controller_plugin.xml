@@ -1,0 +1,9 @@
+<library path="lib/libseatrac_sdk">
+	<class type="labust::seatrac::USBLController" 
+	    base_class_type="labust::seatrac::DeviceController">
+		<description>
+			The generic USBL/Modem controller with auto/manual interrogate 
+			option and multi-id tracking.
+		</description>
+	</class>
+</library>

@@ -10,6 +10,12 @@
 	    <var type="uint8_t" name="beacon_id" />
 	</struct>	
 	
+	<struct name="DataSendResp">
+        <enum name="CID" value="0x60" />
+	    <var type="uint8_t" name="status" />
+	    <var type="uint8_t" name="beacon_id" />
+	</struct>
+	
 	<struct name="PingReq" inherit="SeatracMessage">
 	    <enum name="CID" value="0x41" />
 	    <var type="AcoFix" name="acofix" />

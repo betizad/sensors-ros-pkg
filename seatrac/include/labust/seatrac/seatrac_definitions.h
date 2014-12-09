@@ -31,8 +31,8 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef SEATRAC_SEATRACDEFINITIONS_H
-#define SEATRAC_SEATRACDEFINITIONS_H
+#ifndef SEATRACDEFINITIONS_HPP_
+#define SEATRACDEFINITIONS_HPP_
 
 namespace labust
 {
@@ -46,7 +46,7 @@ namespace labust
 				 * One-Way messages may also be broadcast to all beacons if required.
 				 * No USBL information is sent.
 				 */
-				msg_oway = 0,
+				MSG_OWAY = 0,
 				/**
 				 * Indicates an acoustic message is sent One-Way, and does not require a response.
 				 * One-Way messages may also be broadcast to all
@@ -54,32 +54,32 @@ namespace labust
 				 * acoustic information allowing an incoming bearing to be determined by USBL receivers,
 				 * although range cannot be provided.
 				 */
-				msg_owayu,
+				MSG_OWAYU,
 				/**
 				 * Indicates an acoustic message is sent as a Request type. This requires the
 				 * receiver to generate and return a Response (MSG_RESP) message.
 				 * No USBL information is requested.
 				 */
-				msg_req,
+				MSG_REQ,
 				/**
 				 * Indicate an acoustic message is sent as a Response to a previous Request message
 				 * (MSG_REQ). No USBL information is returned.
 				 */
-				msg_resp,
+				MSG_RESP,
 				/**
 				 * Indicates an acoustic message is sent as a Request type. This requires the receiver to
 				 * generate and return a Response (MSG_RESP)	message. Additionally, the Response message
 				 * should be returned with USBL acoustic information allowing a position fix to be computed
 				 * by USBL receivers through the range and incoming signal angle.
 				 */
-				msg_requ,
+				MSG_REQU,
 				/**
 				 * Indicate an acoustic message is sent as a Response to a previous Request message
 				 * (MSG_REQ). Additionally, the message is sent with USBL	acoustic information
 				 * allowing the position of the sender to be determined through the range and incoming
 				 * signal angle.
 				 */
-				msg_respu,
+				MSG_RESPU,
 				/**
 				 * Indicates an acoustic message is sent as a Request type. This requires the
 				 * receiver to generate and return a Response (MSG_RESP) message.	Additionally,
@@ -87,7 +87,7 @@ namespace labust
 				 * information allowing a more accurate position fix to be computed by USBL
 				 * receivers through the range, remote depth and incoming signal angle.
 				 */
-				msg_reqx,
+				MSG_REQX,
 				/**
 				 * Indicate an acoustic message is sent as a Response to a previous Request
 				 * message (MSG_REQ). Additionally, the message is sent with extended depth
@@ -95,7 +95,7 @@ namespace labust
 				 * sender to be determined through the range, remote depth and incoming
 				 * signal	angle.
 				 */
-				msg_respx,
+				MSG_RESPX,
 			};
 		};
 
@@ -193,5 +193,5 @@ namespace labust
 	}
 }
 
-/* SEATRACDEFINITIONS_H */
+/* SEATRACDEFINITIONS_HPP_ */
 #endif

@@ -45,6 +45,11 @@ def create_messages(xmlroot, prefix, folder = ''):
 
         '''Add automatic inheritance and virtual method implementations'''
         s.sinherit = 'SeatracMessage'
+        #Ptr typedef
+        t = ('boost::shared_ptr< ' + s.sname +' > ', 'Ptr')     
+        s.stypedefs.append(t)  
+        t = ('boost::shared_ptr< ' + s.sname +' const > ', 'ConstPtr') 
+        s.stypedefs.append(t)  
         #get_cid function
         f = Function()
         f.fname = 'getCid'

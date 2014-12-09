@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   tf2_ros
   pluginlib
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -70,6 +71,11 @@ find_package(Boost REQUIRED COMPONENTS system thread serialization)
 #   Action2.action
 # )
 
+## Generate dynamic reconfigurations in the 'cfg' folder
+generate_dynamic_reconfigure_options( 
+  cfg/USBLControllerCfg.cfg
+)
+
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
@@ -110,6 +116,7 @@ add_library(seatrac_sdk
    src/seatrac_sdk/seatrac_serial.cpp
    src/seatrac_sdk/seatrac_factory.cpp
    src/seatrac_node/status_listener.cpp
+   src/seatrac_node/usbl_controller.cpp
    src/seatrac_sdk/serialization.cpp
    src/seatrac_sdk/seatrac_sim.cpp
 )

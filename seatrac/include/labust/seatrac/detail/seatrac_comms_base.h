@@ -58,7 +58,7 @@ namespace labust
 			{
 			public:
 				///Message callback type definition
-				typedef boost::function<void(const SeatracMessage::ConstPtr&)> CallbackType;
+				typedef boost::function<bool(const SeatracMessage::ConstPtr&)> CallbackType;
 				///Pointer to a SeatracComms instance
 				typedef boost::shared_ptr<SeatracCommsBase<Configurator> > Ptr;
 

@@ -34,6 +34,7 @@
 #ifndef SEATRAC_SEATRACCORE_H
 #define SEATRAC_SEATRACCORE_H
 #include <labust/seatrac/seatrac_comms.h>
+#include <labust/seatrac/device_controller.h>
 #include <labust/seatrac/message_listener.h>
 #include <pluginlib/class_loader.h>
 
@@ -70,13 +71,21 @@ namespace labust
 			///Helper function for plugin setup
 			void setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph);
 			///Function handler
-			void incomingMsg(const SeatracMessage::ConstPtr& msg);
+			bool incomingMsg(const SeatracMessage::ConstPtr& msg);
+			///Function handler
+			bool outgoingMsg(const SeatracMessage::ConstPtr& msg);
 
 			//Communication layer
 			///Comms loader
 			pluginlib::ClassLoader<SeatracComms> comms_loader;
 			///Comms handle
 			SeatracComms::Ptr comms;
+
+			//Controller and listener layer
+			///Comms loader
+			pluginlib::ClassLoader<DeviceController> control_loader;
+			///Comms handle
+			DeviceController::Ptr controller;
 
 			///Listeners loader
 			pluginlib::ClassLoader<MessageListener> listener_loader;

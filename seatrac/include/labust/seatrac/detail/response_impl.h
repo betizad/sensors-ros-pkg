@@ -23,6 +23,18 @@ bool PingSendResp::unpack(const SeatracMessage::DataBuffer& in)
 
 
 
+bool DataSendResp::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DataSendResp::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
 bool PingReq::pack(SeatracMessage::DataBuffer& out) const
 {
   return seatrac_serialize(this, out);

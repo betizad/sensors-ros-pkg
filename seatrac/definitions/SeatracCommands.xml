@@ -6,6 +6,13 @@
 	    <var type="uint8_t" name="msg_type" />
 	</struct>
 	
+    <struct name="DataSendCmd">
+        <enum name="CID" value="0x60" />
+	    <var type="uint8_t" name="dest" />
+	    <var type="uint8_t" name="msg_type" />
+	    <var type="PayloadType" name="data" />
+	</struct>
+	
     <struct name="StatusCmd">
         <enum name="CID" value="0x10" />
 	    <var type="StatusBits" name="status_output" />

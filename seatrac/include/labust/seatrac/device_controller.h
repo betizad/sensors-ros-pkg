@@ -31,59 +31,40 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRAC_MEDIATOR_H
-#define SEATRAC_MEDIATOR_H
+#ifndef SEATRAC_DEVICECONTROLLER_H
+#define SEATRAC_DEVICECONTROLLER_H
 #include <labust/seatrac/seatrac_messages.h>
-#include <labust/seatrac/seatrac_comms.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
+#include <labust/seatrac/message_listener.h>
+
+#include <map>
 
 namespace labust
 {
 	namespace seatrac
 	{
-		///Mediator type class to ease dynamic casting between pointers.
-		template <class CastType>
-		class Mediator
+		///Base class for Seatrac messages listeners.
+		class DeviceController : public virtual MessageListener
 		{
-			typedef boost::function<void(CastType)> CallbackFunc;
-			typedef boost::shared_ptr<CastType const> CastPtr;
-			typedef SeatracComms::CallbackType TopCallback;
-
 		public:
-			Mediator(const CallbackFunc& cl):funct(cl){};
+			///Registration map definition
+			typedef std::map<int, SeatracComms::CallbackType> RegisterMap;
+			///Shared pointer to instances
+			typedef boost::shared_ptr<DeviceController> Ptr;
 
-			inline bool operator()(const SeatracMessage::ConstPtr& msg)
-			{
-				CastPtr ptr = boost::shared_dynamic_cast<CastType const>(msg);
-				if (ptr != 0)
-				{
-					//Possibly do something here before callback call
-					funct(*ptr);
-				}
-				return true;
-			}
+			///Generic virtual destructor
+			virtual ~DeviceController(){};
 
-			TopCallback
-			static inline makeCallback(const CallbackFunc& cl)
-			{
-				return boost::bind(&Mediator<CastType>::operator(),
-						Mediator<CastType>(cl),_1);
-			}
+			///Register callback for message forwarding
+			virtual void registerCallback(const SeatracComms::CallbackType& callback) = 0;
 
-		private:
-			CallbackFunc funct;
+			///Start the device controller
+			virtual void start(){};
+
+			///Stop the device controller
+			virtual void stop(){};
 		};
-
-		template <class Type>
-		boost::function<void(const SeatracMessage::ConstPtr&)>
-		getcallback(const Type& med)
-		{
-			return boost::bind(&Type::operator(),med,_1);
-		}
 	}
 }
 
-/* SEATRAC_MEDIATOR_H */
+/* SEATRAC_DEVICECONTROLLER_H */
 #endif

@@ -50,6 +50,12 @@ namespace labust
 		 */
 		class SeatracSim : public virtual SeatracComms
 		{
+			enum
+			{
+				IDLE=0,
+				WAIT_PING_REPLY,
+				WAIT_DATA_REPLY
+			};
 		public:
 			/**
 			 * Main constructor
@@ -82,6 +88,13 @@ namespace labust
 			///Medium transmission handler
 			void onMediumTransmission(const
 				underwater_msgs::MediumTransmission::ConstPtr& msg);
+			///Helper method for received Pings
+			void processPingCmd(const
+				underwater_msgs::MediumTransmission::ConstPtr& msg);
+			///Helper method for received Data
+			void processDataCmd(const
+							underwater_msgs::MediumTransmission::ConstPtr& msg);
+
 
 			///Device position subscriber
 			ros::Subscriber navsts;
@@ -89,11 +102,23 @@ namespace labust
 			ros::Subscriber medium_in;
 			///Outgoing data to medium
 			ros::Publisher medium_out;
+			///Muxer for the publisher
+			boost::mutex medium_mux;
 
 			///The message callback
 			CallbackType callback;
 			///Muxer for the callback
 			boost::mutex callback_mux;
+
+			///The internal simulator state (default: IDLE)
+			int state;
+			///Expected reply source id (default: 0)
+			int expected_id;
+			///The simulated node ID (default: 1)
+			int node_id;
+			///The simulated ping duration (default: 0.65)
+			double ping_duration;
+
 		};
 	}
 }

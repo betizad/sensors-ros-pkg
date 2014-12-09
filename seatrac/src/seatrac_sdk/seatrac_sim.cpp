@@ -40,16 +40,25 @@
 
 using namespace labust::seatrac;
 
-SeatracSim::SeatracSim(){}
+SeatracSim::SeatracSim():
+	state(IDLE),
+	expected_id(0),
+	node_id(1),
+	ping_duration(0.7){}
 
 bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+	ph.param("sim_node_id", node_id, node_id);
+	ph.param("sim_ping_duration", ping_duration, ping_duration);
+
 	navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
 			&SeatracSim::onNavSts, this);
 	medium_in = nh.subscribe<underwater_msgs::MediumTransmission>("medium_in", 1,
 			&SeatracSim::onMediumTransmission, this);
 
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_out",1);
+
+	//Register to medium with node id, navsts topic name, etc.
 
 	return true;
 }
@@ -76,6 +85,25 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 
 bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 {
+	if (msg->getCid() == PingSendCmd::CID)
+	{
+		PingSendCmd::ConstPtr cmd = boost::dynamic_pointer_cast<PingSendCmd const>(msg);
+
+		underwater_msgs::MediumTransmission::Ptr tomedium;
+		tomedium->header.stamp = ros::Time::now();
+		tomedium->sender = this->node_id;
+		tomedium->receiver = cmd->dest;
+		tomedium->duration = ping_duration;
+
+		//Pack ping and send
+		SeatracMessage::DataBuffer buf;
+		msg->pack(buf);
+		tomedium->message.assign(buf.begin(), buf.end());
+
+		//Start internal wait for ping reply thread
+		expected_id = cmd->dest;
+		state = WAIT_PING_REPLY;
+	}
 
 	return true;
 }
@@ -88,9 +116,39 @@ bool SeatracSim::resend()
 void SeatracSim::onMediumTransmission(const
 				underwater_msgs::MediumTransmission::ConstPtr& msg)
 {
-
+	//Throw dice if we will have a CRC error
+	//Dispatch message based on CID (PING, DATA)
 }
 
+void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg)
+{
+	if (state == IDLE)
+	{
+		//Reply on ping command
+		underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
+		rep->sender = node_id;
+		rep->receiver = msg->sender;
+		rep->duration = ping_duration;
+		rep->message.push_back(0xFF);
+
+		//Create PING_REQ message and send to callback
+		boost::mutex::scoped_lock l(medium_mux);
+		medium_out.publish(rep);
+	}
+	else if (state == WAIT_PING_REPLY)
+	{
+		if (msg->sender == expected_id)
+		{
+			//Stop timeout waiting condition.
+			//Handle ping reply
+			//Create the PING_RESP and send navigation data
+		}
+		else
+		{
+			//Send PING_ERROR with XCVR_RESP_WRONG
+		}
+	}
+}
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::SeatracSim, labust::seatrac::SeatracComms)
 

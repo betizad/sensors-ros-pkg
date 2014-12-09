@@ -119,6 +119,16 @@ ar & object.dest;
 ar & object.msg_type;
 }}};
 
+BOOST_CLASS_IMPLEMENTATION(labust::seatrac::DataSendCmd, boost::serialization::object_serializable)
+namespace boost { namespace serialization {
+template<class Archive>
+void serialize(Archive& ar, labust::seatrac::DataSendCmd& object, const unsigned int version)
+{
+ar & object.dest;
+ar & object.msg_type;
+ar & object.data;
+}}};
+
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::StatusCmd, boost::serialization::object_serializable)
 namespace boost { namespace serialization {
 template<class Archive>
@@ -139,6 +149,15 @@ BOOST_CLASS_IMPLEMENTATION(labust::seatrac::PingSendResp, boost::serialization::
 namespace boost { namespace serialization {
 template<class Archive>
 void serialize(Archive& ar, labust::seatrac::PingSendResp& object, const unsigned int version)
+{
+ar & object.status;
+ar & object.beacon_id;
+}}};
+
+BOOST_CLASS_IMPLEMENTATION(labust::seatrac::DataSendResp, boost::serialization::object_serializable)
+namespace boost { namespace serialization {
+template<class Archive>
+void serialize(Archive& ar, labust::seatrac::DataSendResp& object, const unsigned int version)
 {
 ar & object.status;
 ar & object.beacon_id;
