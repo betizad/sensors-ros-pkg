@@ -49,9 +49,16 @@ USBLController::USBLController():
 	timeout(2.0),
 	nextId(0)
 {
-	//registrations[StatusResp::CID] = Mediator<StatusResp>::makeCallback(
-	//		boost::bind(&StatusListener::onStatus,this,_1));
+	registrations[PingError::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
+	registrations[PingSendResp::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
+	registrations[PingResp::CID] = boost::bind(&USBLController::onPingReplies,this,_1);
 }
+
+USBLController::~USBLController()
+{
+	this->stop();
+}
+
 bool USBLController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	//Configure desired outputs and rate
@@ -98,9 +105,8 @@ void USBLController::start()
 void USBLController::stop()
 {
 	ROS_INFO("Stopping auto-interrogation.");
-	this->is_busy = false;
 	this->auto_mode = false;
-	ping_condition.notify_all();
+	this->unlock();
 	if (worker.joinable()) worker.join();
 }
 
@@ -230,6 +236,60 @@ void USBLController::autorun()
 		l.unlock();
 		sendPkg();
 	}
+}
+
+void USBLController::unlock()
+{
+	boost::mutex::scoped_lock lock(ping_mux);
+	is_busy = false;
+	ping_condition.notify_one();
+}
+
+bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
+{
+	bool unlock(false);
+	uint8_t cid = msg->getCid();
+
+	if (cid == PingError::CID)
+	{
+		const PingError::ConstPtr err(
+				boost::dynamic_pointer_cast<PingError const>(msg));
+		ROS_ERROR("USBLController: ping error code: %x", err->status);
+		unlock = true;
+	}
+	else if (cid == PingSendResp::CID)
+	{
+		const PingSendResp::ConstPtr resp(
+				boost::dynamic_pointer_cast<PingSendResp const>(msg));
+		ROS_ERROR("USBLController: ping error code: %x", resp->status);
+		unlock = (resp->status != CST::OK);
+	}
+	else
+	{
+		ROS_WARN("USBLController::onPingErrors : unhandled CID=%x",cid);
+	}
+
+	if (unlock) this->unlock();
+
+	return true;
+}
+
+bool USBLController::onPingReplies(const SeatracMessage::ConstPtr& msg)
+{
+	bool unlock(false);
+	uint8_t cid = msg->getCid();
+
+	if (cid == PingResp::CID)
+	{
+		ROS_INFO("USBLController: Ping response received.");
+	}
+	else
+	{
+		ROS_WARN("USBLController::onPingReplies : unhandled CID=%x",cid);
+	}
+
+	this->unlock();
+	return true;
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::USBLController, labust::seatrac::DeviceController)

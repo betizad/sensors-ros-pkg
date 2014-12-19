@@ -61,6 +61,8 @@ namespace labust
 			 * Main constructor
 			 */
 			SeatracSim();
+			///Default destructor
+			~SeatracSim();
 			/**
 			 * Configures the serial port based on the ROS node handle.
 			 */
@@ -94,7 +96,63 @@ namespace labust
 			///Helper method for received Data
 			void processDataCmd(const
 							underwater_msgs::MediumTransmission::ConstPtr& msg);
+			///Helper method for USBL loop
+			void onUSBLTimeout(const ros::TimerEvent& e);
 
+			///Helper function for medium message sending
+			inline void sendToMedium(underwater_msgs::MediumTransmission::Ptr& msg)
+			{
+				//Attach current state to message
+				boost::mutex::scoped_lock l(position_mux);
+				msg->position = navstate;
+				l.unlock();
+				//Publish message
+				medium_out.publish(msg);
+			}
+
+			inline void sendMessage(const SeatracMessage::ConstPtr& msg)
+			{
+				boost::mutex::scoped_lock l(callback_mux);
+				if (callback) callback(msg);
+			}
+
+			inline void startTimer(double wait_time)
+			{
+				sleeper.setPeriod(ros::Duration(wait_time));
+				sleeper.start();
+			}
+
+			inline void fillAcoFix(AcoFix& acfix)
+			{
+				acfix.vos = vos;
+				boost::mutex::scoped_lock l(position_mux);
+				acfix.attitude[Status::ROLL] = navstate.orientation.roll*Status::ATT_SC;
+				acfix.attitude[Status::PITCH] = navstate.orientation.pitch*Status::ATT_SC;
+				acfix.attitude[Status::YAW] = navstate.orientation.yaw*Status::ATT_SC;
+				acfix.depth_local = navstate.position.depth;
+			}
+
+			///Helper method to make state behave as atomic
+			inline int getState()
+			{
+				boost::mutex::scoped_lock ls(state_mux);
+				return state;
+			}
+			///Helper method to set state
+			inline void setState(int state)
+			{
+				boost::mutex::scoped_lock ls(state_mux);
+				this->state = state;
+			}
+
+			template <class Type>
+			inline void sendError(int error)
+			{
+				typename Type::Ptr err(new Type());
+				err->status = error;
+				err->beacon_id = node_id;
+				this->sendMessage(boost::dynamic_pointer_cast<SeatracMessage const>(err));
+			}
 
 			///Device position subscriber
 			ros::Subscriber navsts;
@@ -109,6 +167,12 @@ namespace labust
 			CallbackType callback;
 			///Muxer for the callback
 			boost::mutex callback_mux;
+			///Muxer for the node position
+			boost::mutex position_mux;
+			///Internal state muxer
+			boost::mutex state_mux;
+			///USBL timeout thread
+			ros::Timer sleeper;
 
 			///The internal simulator state (default: IDLE)
 			int state;
@@ -118,7 +182,14 @@ namespace labust
 			int node_id;
 			///The simulated ping duration (default: 0.65)
 			double ping_duration;
-
+			///The maximum distance (default: 500)
+			double max_distance;
+			///The speed of sound (default: 1500)
+			double vos;
+			///The simulation timeout overhead (default: 0.1)
+			double time_overhead;
+			///The node position and attitude
+			auv_msgs::NavSts navstate;
 		};
 	}
 }

@@ -66,58 +66,6 @@ void SeatracCore::onInit()
 	{
 		ROS_ERROR("SeatracCore::onInit(): Exception caught: %s", e.what());
 	}
-
-
-	/*
-	std::string portName("/dev/ttyUSB0");
-	int baud(115200);
-	ph.param("PortName",portName,portName);
-	ph.param("Baud",baud,baud);
-
-	ros::Rate r(1);
-	bool setupOk(false);
-	while (!(setupOk = comms.connect(portName, baud)) && ros::ok())
-	{
-		ROS_ERROR("SeaTracNode::Failed to open port.");
-		r.sleep();
-	}
-
-	if (setupOk)
-	{
-		ph.param("auto_mode",autoMode,autoMode);
-		ph.param("master",isMaster,isMaster);
-		///\todo Add automatic detection of capabilities
-		ph.param("usbl",isUsbl,isUsbl);
-		ph.param("timeout",ping_timeout,ping_timeout);
-		ph.param("id", transponderId, transponderId);
-		ph.param("only_ack", onlyAck, onlyAck);
-		///\todo remove this hardcoded part and replace with configuration
-		if (transponderId == 1) trackId.push_back(2);
-		else trackId.push_back(1);
-
-		//Register message handlers
-		dispatch[CID_XCVR::fix] = boost::bind(&NavHandler::operator(), &nav,_1,_2);
-		dispatch[CID_STATUS::status] = boost::bind(&StatusHandler::operator(), &stats,_1,_2);
-
-		dataSub = nh.subscribe<underwater_msgs::ModemTransmission>("outgoing_data",
-				0, &SeaTracNode::onOutgoing,this);
-		dataSubBW = nh.subscribe<std_msgs::String>("outgoing_data_bw",
-						0, &SeaTracNode::onOutgoingBW,this);
-		opMode = nh.subscribe<std_msgs::Bool>("auto_mode",	0,
-				&SeaTracNode::onAutoMode,this);
-		dataPub = nh.advertise<underwater_msgs::ModemTransmission>("incoming_data",1);
-		dataPubBW = nh.advertise<std_msgs::String>("incoming_data_bw",1);
-		allMsg = nh.advertise<std_msgs::UInt8MultiArray>("all_msgs",1);
-		usblTimeout = nh.advertise<std_msgs::Bool>("usbl_timeout",1);
-		remoteDepth = nh.advertise<std_msgs::Float32>("remote_depth",1);
-
-		this->start();
-
-		//Register main callback
-		comms.registerCallback(
-				boost::bind(&SeaTracNode::incomingMsg, this, _1, _2));
-	}
-	 */
 }
 
 void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
@@ -135,6 +83,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	//Configure controller
 	ph.param("controller_plugin", conplug, conplug);
 	controller = control_loader.createInstance(conplug);
+	addRegistrationMap(controller->getRegistrations());
 	if ((controller == 0) || !controller->configure(nh, ph))
 		throw std::runtime_error("SeatracCore: Controller configuration failed.");
 	controller->registerCallback(boost::bind(&SeatracCore::outgoingMsg, this, _1));
@@ -159,14 +108,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			//Add listener
 			listeners.push_back(ltemp);
 			//Add callbacks
-			const MessageListener::RegisterMap& lmap = ltemp->getRegistrations();
-			for(MessageListener::RegisterMap::const_iterator it = lmap.begin();
-					it != lmap.end();
-					++it)
-			{
-				callbacks[it->first].push_back(it->second);
-			}
-
+			addRegistrationMap(ltemp->getRegistrations());
 			ROS_INFO("Listener plugin: '%s' loaded", listener_list[i].c_str());
 		}
 		catch (std::exception& e)
@@ -176,6 +118,16 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	}
 
 	ROS_INFO(" loaded.");
+}
+
+void SeatracCore::addRegistrationMap(const MessageListener::RegisterMap& lmap)
+{
+	for(MessageListener::RegisterMap::const_iterator it = lmap.begin();
+			it != lmap.end();
+			++it)
+	{
+		callbacks[it->first].push_back(it->second);
+	}
 }
 
 

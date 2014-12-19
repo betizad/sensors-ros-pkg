@@ -60,6 +60,8 @@ namespace labust
 		public:
 			///Main constructor
 			USBLController();
+			///Default destructor
+			~USBLController();
 
 			///Listener configuration.
 			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
@@ -98,7 +100,12 @@ namespace labust
 					uint8_t msgtype);
 			///Helper method for message assembly
 			SeatracMessage::Ptr makePingCmd(const underwater_msgs::ModemTransmission::ConstPtr& msg);
-
+			///Helper method for handling returned errors
+			bool onPingErrors(const SeatracMessage::ConstPtr& msg);
+			///Helper method for handling returned messages
+			bool onPingReplies(const SeatracMessage::ConstPtr& msg);
+			///Helper method for unlocking the waiting condition.
+			void unlock();
 			///The timeout indicator publisher
 			ros::Publisher usbl_timeout;
 			///The modem transmission request subscription.

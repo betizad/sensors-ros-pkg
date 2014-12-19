@@ -74,6 +74,8 @@ namespace labust
 			bool incomingMsg(const SeatracMessage::ConstPtr& msg);
 			///Function handler
 			bool outgoingMsg(const SeatracMessage::ConstPtr& msg);
+			///Helper function for registrations
+			void addRegistrationMap(const MessageListener::RegisterMap& lmap);
 
 			//Communication layer
 			///Comms loader

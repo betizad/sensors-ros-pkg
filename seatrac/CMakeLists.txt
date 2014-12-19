@@ -125,6 +125,7 @@ add_library(seatrac_sdk
 ## Declare a cpp executable
 add_executable(seatrac_serialization_test src/test/serialization_test.cpp)
 add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
+add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
 add_executable(seatrac_node 
     src/seatrac_node/SeatracNode.cpp
     src/seatrac_node/NavHandler.cpp
@@ -174,6 +175,10 @@ target_link_libraries(seatrac_factory_tester
    ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARY}
    seatrac_sdk
+)
+
+target_link_libraries(ac_medium_sim
+   ${catkin_LIBRARIES}
 )
 
 

@@ -31,8 +31,8 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef SEATRACDEFINITIONS_HPP_
-#define SEATRACDEFINITIONS_HPP_
+#ifndef SEATRAC_SEATRACDEFINITIONS_H
+#define SEATRAC_SEATRACDEFINITIONS_H
 
 namespace labust
 {
@@ -180,8 +180,17 @@ namespace labust
 		namespace CST
 		{
 			enum{
-				ok = 0,
-				xcvr_busy = 0x30
+				OK = 0
+			};
+
+			namespace XCVR
+			{
+				enum{
+					BUSY = 0x30,
+					RESP_TIMEOUT = 0x34,
+					RESP_WRONG = 0x36
+				};
+
 			};
 		}
 
@@ -193,5 +202,5 @@ namespace labust
 	}
 }
 
-/* SEATRACDEFINITIONS_HPP_ */
+/* SEATRAC_SEATRACDEFINITIONS_H */
 #endif
