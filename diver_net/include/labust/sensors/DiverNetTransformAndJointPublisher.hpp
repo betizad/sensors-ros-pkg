@@ -89,13 +89,13 @@ namespace labust
 			/**
 			 * Handle net init.
 			 */
-			void onNetInit(const std_msgs::Bool::ConstPtr& init);
+			void calibratePose(const std_msgs::Bool::ConstPtr& calibrate);
 
 			/**
 			 * The ROS publisher.
 			 */
 			ros::Publisher rawData, jointsPub, rpyData, breathingBelt;
-                        ros::Subscriber rpy;
+      ros::Subscriber rpy, calibrate;
 			/**
 			 * The transform broadcaster.
 			 */
@@ -115,8 +115,10 @@ namespace labust
 			/**
 			 * The calibration and zero state values.
 			 */
-			Eigen::MatrixXd offset, zeroState, currentMeas;
-			/**
+			Eigen::MatrixXd zeroState;
+			std::vector<Eigen::Quaternion<double> > zeroStateQ, currentMeasQ, offsetQ;
+      bool isCalibrated;
+      /**
 			 * Joint names connected to IMU numbers.
 			 * \todo Consider if a map is better option ?
 			 */
@@ -125,7 +127,7 @@ namespace labust
 			 * Data mutex.
 			 */
 			boost::mutex dataMux;
-                        std::string _rpy_topic;
+      std::string _rpy_topic;
 		};
 	}
 }

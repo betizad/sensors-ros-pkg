@@ -13,7 +13,7 @@ DiverNetFilterNode::DiverNetFilterNode():
     data_per_node(18),
     rpy_raw(new std_msgs::Float64MultiArray()),
     rpy_filtered(new std_msgs::Float64MultiArray()), 
-    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.18, 2000.0 * M_PI/180)) {
+    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.25, 2000.0 * M_PI/180)) {
   this->onInit();
 }
 
@@ -51,10 +51,10 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
   filter->processFrame(raw);
   std::vector<Eigen::Quaternion<double> > q = filter->getQuaternionOrientation();
   for (int i=0; i<node_count; ++i) {
-    double q0 = q[i].w();
-    double q1 = q[i].x();
-    double q2 = q[i].y();
-    double q3 = q[i].z();
+    const double q0 = q[i].w();
+    const double q1 = q[i].x();
+    const double q2 = q[i].y();
+    const double q3 = q[i].z();
     
     rpy_filtered->data[3*i] = atan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2));
     rpy_filtered->data[3*i+1] = asin(2.0 * (q0 * q2 - q3 * q1));
