@@ -13,7 +13,7 @@ DiverNetFilterNode::DiverNetFilterNode():
     data_per_node(18),
     rpy_raw(new std_msgs::Float64MultiArray()),
     rpy_filtered(new std_msgs::Float64MultiArray()), 
-    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.25, 2000.0 * M_PI/180)) {
+    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.45, 2000.0 * M_PI/180)) {
   this->onInit();
 }
 

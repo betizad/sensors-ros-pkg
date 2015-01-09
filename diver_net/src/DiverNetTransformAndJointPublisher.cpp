@@ -69,7 +69,7 @@ void DiverNetTransformAndJointPublisher::configureNet() {
   
   //Setup zero state - Should be a configuration option
   //T-pose
-  zeroState<<M_PI, 0.0, M_PI/2,	//"right_shoulder"
+/*  zeroState<<M_PI, 0.0, M_PI/2,	//"right_shoulder"
       M_PI/2, 0.0, M_PI/2,  		//"right_upper_arm"
       0.0, 0.0, 0.0,		        //"right_forearm"
       0.0, -M_PI/2, M_PI,	      //"head"
@@ -89,14 +89,41 @@ void DiverNetTransformAndJointPublisher::configureNet() {
       -M_PI/2, 0.0, 0.0,	      //"right_calf"
       0.0, -M_PI/2, 0.0,	      //"right_foot"
       0.0, 0.0, 0.0;		        //"placeholder_3"
+*/
+  /// poza s rukama ispred//s abs
+  zeroState<<0.0, 0.0, 0.0,   //"right_shoulder"
+      0.0, 0.0, 0.0,          //"right_upper_arm"
+      0.0, 0.0, 0.0,    //"right_forearm"
+      0.0, 0.0, 0.0,  //"head"
+      0.0, 0.0, 0.0,    //"right_hand"
+      0.0, 0.0, -0.0,   //"left_shoulder"
+      0.0, 0.0, 0.0,    //"left_upper_arm"
+      0.0, 0.0, 0.0,    //"left_forearm"
+      0.0, 0.0, 0.0,    //"left_hand"
+      -M_PI, -M_PI/2, 0.0,          //"upper_body"
+      0.0, 0.0, 0.0,    //"placehodler_1"
+      -0.0, 0.0, 0.0, //"left_foot"
+      -M_PI/2, M_PI/2, M_PI,    //"left_calf"
+      0.0, M_PI/2, M_PI/2,  //"left_thigh"
+      0.0, -M_PI/2,0.0, //"lower_back"
+      0.0, 0.0, 0.0,    //"placeholder_2"
+      -M_PI/2, M_PI/2, -M_PI, //"right_thigh"
+      -M_PI/2, M_PI/2, -M_PI/2, //"right_calf"
+      0.0, 0.0, 0.0,  //"right_foot"
+      0.0, 0.0, 0.0;    //"placeholder_3"
 }
 
 void DiverNetTransformAndJointPublisher::calibratePose(const std_msgs::Bool::ConstPtr& calibrate) {
 	if (calibrate->data) {
     boost::mutex::scoped_lock l(dataMux);
+    Eigen::Quaternion<double> q;
+    double r, p, y;
+    labust::tools::eulerZYXFromQuaternion<Eigen::Quaternion<double> > (currentMeasQ[3], r, p, y);
+    labust::tools::quaternionFromEulerZYX(0, 0, y, q);
     for (int i=0; i<nodeCount; ++i) {
       labust::tools::quaternionFromEulerZYX(zeroState(i,0), zeroState(i,1), zeroState(i,2), zeroStateQ[i]);
-      offsetQ[i] = currentMeasQ[i].inverse() * zeroStateQ[i];     
+      zeroStateQ[i] = q * zeroStateQ[i];
+      offsetQ[i] = currentMeasQ[i].inverse() * zeroStateQ[i];
     }	
     isCalibrated = true;
 	}
@@ -118,12 +145,21 @@ void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msg
     transforms[i].transform.translation.y = 0;
     transforms[i].transform.translation.z = 0;
 
+    Eigen::Quaternion<double> q;
+
     labust::tools::quaternionFromEulerZYX(
         rpy->data[3*i], 
         rpy->data[3*i+1],
         rpy->data[3*i+2],
-        transforms[i].transform.rotation);
-
+        q);
+    currentMeasQ[i] = q;
+    if (isCalibrated) q = q * offsetQ[i];
+    
+    transforms[i].transform.rotation.w = q.w();
+    transforms[i].transform.rotation.x = q.x();
+    transforms[i].transform.rotation.y = q.y();
+    transforms[i].transform.rotation.z = q.z();
+    
     transforms[i].child_frame_id = "abs_" + names[i];
     transforms[i].header.frame_id = "local";
     transforms[i].header.stamp = ros::Time::now(); 
@@ -146,14 +182,7 @@ void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msg
             trans = tfbuffer.lookupTransform("local", "abs_"+names[i], ros::Time(0));
           }
         }
-        Eigen::Quaternion<double> q(
-            trans.transform.rotation.w,
-            trans.transform.rotation.x, 
-            trans.transform.rotation.y, 
-            trans.transform.rotation.z);
-        currentMeasQ[i] = q;
-        if (isCalibrated) q = q * offsetQ[i];
-        labust::tools::eulerZYXFromQuaternion(q, roll, pitch, yaw);
+        labust::tools::eulerZYXFromQuaternion(trans.transform.rotation, roll, pitch, yaw);
       }
 
       joints->name[3*i] = names[i] + "_x";
