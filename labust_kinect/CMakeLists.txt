@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   snippets
   tf2_ros
   sensors_util
+  cmake_modules
 )
 
 ## System dependencies are found with CMake's conventions
