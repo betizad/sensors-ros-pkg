@@ -18,36 +18,31 @@ DiverNetReadNode::DiverNetReadNode():
 							io(),
 							port(io),
 							ringBuffer(headerSize,0),
-							nodeCount(20)
-{
+							nodeCount(20) {
 	this->onInit();
 }
 
-DiverNetReadNode::~DiverNetReadNode()
-{
+DiverNetReadNode::~DiverNetReadNode() {
 	io.stop();
 	runner.join();
 }
 
-void DiverNetReadNode::onInit()
-{
+void DiverNetReadNode::onInit() {
 	ros::NodeHandle nh, ph("~");
 	ros::Rate r(1);
 	bool setupOk(false);
-	while (!(setupOk = this->setup_port()) && ros::ok())
-	{
+	while (!(setupOk = this->setup_port()) && ros::ok()) {
 		ROS_ERROR("DiverNetNode::Failed to open port.");
 		r.sleep();
 	}
 
 	//Setup publisher
-	rawData = nh.advertise<std_msgs::Int16MultiArray>("net_data",1);
-	breathingBelt = nh.advertise<std_msgs::Int16>("breathing_belt",1);
+	rawData = nh.advertise<std_msgs::Int16MultiArray>("net_data", 1);
+	breathingBelt = nh.advertise<std_msgs::Int16>("breathing_belt", 1);
 
-	netInit = nh.subscribe<std_msgs::Bool>("net_init",1,&DiverNetReadNode::onNetInit, this);
+	netInit = nh.subscribe<std_msgs::Bool>("net_init", 1, &DiverNetReadNode::onNetInit, this);
 
-	if (setupOk)
-	{
+	if (setupOk) {
 		ROS_INFO("DiverNet is connected.");
 		//Configure the device
 		this->configureNet();
@@ -57,26 +52,23 @@ void DiverNetReadNode::onInit()
 	}
 }
 
-void DiverNetReadNode::configureNet()
-{
+void DiverNetReadNode::configureNet() {
 	//Read number of nodes
 	ros::NodeHandle ph("~");
 	ph.param("node_count", nodeCount, nodeCount);
 	rawBuffer.resize(nodeCount * dataPerNode + crc + adc);
 }
 
-void DiverNetReadNode::start_receive()
-{
+void DiverNetReadNode::start_receive() {
 	using namespace boost::asio;
 	async_read(port, buffer.prepare(headerSize),
 			boost::bind(&DiverNetReadNode::onHeader, this, _1,_2));
 }
 
-bool DiverNetReadNode::setup_port()
-{
+bool DiverNetReadNode::setup_port() {
 	ros::NodeHandle ph("~");
 	std::string portName("/dev/ttyUSB0");
-	int baud(115200);
+	int baud(460800);
 
 	ph.param("PortName",portName,portName);
 	ph.param("Baud",baud,baud);
@@ -84,40 +76,30 @@ bool DiverNetReadNode::setup_port()
 	using namespace boost::asio;
 	port.open(portName);
 	port.set_option(serial_port::baud_rate(baud));
-	port.set_option(serial_port::flow_control(
-			serial_port::flow_control::none));
+	port.set_option(serial_port::flow_control(serial_port::flow_control::none));
 
 	return port.is_open();
 }
 
-void DiverNetReadNode::onHeader(const boost::system::error_code& e,
-		std::size_t size)
-{
-	if (!e)
-	{
+void DiverNetReadNode::onHeader(const boost::system::error_code& e, std::size_t size) {
+	if (!e) {
 		//std::cout<<"Header read size:"<<size<<std::endl;
 		buffer.commit(size);
-		if (size == 1)
-		{
+		if (size == 1) {
 			//Put the new byte on the end of the ring buffer
 			ringBuffer.push_back(buffer.sbumpc());
-		}
-		else
-		{
+		} else {
 			//Copy all data into the buffer
 			buffer.sgetn(reinterpret_cast<char*>(ringBuffer.data()),size);
 		}
 
 		//Check LRC
-		if (test_sync())
-		{
+		if (test_sync()) {
 			std::cout<<"Sync ok."<<std::endl;
 			boost::asio::async_read(port, boost::asio::buffer(rawBuffer),
 					boost::bind(&DiverNetReadNode::onData,this,_1,_2));
 			return;
-		}
-		else
-		{
+	  } else {
 			std::cout<<"Sync failed."<<std::endl;
 			ringBuffer.erase(ringBuffer.begin());
 			boost::asio::async_read(port,
@@ -125,16 +107,13 @@ void DiverNetReadNode::onHeader(const boost::system::error_code& e,
 					boost::bind(&DiverNetReadNode::onHeader,this,_1,_2));
 			return;
 		}
-	}
-	else
-	{
+	} else {
 		ROS_ERROR("DiverNetNode: %s",e.message().c_str());
 	}
 	this->start_receive();
 }
 
-bool DiverNetReadNode::test_sync()
-{
+bool DiverNetReadNode::test_sync() {
 	std::string header(reinterpret_cast<char*>(ringBuffer.data()),headerSize);
 
 	std::cout<<"SyncData:"<<header<<std::endl;
@@ -144,11 +123,9 @@ bool DiverNetReadNode::test_sync()
 }
 
 void DiverNetReadNode::onData(const boost::system::error_code& e,
-		std::size_t size)
-{
+		std::size_t size) {
 	//std::cout<<"Received data size:"<<size<<std::endl;
-	if (!e)
-	{
+	if (!e) {
 		//buffer.commit(size);
 		//std::istream is(&buffer);
 
@@ -178,8 +155,7 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
 		std::cout<<"CRC: "<<crc_test<<",";
 		std::cout<<256*uint8_t(rawBuffer[rawBuffer.size()-2])+uint8_t(rawBuffer[rawBuffer.size()-1])<<","<<result.checksum()<<std::endl;
 
-		if (true || (result.checksum() == crc_test))
-		{
+		if (true || (result.checksum() == crc_test)) {
 			//Process tested data
 			//This can be done better
 			std::cout<<"CRC ok."<<std::endl;
@@ -188,10 +164,8 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
 			Eigen::MatrixXd raw(nodeCount,9);
 
 			int elemCount = 9;
-			for (int i=0; i<nodeCount; ++i)
-			{
-				for (int e=0; e<elemCount; ++e)
-				{
+			for (int i=0; i<nodeCount; ++i) {
+				for (int e=0; e<elemCount; ++e) {
 					raw(i,e) = out->data[i*elemCount + e] = rawBuffer[2*e*nodeCount + i] +
 							256*rawBuffer[(2*e+1)*nodeCount + i];
 					raw(i,e) /= (1 << 15);
@@ -202,9 +176,7 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
                         out->data.push_back(bbelt->data);
                         breathingBelt.publish(bbelt);
 			rawData.publish(out);
-		}
-		else
-		{
+		} else {
 			std::cout<<"Data CRC failed."<<std::endl;
 		}
 	}
@@ -218,13 +190,10 @@ void DiverNetReadNode::onNetInit(const std_msgs::Bool::ConstPtr& init) {
 }
 
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 	ros::init(argc,argv,"diver_net_read_node");
 	DiverNetReadNode node;
 	ros::spin();
 
 	return 0;
 }
-
-
