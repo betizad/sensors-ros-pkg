@@ -67,51 +67,11 @@ void DiverNetTransformAndJointPublisher::configureNet() {
   names.push_back("right_foot");
   names.push_back("placeholder_3");
   
-  //Setup zero state - Should be a configuration option
-  //T-pose
-/*  zeroState<<M_PI, 0.0, M_PI/2,	//"right_shoulder"
-      M_PI/2, 0.0, M_PI/2,  		//"right_upper_arm"
-      0.0, 0.0, 0.0,		        //"right_forearm"
-      0.0, -M_PI/2, M_PI,	      //"head"
-      0.0, 0.0, 0.0,		        //"right_hand"
-      -M_PI, 0.0, -M_PI/2, 	    //"left_shoulder"
-      -M_PI/2, 0.0, -M_PI/2,		//"left_upper_arm"
-      0.0, 0.0, 0.0, 		        //"left_forearm"
-      0.0, 0.0, 0.0,		        //"left_hand"
-      M_PI, 0.0, 0.0,	          //"upper_body"
-      0.0, 0.0, 0.0,		        //"placehodler_1"
-      0.0, -M_PI/2, 0.0,	      //"left_foot"
-      M_PI/2, 0.0, 0.0,		      //"left_calf"
-      M_PI/2, 0.0, M_PI,	      //"left_thigh"
-      0.0, -M_PI/2, 0,	        //"lower_back"
-      0.0, 0.0, 0.0,		        //"placeholder_2"
-      -M_PI/2, 0.0, -M_PI,	    //"right_thigh"
-      -M_PI/2, 0.0, 0.0,	      //"right_calf"
-      0.0, -M_PI/2, 0.0,	      //"right_foot"
-      0.0, 0.0, 0.0;		        //"placeholder_3"
-*/
-  /// poza s rukama ispred//s abs
-  zeroState<<0.0, 0.0, 0.0,   //"right_shoulder"
-      0.0, 0.0, 0.0,          //"right_upper_arm"
-      0.0, 0.0, 0.0,    //"right_forearm"
-      0.0, 0.0, 0.0,  //"head"
-      0.0, 0.0, 0.0,    //"right_hand"
-      0.0, 0.0, -0.0,   //"left_shoulder"
-      0.0, 0.0, 0.0,    //"left_upper_arm"
-      0.0, 0.0, 0.0,    //"left_forearm"
-      0.0, 0.0, 0.0,    //"left_hand"
-      -M_PI, -M_PI/2, 0.0,          //"upper_body"
-      0.0, 0.0, 0.0,    //"placehodler_1"
-      -0.0, 0.0, 0.0, //"left_foot"
-      -M_PI/2, M_PI/2, M_PI,    //"left_calf"
-      0.0, M_PI/2, M_PI/2,  //"left_thigh"
-      0.0, -M_PI/2,0.0, //"lower_back"
-      0.0, 0.0, 0.0,    //"placeholder_2"
-      -M_PI/2, M_PI/2, -M_PI, //"right_thigh"
-      -M_PI/2, M_PI/2, -M_PI/2, //"right_calf"
-      0.0, 0.0, 0.0,  //"right_foot"
-      0.0, 0.0, 0.0;    //"placeholder_3"
+  // Setup zero state - Should be a configuration option
+  // Null-pose, arms in front. This initialization assumes axes permutation is done.
+  zeroState = Eigen::MatrixXd::Zero(nodeCount, 3);
 }
+
 
 void DiverNetTransformAndJointPublisher::calibratePose(const std_msgs::Bool::ConstPtr& calibrate) {
 	if (calibrate->data) {

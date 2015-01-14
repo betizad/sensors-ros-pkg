@@ -34,6 +34,7 @@ namespace labust
         ros::Subscriber raw_data;
         ros::Publisher raw_angles_publisher, filtered_angles_publisher;
         std_msgs::Float64MultiArrayPtr rpy_raw, rpy_filtered;
+        std::vector<Eigen::MatrixXd> axes_permutation;
         ImuComplementaryQuaternionFilter *filter;
         const double dT, fs;
         int node_count, data_per_node;

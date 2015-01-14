@@ -171,10 +171,9 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
 					raw(i,e) /= (1 << 15);
 				}
 			}
-                        std_msgs::Int16Ptr bbelt(new std_msgs::Int16());
-                        bbelt->data = (rawBuffer[nodeCount * dataPerNode] + 256 * rawBuffer[nodeCount * dataPerNode + 1]);
-                        out->data.push_back(bbelt->data);
-                        breathingBelt.publish(bbelt);
+      std_msgs::Int16Ptr bbelt(new std_msgs::Int16());
+      bbelt->data = (rawBuffer[nodeCount * dataPerNode] + 256 * rawBuffer[nodeCount * dataPerNode + 1]);
+      breathingBelt.publish(bbelt);
 			rawData.publish(out);
 		} else {
 			std::cout<<"Data CRC failed."<<std::endl;
