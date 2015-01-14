@@ -25,7 +25,7 @@ namespace labust
          *  beta - filter coefficient, consult paper for details;
          *  gyro_gain - scaling factor for converting gyro data to rad/s.
          */
-        ImuComplementaryQuaternionFilter(const int node_count, const double dT, const double beta, const double gyro_gain);
+        ImuComplementaryQuaternionFilter(const int node_count, const double dT, const double beta, const double gyro_zeta);
         
         /**
          * Generic destructor.
@@ -38,10 +38,11 @@ namespace labust
       private:
         void initialOrientation(const Eigen::MatrixXd data);
         const double dT, fs;
-        const double beta, gyro_gain;
+        const double beta, gyro_zeta;
         const int node_count;
         bool is_initialized;
         std::vector<Eigen::Quaternion<double> > q;
+        double w_bx, w_by, w_bz;
     };
   }
 }

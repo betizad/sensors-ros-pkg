@@ -4,14 +4,17 @@
 
 using namespace labust::sensors;
 
-ImuComplementaryQuaternionFilter::ImuComplementaryQuaternionFilter(const int node_count, const double dT, const double beta, const double gyro_gain) :
+ImuComplementaryQuaternionFilter::ImuComplementaryQuaternionFilter(const int node_count, const double dT, const double beta, const double gyro_zeta) :
     node_count(node_count),
     dT(dT),
     fs(1.f/dT),
     beta(beta),
-    gyro_gain(gyro_gain),
+    gyro_zeta(gyro_zeta),
     is_initialized(false),
-    q(node_count) {}
+    q(node_count),
+    w_bx(0.0),
+    w_by(0.0),
+    w_bz(0.0) {}
 
 ImuComplementaryQuaternionFilter::~ImuComplementaryQuaternionFilter() {}
 
@@ -31,9 +34,9 @@ void ImuComplementaryQuaternionFilter::processFrame(const Eigen::MatrixXd data) 
     
     // Gyro data must be normalized to rad/s. Accelerometer and magnetometer
     // data can be in any range as long as all axes have the same scale.
-    double gx = data(i,6) * gyro_gain;
-    double gy = data(i,7) * gyro_gain;
-    double gz = data(i,8) * gyro_gain;
+    double gx = data(i,6);
+    double gy = data(i,7);
+    double gz = data(i,8);
   
     // Auxiliary variables for convenience
     const double q0 = q[i].w();
@@ -122,6 +125,18 @@ void ImuComplementaryQuaternionFilter::processFrame(const Eigen::MatrixXd data) 
     qDot3 = qDot3 - (beta * s2);
     qDot4 = qDot4 - (beta * s3);
 
+    const double w_err_x = u2q0 * s1 - u2q1 * s0 - u2q2 * s3 + u2q3 * s2;
+    const double w_err_y = u2q0 * s2 + u2q1 * s3 - u2q2 * s0 - u2q3 * s1;
+    const double w_err_z = u2q0 * s3 - u2q1 * s2 + u2q2 * s1 - u2q3 * s0;
+    
+    w_bx += w_err_x * dT * gyro_zeta;
+    w_by += w_err_y * dT * gyro_zeta;
+    w_bz += w_err_z * dT * gyro_zeta;
+    
+    gx -= w_bx;
+    gy -= w_by;
+    gz -= w_bz;
+
     // Integrate rate of change of quaternion
     q[i].w() += qDot1 * dT;
     q[i].x() += qDot2 * dT;
@@ -143,7 +158,6 @@ void ImuComplementaryQuaternionFilter::initialOrientation(const Eigen::MatrixXd 
     double hy = data(i,my) * cos(roll) - data(i,mz) * sin(roll);
     double yaw = atan2(-hy, hx);
 
-    Eigen::Quaternion<double> t;
     labust::tools::quaternionFromEulerZYX(roll, pitch, yaw, q[i]);
   }
 }
