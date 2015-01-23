@@ -74,6 +74,7 @@
     <color rgba="1 0 0 1" />
     <origin xyz="0 0 0"/>
 	</xacro:OldJoint> -->
+
 	<xacro:OldJoint node="lower_back" parent="local">
 		<origin xyz="0 0 0" rpy="0 0 0" />
     <box size="0.1 0.2 0.05"/>
@@ -176,7 +177,7 @@
 	<xacro:Joint3d node="right_hand" parent="right_forearm">
 		<origin xyz="0 0 0" rpy="0 1.57 1.57"/>
 		<mesh filename="package://diver_net/data/models/dae/right_hand.dae" />
-		<origin xyz="0.25 0 0" />`
+		<origin xyz="0.25 0 0" />
 	</xacro:Joint3d>
 
 </robot>

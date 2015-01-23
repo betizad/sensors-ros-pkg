@@ -1,5 +1,5 @@
 #!/bin/bash
-URL=https://bitbucket.org/labust-unizg/labust-data/downloads/diver_models.tar.bz2
+URL=https://bitbucket.org/labust/labust-data/downloads/diver_meshes.tar.bz2
 username=labust-unizg
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 echo ${SCRIPT_DIR}
