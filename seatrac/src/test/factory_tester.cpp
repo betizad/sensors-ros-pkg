@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 	std::cout<<std::endl;
 
 	SeatracMessage::Ptr msg1 = fact.createCommand(PingSendCmd::CID);
-	boost::shared_ptr<PingSendCmd> test = boost::shared_dynamic_cast<PingSendCmd>(msg1);
+	boost::shared_ptr<PingSendCmd> test = boost::dynamic_pointer_cast<PingSendCmd>(msg1);
 	test->dest = 1;
 	test->msg_type = 2;
 	std::cout<<"test:"<<msg1->getCid()<<std::endl;
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 	std::cout<<std::endl;
 
 	SeatracMessage::Ptr msg = fact.createCommand(0x41);
-	boost::shared_ptr<PingSendCmd> cmsg = boost::shared_dynamic_cast<PingSendCmd>(msg);
+	boost::shared_ptr<PingSendCmd> cmsg = boost::dynamic_pointer_cast<PingSendCmd>(msg);
 	cmsg->dest = 10;
 
 	typedef boost::function<void (const SeatracMessage::ConstPtr&)> Callback;

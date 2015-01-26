@@ -56,7 +56,7 @@ namespace labust
 
 			inline bool operator()(const SeatracMessage::ConstPtr& msg)
 			{
-				CastPtr ptr = boost::shared_dynamic_cast<CastType const>(msg);
+				CastPtr ptr = boost::dynamic_pointer_cast<CastType const>(msg);
 				if (ptr != 0)
 				{
 					//Possibly do something here before callback call

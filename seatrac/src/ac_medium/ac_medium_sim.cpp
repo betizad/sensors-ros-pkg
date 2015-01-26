@@ -40,8 +40,8 @@
 using namespace labust::seatrac;
 
 AcMediumSim::AcMediumSim():
-		vos(1475),
-		mediumOccupied(false)
+				vos(1475),
+				mediumOccupied(false)
 {
 	this->onInit();
 }
@@ -52,51 +52,39 @@ void AcMediumSim::onInit()
 {
 	ros::NodeHandle nh, ph("~");
 
-	medium_in = nh.subscribe<underwater_msgs::MediumTransmission>("medium_out", 3,
-			&AcMediumSim::onMediumTransmission, this);
+	medium_in = nh.subscribe("medium_out", 3, &AcMediumSim::onMediumTransmission, this);
 
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_in",16);
+
+	registration = nh.advertiseService("register_modem",&AcMediumSim::onRegistration, this);
 }
 
 void AcMediumSim::onNavSts(int id, const auv_msgs::NavSts::ConstPtr& msg)
 {
 	//No need to protect with mutex with a single spinner
+	boost::mutex::scoped_lock l(state_mux);
 	nodes[id] = *msg;
 }
 
 bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& request,
 		underwater_msgs::AcSimRegister::Response& response)
 {
+	boost::mutex::scoped_lock l(state_mux);
 	if (request.navsts_topic.empty())
 	{
 		ROS_ERROR("Empty topic name for node ID=%d", request.node_id);
 		return false;
 	}
 
-	if (nodes.find(request.node_id) != nodes.end())
+	if (nodes.find(request.node_id) == nodes.end())
 	{
 		ros::NodeHandle nh;
 
 		ROS_INFO("Registering node ID=%d", request.node_id);
 		//Add subscription to node and bind with node_id
-		subs[request.node_id] = boost::bind(&AcMediumSim::onNavSts, this,
-				request.node_id, _1);
+		subs[request.node_id] = nh.subscribe<auv_msgs::NavSts>(request.navsts_topic, 1,
+				boost::bind(&AcMediumSim::onNavSts, this, request.node_id, _1));
 		nodes[request.node_id] = auv_msgs::NavSts();
-
-		/*boost::mutex::scoped_lock ltt(transport_mux);
-		transport_timers[request.node_id] = nh.createTimer(ros::Duration(0.1),
-				boost::bind(&AcMediumSim::receiveMessage, this,
-						request.node_id,
-						underwater_msgs::MediumTransmission::Ptr(), _1),
-						false, false);
-		ltt.unlock();*/
-
-	/*	boost::mutex::scoped_lock ldt(delivery_mux);
-		delivery_timers[request.node_id] = nh.createTimer(ros::Duration(0.1),
-				boost::bind(&AcMediumSim::transportMessage, this,
-						request.node_id,
-						underwater_msgs::MediumTransmission::Ptr(), _1),
-						false, false);*/
 	}
 	else
 	{
@@ -108,30 +96,28 @@ bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& reques
 }
 
 void AcMediumSim::onMediumTransmission(const
-	underwater_msgs::MediumTransmission::ConstPtr& msg)
+underwater_msgs::MediumTransmission::ConstPtr& msg)
 {
 	//The node has to be registered (if no NavSts message is received the default is NavSts()).
+	boost::mutex::scoped_lock l(state_mux);
 	NavStsMap::const_iterator it(nodes.find(msg->sender));
 	if (it == nodes.end())
 	{
 		ROS_ERROR("Trying to publish from unregistered node.");
 		return;
 	}
-
-	underwater_msgs::MediumTransmission msgout(*msg);
-	msgout.position = it->second;
+	l.unlock();
 
 	DistanceMap dist;
 	this->getDistances(msg->sender, it->second, dist);
-
-	this->distributeToMedium(dist, msgout);
+	this->distributeToMedium(dist, msg);
 
 	//TODO Determine at what time the data can be transmitted to each node
 	//TODO Throw dice for success and start transmission thread
 }
 
 void AcMediumSim::distributeToMedium(const DistanceMap& dist,
-		const underwater_msgs::MediumTransmission& msg)
+		const underwater_msgs::MediumTransmission::ConstPtr msg)
 {
 	boost::mutex::scoped_lock l(transport_mux);
 	ros::NodeHandle nh;
@@ -142,36 +128,21 @@ void AcMediumSim::distributeToMedium(const DistanceMap& dist,
 	{
 		//TODO Determine if node can hear the transmission
 		//Get timer list
-		std::list<ros::Timer>& timer_list(transport_timers.find(it->first)->second);
-		std::list<ros::Timer>::iterator lit = processTimerList(timer_list);
-		if (lit == timer_list.end())
-		{
-			timer_list.insert(nh.createTimer(ros::Duration(0.1),
-					boost::bind(&AcMediumSim::transportMessage, this,
-							it->first,
-							underwater_msgs::MediumTransmission::Ptr(), _1),
-							false, false));
-		}
-		//Clean dead timers
-		for (std::list<ros::Timer>::const_iterator it2 = timer_list.begin();
-				it2 != timer_list.end();
-				++it2
-				)
-		{
-			if (!it2->hasPending())
-			{
-
-			}
-		}
-		tit->second.push_back(nh.createTimer())
+		std::list<ros::Timer>& timer_list(transport_timers[it->first]);
+		processTimerList(timer_list);
+		timer_list.push_back(nh.createTimer(ros::Duration(it->second/vos),
+					boost::bind(&AcMediumSim::transportMessage, this, it->first, msg, _1),
+							true, true));
+		ROS_INFO("Sent message from %d to %d. Distance is %f.",msg->sender, it->first, it->second);
 	}
 }
 
 void AcMediumSim::processTimerList(std::list<ros::Timer>& list)
 {
-  //Clean dead timers
-	bool foundDead(false);
-	std::list<ros::Timer>::const_iterator it = list.begin();
+	//Clean dead timers
+	if (list.empty()) return;
+
+	std::list<ros::Timer>::iterator it = list.begin();
 	while (it != list.end())
 	{
 		if (!it->hasPending())
@@ -183,11 +154,6 @@ void AcMediumSim::processTimerList(std::list<ros::Timer>& list)
 			++it;
 		}
 	}
-
-	//Create new if no dead iterator found
-	if (!foundDead) retit = list.end();
-
-	return retit;
 }
 
 void AcMediumSim::transportMessage(int node_id,
@@ -195,28 +161,38 @@ void AcMediumSim::transportMessage(int node_id,
 		const ros::TimerEvent& event)
 {
 	//Message arrived to the node_id transponder
-	/*boost::mutex::scoped_lock l(timers_mux);
+	ROS_INFO("Message arrived at %d.", node_id);
+	boost::mutex::scoped_lock l(delivery_mux);
 
-	TimerMap::const_iterator it(delivery_timers.find(node_id));
+	TimerMap::iterator it(delivery_timers.find(node_id));
 	if (it != delivery_timers.end())
 	{
 		//Is already receiving a different message
 		if (it->second.hasPending())
 		{
 			it->second.stop();
-		}
-		else
-		{
-			it->second.setPeriod(ros::Duration())
+			return;
 		}
 	}
-	*/
+
+	ros::NodeHandle nh;
+	delivery_timers[node_id] = nh.createTimer(ros::Duration(msg->duration),
+				boost::bind(&AcMediumSim::receiveMessage, this, node_id,
+						msg,_1),true,true);
 }
 
 void AcMediumSim::receiveMessage(int node_id,
 		underwater_msgs::MediumTransmission::ConstPtr msg,
 		const ros::TimerEvent& event)
 {
+	ROS_INFO("Forwarding message from %d to %d", msg->sender, node_id);
+	underwater_msgs::MediumTransmission::Ptr msgout(new underwater_msgs::MediumTransmission(*msg));
+	msgout->listener_id = node_id;
+	///TODO Check mutexing here
+	boost::mutex::scoped_lock ls(state_mux);
+	NavStsMap::const_iterator it(nodes.find(msg->sender));
+	msgout->position = it->second;
+	ls.unlock();
 	boost::mutex::scoped_lock l(medium_mux);
 	medium_out.publish(msg);
 }

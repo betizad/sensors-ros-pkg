@@ -57,7 +57,7 @@ namespace labust
 			typedef std::map<int, ros::Timer> TimerMap;
 			typedef std::map<int, std::list<ros::Timer> > TimerVectorMap;
 			typedef boost::function<void(const auv_msgs::NavSts::ConstPtr&)> Callback;
-			typedef std::map<int, Callback> SubscriberMap;
+			typedef std::map<int, ros::Subscriber> SubscriberMap;
 			typedef std::map<int, double> DistanceMap;
 
 		public:
@@ -82,7 +82,7 @@ namespace labust
 			void getDistances(int node_id, const auv_msgs::NavSts& npos, DistanceMap& map);
 			///Helper function to start medium delay
 			void distributeToMedium(const DistanceMap& dist,
-					const underwater_msgs::MediumTransmission& msg);
+					const underwater_msgs::MediumTransmission::ConstPtr msg);
 
 			/**
 			 * Helper method to simulate data transmission through medium. This
@@ -126,6 +126,8 @@ namespace labust
 			boost::mutex delivery_mux;
 			///Muxer for the medium publisher
 			boost::mutex medium_mux;
+			///Muxer for states
+			boost::mutex state_mux;
 			///Velocity of sound (default: 1475)
 			double vos;
 			///Flag for occupied medium (default: false)

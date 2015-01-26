@@ -98,6 +98,8 @@ namespace labust
 							underwater_msgs::MediumTransmission::ConstPtr& msg);
 			///Helper method for USBL loop
 			void onUSBLTimeout(const ros::TimerEvent& e);
+			///Helper method for registration
+			void registerModem();
 
 			///Helper function for medium message sending
 			inline void sendToMedium(underwater_msgs::MediumTransmission::Ptr& msg)
@@ -190,6 +192,8 @@ namespace labust
 			double time_overhead;
 			///The node position and attitude
 			auv_msgs::NavSts navstate;
+			///Modem registration flag
+			bool registered;
 		};
 	}
 }

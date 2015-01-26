@@ -39,6 +39,8 @@
 #include <labust/seatrac/seatrac_definitions.h>
 #include <pluginlib/class_list_macros.h>
 
+#include <underwater_msgs/AcSimRegister.h>
+
 using namespace labust::seatrac;
 
 SeatracSim::SeatracSim():
@@ -48,7 +50,8 @@ SeatracSim::SeatracSim():
 	ping_duration(0.7),
 	max_distance(500.0),
 	vos(1500),
-	time_overhead(0.1){}
+	time_overhead(0.1),
+	registered(false){}
 
 SeatracSim::~SeatracSim()
 {
@@ -76,8 +79,27 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			true, false);
 
 	//Register to medium with node id, navsts topic name, etc.
+	registerModem();
 
 	return true;
+}
+
+void SeatracSim::registerModem()
+{
+	if (registered) return;
+
+	ros::NodeHandle nh;
+	ros::ServiceClient reg = nh.serviceClient<underwater_msgs::AcSimRegister>("register_modem");
+
+	underwater_msgs::AcSimRegister srv;
+	srv.request.node_id = node_id;
+	srv.request.navsts_topic = navsts.getTopic();
+	registered = reg.call(srv);
+
+	if (!registered)
+	{
+		ROS_WARN("SeatracSim: modem is not registered with the acoustic medium.");
+	}
 }
 
 void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
@@ -106,6 +128,10 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 
 bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 {
+	//Try registering before sending
+	this->registerModem();
+	if (!registered) return false;
+
 	if (getState() != IDLE)
 	{
 		//Reply with device busy
