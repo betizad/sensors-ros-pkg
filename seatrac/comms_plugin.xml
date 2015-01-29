@@ -1,0 +1,15 @@
+<library path="lib/libseatrac_sdk">
+	<class type="labust::seatrac::SeatracSerial" 
+	    base_class_type="labust::seatrac::SeatracComms">
+		<description>
+			The ascii-serial port protocol implementation for the Seatrac
+			USBL/Modem.
+		</description>
+	</class>
+	<class type="labust::seatrac::SeatracSim" 
+	    base_class_type="labust::seatrac::SeatracComms">
+		<description>
+			The USBL simulator on the protocol internal protocol level.
+		</description>
+	</class>
+</library>

@@ -1,0 +1,11 @@
+<launch>
+	<node pkg="seatrac" type="seatrac_core" name="usbl_sim">
+		<rosparam command="load" file="$(find seatrac)/launch/usbl_sim.yaml" /> 
+	</node>
+	
+	<node pkg="seatrac" type="seatrac_core" name="diver_sim">
+		<rosparam command="load" file="$(find seatrac)/launch/diver_modem.yaml" /> 
+	</node>
+ 
+ 	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
+</launch>

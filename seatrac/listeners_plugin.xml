@@ -1,0 +1,8 @@
+<library path="lib/libseatrac_sdk">
+	<class type="labust::seatrac::StatusListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			The USBL diagnostics listener.
+		</description>
+	</class>
+</library>

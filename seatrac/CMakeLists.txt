@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   auv_msgs
   geometry_msgs
   tf2_ros
+  pluginlib
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -69,6 +71,11 @@ find_package(Boost REQUIRED COMPONENTS system thread serialization)
 #   Action2.action
 # )
 
+## Generate dynamic reconfigurations in the 'cfg' folder
+generate_dynamic_reconfigure_options( 
+  cfg/USBLControllerCfg.cfg
+)
+
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
@@ -106,17 +113,30 @@ include_directories(
 ## Declare a cpp library
 add_library(seatrac_sdk
    src/seatrac_sdk/SeatracHandler.cpp
+   src/seatrac_sdk/seatrac_serial.cpp
+   src/seatrac_sdk/seatrac_factory.cpp
+   src/seatrac_node/status_listener.cpp
+   src/seatrac_node/usbl_controller.cpp
+   src/seatrac_sdk/serialization.cpp
+   src/seatrac_sdk/seatrac_sim.cpp
 )
+
 
 ## Declare a cpp executable
 add_executable(seatrac_serialization_test src/test/serialization_test.cpp)
+add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
+add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
 add_executable(seatrac_node 
     src/seatrac_node/SeatracNode.cpp
     src/seatrac_node/NavHandler.cpp
     src/seatrac_node/StatusHandler.cpp)
+    
+add_executable(seatrac_core
+    src/seatrac_node/seatrac_core.cpp)
 
 if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(seatrac_node ${catkin_EXPORTED_TARGETS})
+ add_dependencies(seatrac_core ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_serialization_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_sdk ${catkin_EXPORTED_TARGETS})
 endif()
@@ -130,6 +150,7 @@ target_link_libraries(seatrac_sdk
    ${catkin_LIBRARIES}
    ${Boost_SYSTEM_LIBRARY}
    ${Boost_THREAD_LIBRARY}
+   ${Boost_SERIALIZATION_LIBRARY}
 )
 
 target_link_libraries(seatrac_node
@@ -139,11 +160,27 @@ target_link_libraries(seatrac_node
    seatrac_sdk
 )
 
+target_link_libraries(seatrac_core
+   ${catkin_LIBRARIES}
+   seatrac_sdk
+)
+
 target_link_libraries(seatrac_serialization_test
    ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARY}
    seatrac_sdk
 )
+
+target_link_libraries(seatrac_factory_tester
+   ${catkin_LIBRARIES}
+   ${Boost_SERIALIZATION_LIBRARY}
+   seatrac_sdk
+)
+
+target_link_libraries(ac_medium_sim
+   ${catkin_LIBRARIES}
+)
+
 
 #############
 ## Install ##

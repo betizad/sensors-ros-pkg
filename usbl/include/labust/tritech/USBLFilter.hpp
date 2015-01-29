@@ -39,6 +39,7 @@
 #include <labust/navigation/KFCore.hpp>
 #include <labust/navigation/KinematicModel.hpp>
 
+#include <auv_msgs/NavSts.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/PointStamped.h>
@@ -84,9 +85,17 @@ namespace labust
 			 */
 			void onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg);
 			/**
+			 * Handles arrived USBL navigation messages.
+			 */
+			void onUsblNavSts(const auv_msgs::NavSts::ConstPtr& msg);
+			/**
 			 * Configure from ROS file.
 			 */
 			void configureModel(ros::NodeHandle& nh);
+			/**
+			 * Propagates the USBL model.
+			 */
+			void step(KFilter::input_type& vec);
 
 			/**
 			 * The USBL device.
@@ -113,7 +122,7 @@ namespace labust
 			/**
 			 * The usbl measurement subscriber.
 			 */
-			ros::Subscriber usblSub;
+			ros::Subscriber usblSub, usblNavStsSub;
 			/**
 			 * Transform buffer.
 			 */
@@ -138,6 +147,10 @@ namespace labust
 			 * Test for received position.
 			 */
 			bool hasUSBL;
+			///The last state.
+			KFilter::vector xd;
+			///The last covariance.
+			KFilter::matrix Pd;
 		};
 	}
 }
