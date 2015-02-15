@@ -120,10 +120,9 @@ void ObjectDetectorNode<ObjDetect>::processFrame(const sensor_msgs::ImageConstPt
 }
 
 template<class ObjDetect>
-void ObjectDetectorNode<ObjDetect>::setEnableVideoDisplay(bool enable_video_display) {
+void ObjectDetectorNode<ObjDetect>::setEnableVideoDisplay(bool enable_video_display, std::string window_name = "Object Detector Node") {
   enable_video_display_ = enable_video_display;
-  object_detector_->setEnableVideoDisplay(enable_video_display);
-  cv::namedWindow(opencv_window_); 
+  object_detector_->setEnableVideoDisplay(enable_video_display, window_name);
   cv::waitKey(1);
 }
 
@@ -133,6 +132,7 @@ int main(int argc, char **argv) {
   ObjectDetectorNode<ColorObjectDetector> od;
   od.setObjectDetector(new ColorObjectDetector());
   od.setEnableVideoDisplay(true);
+  
   ros::spin();
 
   return 0;
