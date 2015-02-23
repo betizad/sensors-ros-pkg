@@ -31,42 +31,57 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef OBJECTDETECTOR_HPP_
-#define OBJECTDETECTOR_HPP_
+#ifndef VISUALORIENTATIONESTIMATOR_HPP_
+#define VISUALORIENTATIONESTIMATOR_HPP_
+#include <algorithm>
 #include <opencv2/opencv.hpp>
-#include <string>
+#include <labust/sensors/image/ObjectDetector.hpp>
+#include <labust/sensors/image/ColorObjectDetector.hpp>
+#include <labust/sensors/image/TemplateObjectDetector.hpp>
 
 namespace labust {
   namespace sensors {
     namespace image {
 
       /**
-       * Abstract class for object detection.
-       * Classes that implement any kind of object 
-       * detection should extend this class.
+       * Class for object orientation estimation based on familiar marker tracking.
        */
-      class ObjectDetector {
+      template <class ObjDet>
+      class VisualOrientationEstimator {
 
       public:
-        virtual ~ObjectDetector() {};
-        virtual void detect(cv::Mat &image, cv::Point2f &center, double &area) = 0;
-        virtual void setEnableVideoDisplay(bool enable_video_display, std::string window_name) {
-          enable_video_display_ = enable_video_display;
-          WINDOW_ = window_name;
-          createOpenCvWindow();
-        }
+        VisualOrientationEstimator();
 
-      protected:
-        virtual void createOpenCvWindow() {
-          cv::namedWindow(WINDOW_.c_str());
+        VisualOrientationEstimator(ObjDet *obj_detector_1, ObjDet *obj_detector_2);
+
+        void setObjectDetectors(ObjDet *obj_detector_1, ObjDet *obj_detector_2);
+
+        void setReferences(const double ref_area_1, const double ref_area_2, 
+            const double ref_pixel_size);
+        void setReferences(const double ref_dist, const double ref_area_1, const double ref_area_2, 
+            const double ref_pixel_size, const double ref_mutual_dist);
+
+        void setMutalObjectDistance(const double ref_mutual_dist);
+
+        ~VisualOrientationEstimator();
+
+        void processFrame(cv::Mat frame);
+
+      private:
+        struct VisualMarker {
+          cv::Point3f coordinate;
+          cv::Point2f center;
+          double depth, area;
+          double ref_dist, ref_area, ref_pixel_size;
         };
-        std::string WINDOW_;
-        bool enable_video_display_;
-      };
 
+        ObjDet* obj_detector_1, *obj_detector_2;
+        VisualMarker vm_1, vm_2;
+        double ref_mutual_distance;
+      };
     }
   }
 }
 
-/* OBJECTDETECTOR_HPP_ */
+/* VISUALORIENTATIONESTIMATOR_HPP_ */
 #endif

@@ -51,6 +51,7 @@ namespace labust {
         cv_bridge::CvImage cv_image;
         cv_image.image = image;
         cv_image.encoding = encoding;
+        cv_image.header.stamp = ros::Time::now();
         return cv_image.toImageMsg();
       }
 

@@ -38,6 +38,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <labust/sensors/image/ObjectDetector.hpp>
+#include <string>
 
 namespace labust {
   namespace sensors {
@@ -56,7 +57,7 @@ namespace labust {
         ~ObjectDetectorNode();
         void setObjectDetector(ObjDetect *object_detector);
         ObjDetect& getObjectDetector();
-        void setEnableVideoDisplay(bool enable_video_display);
+        void setEnableVideoDisplay(bool enable_video_display, std::string window_name);
 
       private:
         void processFrame(const sensor_msgs::ImageConstPtr &sensor_image);

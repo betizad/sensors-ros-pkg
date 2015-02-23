@@ -43,7 +43,6 @@
 using namespace labust::sensors::image;
 
 ColorObjectDetector::ColorObjectDetector() {
-  WINDOW_ = "Color object detector";
   enable_video_display_ = false;
   iLowH = 0;
   iHighH = 179;
@@ -53,29 +52,30 @@ ColorObjectDetector::ColorObjectDetector() {
   iHighV = 255;
 }
 
-void ColorObjectDetector::setEnableVideoDisplay(bool enable_video_display) {
+void ColorObjectDetector::setEnableVideoDisplay(bool enable_video_display, std::string window_name) {
   enable_video_display_ = enable_video_display;
+  WINDOW_ = window_name;
   this->createOpenCvWindow();
 }
 
 void ColorObjectDetector::createOpenCvWindow() {
-  cv::namedWindow(WINDOW_);
+  cv::namedWindow(WINDOW_.c_str());
 
   // Create trackbars in "Control" window
   // Hue (0-179) 
-  cvCreateTrackbar("LowH", WINDOW_, &iLowH, 179); 
-  cvCreateTrackbar("HighH", WINDOW_, &iHighH, 179);
+  cvCreateTrackbar("LowH", WINDOW_.c_str(), &iLowH, 179); 
+  cvCreateTrackbar("HighH", WINDOW_.c_str(), &iHighH, 179);
   // Saturation (0-255)
-  cvCreateTrackbar("LowS", WINDOW_, &iLowS, 255); 
-  cvCreateTrackbar("HighS", WINDOW_, &iHighS, 255);
+  cvCreateTrackbar("LowS", WINDOW_.c_str(), &iLowS, 255); 
+  cvCreateTrackbar("HighS", WINDOW_.c_str(), &iHighS, 255);
   // Value (0-255)
-  cvCreateTrackbar("LowV", WINDOW_, &iLowV, 255); 
-  cvCreateTrackbar("HighV", WINDOW_, &iHighV, 255);
+  cvCreateTrackbar("LowV", WINDOW_.c_str(), &iLowV, 255); 
+  cvCreateTrackbar("HighV", WINDOW_.c_str(), &iHighV, 255);
   cv::waitKey(1);
 }
 
 ColorObjectDetector::~ColorObjectDetector() {
-  cv::destroyWindow(WINDOW_);
+  cv::destroyWindow(WINDOW_.c_str());
 }
 
 bool compare(cv::vector<cv::Point> a, cv::vector<cv::Point> b) {
@@ -87,7 +87,7 @@ void ColorObjectDetector::detect(cv::Mat &image_bgr, cv::Point2f &center, double
   cv::cvtColor(image_bgr, image_hsv, CV_BGR2HSV);
   cv::inRange(image_hsv, cv::Scalar(iLowH, iLowS, iLowV), cv::Scalar(iHighH, iHighS, iHighV), image_thresholded); 
   if (enable_video_display_) {
-    cv::imshow(WINDOW_, image_thresholded);
+    cv::imshow(WINDOW_.c_str(), image_thresholded);
     cv::waitKey(1);
   }
 
@@ -115,4 +115,13 @@ void ColorObjectDetector::detect(cv::Mat &image_bgr, cv::Point2f &center, double
   area = max_area;
 
   // cv::drawContours(image_contours, contours, max_area_index, cv::Scalar(152,5,85), CV_FILLED);
+}
+
+void ColorObjectDetector::setHSVColorRange(int lowH, int highH, int lowS, int highS, int lowV, int highV) {
+  iLowH = lowH;
+  iHighH = highH;
+  iLowS = lowS;
+  iHighS = highS;
+  iLowV = lowV;
+  iHighV = highV;
 }
