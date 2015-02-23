@@ -1,6 +1,11 @@
   {StatusResp::CID, createInstance<StatusResp>},
   {PingSendResp::CID, createInstance<PingSendResp>},
-  {DataSendResp::CID, createInstance<DataSendResp>},
   {PingReq::CID, createInstance<PingReq>},
   {PingResp::CID, createInstance<PingResp>},
-  {PingError::CID, createInstance<PingError>}
+  {PingError::CID, createInstance<PingError>},
+  {DatSendResp::CID, createInstance<DatSendResp>},
+  {DatReceive::CID, createInstance<DatReceive>},
+  {DatError::CID, createInstance<DatError>},
+  {DatQueueSetResp::CID, createInstance<DatQueueSetResp>},
+  {DatQueueClearResp::CID, createInstance<DatQueueClearResp>},
+  {DatQueueStatusResp::CID, createInstance<DatQueueStatusResp>}

@@ -52,6 +52,9 @@ USBLController::USBLController():
 	registrations[PingError::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
 	registrations[PingSendResp::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
 	registrations[PingResp::CID] = boost::bind(&USBLController::onPingReplies,this,_1);
+	registrations[DatError::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
+	registrations[DatSendResp::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
+	registrations[DatReceive::CID] = boost::bind(&USBLController::onPingReplies,this,_1);
 }
 
 USBLController::~USBLController()
@@ -113,7 +116,7 @@ void USBLController::stop()
 SeatracMessage::Ptr USBLController::makeDataCmd(const underwater_msgs::ModemTransmission::ConstPtr& msg,
 		uint8_t msgtype)
 {
-	DataSendCmd::Ptr cmd(new DataSendCmd());
+	DatSendCmd::Ptr cmd(new DatSendCmd());
 	cmd->dest = msg->receiver;
 	cmd->msg_type = msgtype;
 	cmd->data.assign(msg->payload.begin(), msg->payload.end());
@@ -156,8 +159,8 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 				(enhanced_data)?AMsgType::MSG_OWAYU:AMsgType::MSG_OWAY);
 		break;
 	case underwater_msgs::ModemTransmission::SET_REPLY:
+		///This USBL controller does not implement this action
 		break;
-		//message =
 	default:
 		break;
 	}
@@ -166,7 +169,7 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 	if (message != 0) outgoing.push(message);
 	l.unlock();
 
-	//Only master send data
+	//Only master can send data
 	if (!auto_mode && !is_busy) sendPkg();
 }
 
@@ -282,6 +285,10 @@ bool USBLController::onPingReplies(const SeatracMessage::ConstPtr& msg)
 	if (cid == PingResp::CID)
 	{
 		ROS_INFO("USBLController: Ping response received.");
+	}
+	else if (cid == DatReceive::CID)
+	{
+		ROS_INFO("USBLController: Data reply received.");
 	}
 	else
 	{

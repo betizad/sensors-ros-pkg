@@ -8,6 +8,6 @@ auto_mode: false
 transponders: []
 
 # Simulation parameters
-sim_node_id: 2
-sim_is_modem: true
+sim_node_id: 3
+sim_is_modem: false
 

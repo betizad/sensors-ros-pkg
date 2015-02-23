@@ -23,18 +23,6 @@ bool PingSendResp::unpack(const SeatracMessage::DataBuffer& in)
 
 
 
-bool DataSendResp::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool DataSendResp::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
-
-
-
 bool PingReq::pack(SeatracMessage::DataBuffer& out) const
 {
   return seatrac_serialize(this, out);
@@ -65,6 +53,78 @@ bool PingError::pack(SeatracMessage::DataBuffer& out) const
 }
 
 bool PingError::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatSendResp::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatSendResp::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatReceive::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatReceive::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatError::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatError::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatQueueSetResp::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatQueueSetResp::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatQueueClearResp::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatQueueClearResp::unpack(const SeatracMessage::DataBuffer& in)
+{
+  return seatrac_deserialize(this, in);
+}
+
+
+
+bool DatQueueStatusResp::pack(SeatracMessage::DataBuffer& out) const
+{
+  return seatrac_serialize(this, out);
+}
+
+bool DatQueueStatusResp::unpack(const SeatracMessage::DataBuffer& in)
 {
   return seatrac_deserialize(this, in);
 }

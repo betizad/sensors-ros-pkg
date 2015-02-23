@@ -66,6 +66,9 @@ struct USBLData
 
 struct AcoFix
 {
+  enum {RANGE_SC = 10};
+  enum {ANGLE_SC = 10};
+
   uint8_t dest;
   AcoFixBits flags;
   uint8_t msg_type;

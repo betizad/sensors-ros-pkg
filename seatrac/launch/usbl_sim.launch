@@ -1,10 +1,17 @@
 <launch>
-	<node pkg="seatrac" type="seatrac_core" name="usbl_sim">
-		<rosparam command="load" file="$(find seatrac)/launch/usbl_sim.yaml" /> 
+	<node pkg="seatrac" type="seatrac_core" name="surface_sim">
+		<rosparam command="load" file="$(find seatrac)/launch/surface_usbl.yaml" />
+		<remap from="navsts" to="/surface/position" />
 	</node>
 	
 	<node pkg="seatrac" type="seatrac_core" name="diver_sim">
-		<rosparam command="load" file="$(find seatrac)/launch/diver_modem.yaml" /> 
+		<rosparam command="load" file="$(find seatrac)/launch/diver_modem.yaml" />
+		<remap from="navsts" to="/diver/position" />
+	</node>
+	
+	<node pkg="seatrac" type="seatrac_core" name="buddy_sim">
+		<rosparam command="load" file="$(find seatrac)/launch/buddy_modem.yaml" />
+		<remap from="navsts" to="/buddy/position" />
 	</node>
  
  	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />

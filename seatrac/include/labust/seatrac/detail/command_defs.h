@@ -1,3 +1,18 @@
+struct StatusCmd: public SeatracMessage
+{
+typedef boost::shared_ptr< StatusCmd >  Ptr;
+typedef boost::shared_ptr< StatusCmd const >  ConstPtr;
+  enum {CID = 0x10};
+
+  int getCid() const
+{
+  return StatusCmd::CID;
+};
+  bool pack(SeatracMessage::DataBuffer& out) const;
+  bool unpack(const SeatracMessage::DataBuffer& in);
+  StatusBits status_output;
+};
+
 struct PingSendCmd: public SeatracMessage
 {
 typedef boost::shared_ptr< PingSendCmd >  Ptr;
@@ -14,15 +29,15 @@ typedef boost::shared_ptr< PingSendCmd const >  ConstPtr;
   uint8_t msg_type;
 };
 
-struct DataSendCmd: public SeatracMessage
+struct DatSendCmd: public SeatracMessage
 {
-typedef boost::shared_ptr< DataSendCmd >  Ptr;
-typedef boost::shared_ptr< DataSendCmd const >  ConstPtr;
+typedef boost::shared_ptr< DatSendCmd >  Ptr;
+typedef boost::shared_ptr< DatSendCmd const >  ConstPtr;
   enum {CID = 0x60};
 
   int getCid() const
 {
-  return DataSendCmd::CID;
+  return DatSendCmd::CID;
 };
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
@@ -31,18 +46,47 @@ typedef boost::shared_ptr< DataSendCmd const >  ConstPtr;
   PayloadType data;
 };
 
-struct StatusCmd: public SeatracMessage
+struct DatQueueSetCmd: public SeatracMessage
 {
-typedef boost::shared_ptr< StatusCmd >  Ptr;
-typedef boost::shared_ptr< StatusCmd const >  ConstPtr;
-  enum {CID = 0x10};
+typedef boost::shared_ptr< DatQueueSetCmd >  Ptr;
+typedef boost::shared_ptr< DatQueueSetCmd const >  ConstPtr;
+  enum {CID = 0x64};
 
   int getCid() const
 {
-  return StatusCmd::CID;
+  return DatQueueSetCmd::CID;
 };
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
-  StatusBits status_output;
+  uint8_t dest;
+  PayloadType data;
+};
+
+struct DatQueueClearCmd: public SeatracMessage
+{
+typedef boost::shared_ptr< DatQueueClearCmd >  Ptr;
+typedef boost::shared_ptr< DatQueueClearCmd const >  ConstPtr;
+  enum {CID = 0x65};
+
+  int getCid() const
+{
+  return DatQueueClearCmd::CID;
+};
+  bool pack(SeatracMessage::DataBuffer& out) const;
+  bool unpack(const SeatracMessage::DataBuffer& in);
+};
+
+struct DatQueueStatusCmd: public SeatracMessage
+{
+typedef boost::shared_ptr< DatQueueStatusCmd >  Ptr;
+typedef boost::shared_ptr< DatQueueStatusCmd const >  ConstPtr;
+  enum {CID = 0x66};
+
+  int getCid() const
+{
+  return DatQueueStatusCmd::CID;
+};
+  bool pack(SeatracMessage::DataBuffer& out) const;
+  bool unpack(const SeatracMessage::DataBuffer& in);
 };
 

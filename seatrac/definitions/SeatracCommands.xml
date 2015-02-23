@@ -1,20 +1,36 @@
 <seatrac_commands>
     <!-- The structures will auto inherit the message implementation -->
+    <struct name="StatusCmd">
+        <enum name="CID" value="0x10" />
+	    <var type="StatusBits" name="status_output" />
+	</struct>	
+    
+    <!-- PING MESSAGES -->
     <struct name="PingSendCmd">
         <enum name="CID" value="0x40" />
 	    <var type="uint8_t" name="dest" />
 	    <var type="uint8_t" name="msg_type" />
 	</struct>
 	
-    <struct name="DataSendCmd">
+    <!-- DAT MESSAGES -->
+    <struct name="DatSendCmd">
         <enum name="CID" value="0x60" />
 	    <var type="uint8_t" name="dest" />
 	    <var type="uint8_t" name="msg_type" />
 	    <var type="PayloadType" name="data" />
 	</struct>
 	
-    <struct name="StatusCmd">
-        <enum name="CID" value="0x10" />
-	    <var type="StatusBits" name="status_output" />
+	<struct name="DatQueueSetCmd">
+        <enum name="CID" value="0x64" />
+	   	<var type="uint8_t" name="dest" />
+	    <var type="PayloadType" name="data" />
+	</struct>	
+	
+	<struct name="DatQueueClearCmd">
+        <enum name="CID" value="0x65" />
+	</struct>
+	
+	<struct name="DatQueueStatusCmd">
+        <enum name="CID" value="0x66" />
 	</struct>		
 </seatrac_commands>

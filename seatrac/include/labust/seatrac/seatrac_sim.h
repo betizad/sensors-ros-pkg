@@ -41,6 +41,8 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include <queue>
+
 namespace labust
 {
 	namespace seatrac
@@ -190,10 +192,17 @@ namespace labust
 			double vos;
 			///The simulation timeout overhead (default: 0.1)
 			double time_overhead;
+			///The type of the device (modem or USBL)
+			bool is_modem;
+			///The modem speed in bps (default: 100)
+			double bps;
 			///The node position and attitude
 			auv_msgs::NavSts navstate;
 			///Modem registration flag
 			bool registered;
+
+			///The internal message queue
+			std::queue<DatQueueSetCmd::Ptr> reply_queue;
 		};
 	}
 }

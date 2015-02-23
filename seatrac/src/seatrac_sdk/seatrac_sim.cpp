@@ -51,6 +51,8 @@ SeatracSim::SeatracSim():
 	max_distance(500.0),
 	vos(1500),
 	time_overhead(0.1),
+	is_modem(false),
+	bps(100),
 	registered(false){}
 
 SeatracSim::~SeatracSim()
@@ -65,6 +67,8 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	ph.param("sim_max_distance", max_distance, max_distance);
 	ph.param("sim_vos", vos, vos);
 	ph.param("sim_time_overhead", time_overhead, time_overhead);
+	ph.param("sim_is_modem", is_modem, is_modem);
+	ph.param("sim_bps", bps, bps);
 
 	navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
 			&SeatracSim::onNavSts, this);
@@ -88,13 +92,18 @@ void SeatracSim::registerModem()
 {
 	if (registered) return;
 
+	ROS_INFO("SeatracSim: registering modem to medium.");
+
 	ros::NodeHandle nh;
 	ros::ServiceClient reg = nh.serviceClient<underwater_msgs::AcSimRegister>("register_modem");
 
-	underwater_msgs::AcSimRegister srv;
-	srv.request.node_id = node_id;
-	srv.request.navsts_topic = navsts.getTopic();
-	registered = reg.call(srv);
+	if (reg.waitForExistence(ros::Duration(1.0)))
+	{
+		underwater_msgs::AcSimRegister srv;
+		srv.request.node_id = node_id;
+		srv.request.navsts_topic = navsts.getTopic();
+		registered = reg.call(srv);
+	}
 
 	if (!registered)
 	{
@@ -151,9 +160,27 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 	{
 		PingSendCmd::ConstPtr cmd = boost::dynamic_pointer_cast<PingSendCmd const>(msg);
 		tomedium->receiver = cmd->dest;
-		//Start internal wait for ping reply thread
 		expected_id = cmd->dest;
 		this->setState(WAIT_PING_REPLY);
+	}
+	else if (msg->getCid() == DatSendCmd::CID)
+	{
+		DatSendCmd::ConstPtr cmd = boost::dynamic_pointer_cast<DatSendCmd const>(msg);
+		tomedium->receiver = cmd->dest;
+		expected_id = cmd->dest;
+		if ((cmd->msg_type == AMsgType::MSG_REQX) ||
+			(cmd->msg_type == AMsgType::MSG_REQU) ||
+			(cmd->msg_type == AMsgType::MSG_OWAYU))
+		{
+			tomedium->duration += 8*cmd->data.size()/bps;
+		}
+		else
+		{
+			//No ping, no USBL info; pure data
+			tomedium->duration = 8*cmd->data.size()/bps;
+		}
+
+		this->setState(WAIT_DATA_REPLY);
 	}
 	else
 	{
@@ -182,6 +209,10 @@ bool SeatracSim::resend()
 void SeatracSim::onMediumTransmission(const
 				underwater_msgs::MediumTransmission::ConstPtr& msg)
 {
+	//Try registering before sending
+	this->registerModem();
+	if (!registered) return;
+
 	//Ignore self-messages - there should be no messages
 	if (msg->sender == node_id) return;
 	//Test if it is possible to hear the message
@@ -194,9 +225,9 @@ void SeatracSim::onMediumTransmission(const
 	{
 		processPingCmd(msg);
 	}
-	else if (msg->message[0] == PingSendCmd::CID)
+	else if (msg->message[0] == DatSendCmd::CID)
 	{
-		//Process data command
+		processDataCmd(msg);
 	}
 	else
 	{
@@ -213,19 +244,34 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 	if (state == IDLE)
 	{
 		//Reply on ping command
-		underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
-		rep->sender = node_id;
-		rep->receiver = msg->sender;
-		rep->duration = ping_duration;
-		rep->message.push_back(PingSendCmd::CID);
+		if (msg->receiver == node_id)
+		{
+			ROS_INFO("Node %d received USBL ping from %d and will reply.", msg->receiver, msg->sender);
+			underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
+			rep->sender = node_id;
+			rep->receiver = msg->sender;
+			rep->duration = ping_duration;
+			rep->message.push_back(PingSendCmd::CID);
+			this->sendToMedium(rep);
+		}
+		else
+		{
+			ROS_INFO("Node %d received USBL ping to %d and will listen only.", node_id, msg->receiver);
+		}
 
-		this->sendToMedium(rep);
 		//Create PING_REQ message and send to callback
+		//TODO Add for USBL the azimuth measurement on listening
 		PingReq::Ptr req(new PingReq());
 		req->acofix.dest = msg->sender;
 		req->acofix.flags.POSITION_VALID = 0;
 		req->acofix.flags.RANGE_VALID = 0;
 		req->acofix.flags.USBL_VALID = 0;
+		if (!is_modem)
+		{
+			req->acofix.flags.USBL_VALID = 1;
+			req->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
+			req->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
+		}
 		this->fillAcoFix(req->acofix);
 		out = req;
 	}
@@ -233,7 +279,7 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 	{
 		if (msg->sender == expected_id)
 		{
-			ROS_ERROR("Received expected id.");
+			ROS_INFO("Received expected id=%d.", expected_id);
 			//Stop timeout waiting condition.
 			sleeper.stop();
 			//Handle ping reply
@@ -241,12 +287,12 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 			PingResp::Ptr resp(new PingResp());
 			//\todo Set only range for modems
 			resp->acofix.dest = expected_id;
-			resp->acofix.range.dist = msg->range;
-			resp->acofix.usbl.azimuth = msg->azimuth;
-			resp->acofix.usbl.elevation = msg->elevation;
+			resp->acofix.range.dist = msg->range*AcoFix::RANGE_SC;
+			resp->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
+			resp->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
 			this->fillAcoFix(resp->acofix);
 			out = resp;
-			ROS_ERROR("Message processed.");
+			ROS_INFO("Message from id=%d processed.", expected_id);
 		}
 		else
 		{
@@ -262,6 +308,106 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 	this->setState(IDLE);
 }
 
+void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg)
+{
+	SeatracMessage::ConstPtr out;
+	int state = getState();
+	SeatracMessage::DataBuffer buf;
+	buf.assign(msg->message.begin(), msg->message.end());
+	DatSendCmd incoming;
+	incoming.unpack(buf);
+
+	if (state == IDLE)
+	{
+		//Look into data command
+		if (msg->receiver == node_id)
+		{
+			ROS_INFO("Node %d received USBL data from %d.", msg->receiver, msg->sender);
+
+			if ((incoming.msg_type == AMsgType::MSG_REQU) || (incoming.msg_type == AMsgType::MSG_REQX))
+			{
+				underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
+				rep->sender = node_id;
+				rep->receiver = msg->sender;
+				rep->duration = ping_duration;
+
+				if (reply_queue.empty())
+				{
+					//If nothing to reply, return only the pinging part of data
+					rep->message.push_back(DatSendCmd::CID);
+					this->sendToMedium(rep);
+				}
+				else
+				{
+					///TODO Start using DataQueueSetCmd::dest_id to decide if message in queue should be sent
+					SeatracMessage::DataBuffer buf;
+					DatQueueSetCmd::Ptr mr = reply_queue.front();
+					DatSendCmd ret;
+					ret.dest = msg->sender;
+					ret.data = mr->data;
+					ret.pack(buf);
+					rep->message.assign(buf.begin(), buf.end());
+					rep->duration += 8*mr->data.size()/bps;
+				}
+			}
+		}
+		else
+		{
+			ROS_INFO("Node %d received USBL ping to %d and will listen only.", node_id, msg->receiver);
+		}
+
+		//Create DAT_RECEIVE message and send to callback
+		//TODO Add for USBL the azimuth measurement on listening
+		DatReceive::Ptr req(new DatReceive());
+		req->acofix.dest = msg->sender;
+		req->acofix.flags.POSITION_VALID = 0;
+		req->acofix.flags.RANGE_VALID = 0;
+		req->acofix.flags.USBL_VALID = 0;
+		req->data = incoming.data;
+		if (!is_modem)
+		{
+			req->acofix.flags.USBL_VALID = 1;
+			req->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
+			req->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
+		}
+		this->fillAcoFix(req->acofix);
+		out = req;
+	}
+	else if (state == WAIT_DATA_REPLY)
+	{
+		if (msg->sender == expected_id)
+		{
+			ROS_INFO("Received expected id=%d.", expected_id);
+			//Stop timeout waiting condition.
+			sleeper.stop();
+			//Handle ping reply
+			//Create the PING_RESP and send navigation data
+			DatReceive::Ptr resp(new DatReceive());
+			//\todo Set only range for modems
+			resp->acofix.dest = expected_id;
+			resp->acofix.range.dist = msg->range*AcoFix::RANGE_SC;
+			resp->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
+			resp->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
+			resp->data = incoming.data;
+			this->fillAcoFix(resp->acofix);
+			out = resp;
+			ROS_INFO("Message from id=%d processed.", expected_id);
+		}
+		else
+		{
+			ROS_ERROR("Unexpected id.");
+			//Send PING_ERROR with XCVR_RESP_WRONG
+			PingError::Ptr err(new PingError());
+			err->beacon_id = expected_id;
+			err->status = CST::XCVR::RESP_WRONG;
+			out = err;
+		}
+	}
+	this->sendMessage(out);
+	this->setState(IDLE);
+}
+
+
 void SeatracSim::onUSBLTimeout(const ros::TimerEvent& e)
 {
 	ROS_ERROR("SeatracSim: USBL timeout.");
@@ -274,7 +420,7 @@ void SeatracSim::onUSBLTimeout(const ros::TimerEvent& e)
 	}
 	else if (state == WAIT_DATA_REPLY)
 	{
-		///
+		sendError<DatError>(CST::XCVR::RESP_TIMEOUT);
 	}
 
 	this->setState(IDLE);
