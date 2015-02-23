@@ -134,14 +134,12 @@ try
 	binary.push_back(pt[0]);
 	binary.push_back(pt[1]);
 
-	out.str("#");
+	out.str("");
+	out<<"#";
 	convertToAscii(binary);
-	out<<'\r'<<'\n';
 	ROS_DEBUG("Sending data: %s",out.str().c_str());
-	//boost::asio::write(port, boost::asio::buffer(out.str()));
-	std::stringbuf b2;
-	std::stringstream s;
-	//boost::asio::write(port, s);
+	out<<'\r'<<'\n';
+	boost::asio::write(port, boost::asio::buffer(out.str()));
 	return true;
 }
 catch (std::exception& e)
@@ -176,7 +174,9 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		{
 			//Skip '$' and '\r\n'
 			SeatracMessage::DataBuffer binary;
-			convertToBinary(data, binary);
+			enum {PSTART=1, PTRUNC=2};
+			std::string frame = data.substr(PSTART, data.size()-PTRUNC);
+			convertToBinary(frame, binary);
 			//Checksum
 			boost::crc_16_type checksum;
 			checksum.process_bytes(binary.data(), binary.size() - CRC_BYTES);
@@ -188,7 +188,7 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 				try
 				{
 					SeatracMessage::Ptr msg = SeatracFactory::createResponse(binary[0]);
-	   			//Remove CRC
+	   				//Remove CRC
 					for (int i=0; i<CRC_BYTES;++i) 	binary.pop_back();
 					msg->unpack(binary);
 					boost::mutex::scoped_lock l(callback_mux);

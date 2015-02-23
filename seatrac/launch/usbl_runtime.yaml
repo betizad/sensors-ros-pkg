@@ -1,0 +1,16 @@
+# Core configuration
+comms_plugin: "labust::seatrac::SeatracSerial"
+controller_plugin: "labust::seatrac::USBLController"
+listener_plugins: ["labust::seatrac::StatusListener"]
+
+# USBLController configuration
+auto_mode: true
+transponders: [2]
+
+# Serial connection parameters
+port_name: "/dev/ttyS0"
+baud: 115200
+
+#Simulation parameters
+sim_node_id: 1
+

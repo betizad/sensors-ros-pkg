@@ -22,7 +22,7 @@ BOOST_STATIC_ASSERT((sizeof(AcoFixBits) == 1) && ("AcoFixBits structure is assum
 struct MagCalibration
 {
   uint8_t buffer;
-  bool valid;
+  uint8_t valid;
   uint32_t age;
   uint8_t fit;
 };

@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="seatrac" type="seatrac_core" name="usbl">
+		<rosparam command="load" file="$(find seatrac)/launch/usbl_runtime.yaml"/>
+	</node>
+</launch>
