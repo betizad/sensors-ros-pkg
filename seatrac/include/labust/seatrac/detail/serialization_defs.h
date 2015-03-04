@@ -71,6 +71,7 @@ template<class Archive>
 void serialize(Archive& ar, labust::seatrac::AcoFix& object, const unsigned int version)
 {
 ar & object.dest;
+ar & object.src;
 ar & object.flags;
 ar & object.msg_type;
 ar & object.attitude;

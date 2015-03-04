@@ -68,8 +68,12 @@ struct AcoFix
 {
   enum {RANGE_SC = 10};
   enum {ANGLE_SC = 10};
+  enum {x = 1};
+  enum {y = 0};
+  enum {z = 2};
 
   uint8_t dest;
+  uint8_t src;
   AcoFixBits flags;
   uint8_t msg_type;
   vec3si attitude;

@@ -1,12 +1,14 @@
 # Core configuration
 comms_plugin: "labust::seatrac::SeatracSim"
 controller_plugin: "labust::seatrac::USBLController"
-listener_plugins: ["labust::seatrac::StatusListener"]
+listener_plugins: ["labust::seatrac::StatusListener",
+                   "labust::seatrac::NavListener"]
 
 # USBLController configuration
 auto_mode: true
-transponders: [2]
+transponders: [2,3]
 
 #Simulation parameters
 sim_node_id: 1
+sim_is_modem: false
 

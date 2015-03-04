@@ -19,6 +19,21 @@ def gen_factory_initializer(structs, bindent = '', indent = '  '):
     #Remove the last comma and newline
     return code[:-2]
 
+def gen_names(structs, bindent = '', indent = '  '):
+    """
+    Generates the human readable names of CIDs.
+        
+    bindent -- the current indent in the document
+    indent -- the usual minimum indentation
+    """
+    code = ''
+    for struct in structs:
+        code = code + indent + '{' + struct.sname + '::CID, \"' + struct.sname + '\"},\n'   
+    
+    #Remove the last comma and newline
+    return code[:-2]
+
+
 def create_datatypes(xmlroot, folder = ''):
     structs = []
     for node in xmlroot.findall('struct'):
@@ -88,6 +103,10 @@ def create_messages(xmlroot, prefix, folder = ''):
     
     cmi = open(filebase + '_factory_initializer.h','w')
     cmi.write(gen_factory_initializer(structs))
+    cmi.close()
+    
+    cmi = open(filebase + '_names.h','w')
+    cmi.write(gen_names(structs))
     cmi.close()
     
     smsg = open(filebase + '_defs.h','w')

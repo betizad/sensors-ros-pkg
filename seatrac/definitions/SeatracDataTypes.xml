@@ -58,7 +58,11 @@
 	<struct name="AcoFix" serialization="object_serializable" >
 	    <enum name="RANGE_SC" value="10" />
 	    <enum name="ANGLE_SC" value="10" />
+	    <enum name="x" value="1" />
+	    <enum name="y" value="0" />
+	    <enum name="z" value="2" />
 		<var type="uint8_t" name="dest" />
+		<var type="uint8_t" name="src" />
 		<var type="AcoFixBits" name="flags" />
 		<var type="uint8_t" name="msg_type" />
 		<var type="vec3si" name="attitude" />

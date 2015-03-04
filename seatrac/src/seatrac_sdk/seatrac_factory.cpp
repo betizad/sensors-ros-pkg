@@ -43,6 +43,14 @@ SeatracFactory::CID2ClassMap SeatracFactory::respmap = {
 	#include <labust/seatrac/detail/response_factory_initializer.h>
 };
 
+SeatracFactory::NameMap SeatracFactory::cmdnames = {
+	#include <labust/seatrac/detail/command_names.h>
+};
+
+SeatracFactory::NameMap SeatracFactory::respnames = {
+	#include <labust/seatrac/detail/response_names.h>
+};
+
 SeatracMessage::Ptr SeatracFactory::createCommand(int cid)
 {
 	CID2ClassMap::const_iterator it = cmdmap.find(cid);
@@ -67,4 +75,30 @@ SeatracMessage::Ptr SeatracFactory::createResponse(int cid)
 		throw std::runtime_error(out.str());
 	}
 	return SeatracMessage::Ptr(it->second());
+}
+
+const std::string& SeatracFactory::getCommandName(int cid)
+{
+	NameMap::const_iterator it = cmdnames.find(cid);
+	if (it == cmdnames.end())
+	{
+		std::stringstream out;
+		out << "SeatracFactory: no name for command message CID = 0x";
+		out << std::hex << cid <<std::endl;
+		throw std::runtime_error(out.str());
+	}
+	return it->second;
+}
+
+const std::string& SeatracFactory::getResponseName(int cid)
+{
+	NameMap::const_iterator it = respnames.find(cid);
+	if (it == respnames.end())
+	{
+		std::stringstream out;
+		out << "SeatracFactory: no name for response message CID = 0x";
+		out << std::hex << cid <<std::endl;
+		throw std::runtime_error(out.str());
+	}
+	return it->second;
 }

@@ -35,6 +35,7 @@
  *  Created: 23.01.2013.
  *********************************************************************/
 #include <labust/seatrac/seatrac_core.h>
+#include <labust/seatrac/seatrac_factory.h>
 #include <ros/ros.h>
 
 using namespace labust::seatrac;
@@ -64,13 +65,13 @@ void SeatracCore::onInit()
 	}
 	catch (std::exception& e)
 	{
-		ROS_ERROR("SeatracCore::onInit(): Exception caught: %s", e.what());
+		ROS_ERROR("SeatracCore: Exception caught during initialization: %s", e.what());
 	}
 }
 
 void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	ROS_INFO("loading plugins ...");
+	ROS_INFO("SeatracCore: loading plugins ...");
 
 	//Configure comms
 	std::string commsplug, conplug;
@@ -78,7 +79,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	comms = comms_loader.createInstance(commsplug);
 	if ((comms == 0) || !comms->configure(nh, ph))
 		throw std::runtime_error("SeatracCore: Comms configuration failed.");
-	ROS_INFO("Comms plugin: '%s' loaded", commsplug.c_str());
+	ROS_INFO("SeatracCore: Comms plugin: '%s' loaded", commsplug.c_str());
 
 	//Configure controller
 	ph.param("controller_plugin", conplug, conplug);
@@ -87,7 +88,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	if ((controller == 0) || !controller->configure(nh, ph))
 		throw std::runtime_error("SeatracCore: Controller configuration failed.");
 	controller->registerCallback(boost::bind(&SeatracCore::outgoingMsg, this, _1));
-	ROS_INFO("Controller plugin: '%s' loaded", conplug.c_str());
+	ROS_INFO("SeatracCore: Controller plugin: '%s' loaded", conplug.c_str());
 
 	//Configure listeners
 	std::vector<std::string> listener_list;
@@ -101,7 +102,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			//Configure
 			if (!ltemp->configure(nh, ph))
 			{
-				ROS_WARN("Listener %s failed to configure and will be skipped.",
+				ROS_WARN("SeatracCore: Listener %s failed to configure and will be skipped.",
 						listener_list[i].c_str());
 				continue;
 			}
@@ -109,15 +110,15 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			listeners.push_back(ltemp);
 			//Add callbacks
 			addRegistrationMap(ltemp->getRegistrations());
-			ROS_INFO("Listener plugin: '%s' loaded", listener_list[i].c_str());
+			ROS_INFO("SeatracCore: Listener plugin: '%s' loaded", listener_list[i].c_str());
 		}
 		catch (std::exception& e)
 		{
-			ROS_ERROR("Failed loading listener plugin:%s",e.what());
+			ROS_ERROR("SeatracCore: Failed loading listener plugin:%s",e.what());
 		}
 	}
 
-	ROS_INFO(" loaded.");
+	ROS_INFO("SeatracCore: loaded.");
 }
 
 void SeatracCore::addRegistrationMap(const MessageListener::RegisterMap& lmap)
@@ -137,27 +138,25 @@ bool SeatracCore::incomingMsg(const SeatracMessage::ConstPtr& msg)
 
 	if (it != callbacks.end())
 	{
-		ROS_DEBUG("Found subscription.");
 		const CallbackList& tlist = it->second;
 		for (CallbackList::const_iterator it = tlist.begin();
 				it != tlist.end();
 				++it
 		)
 		{
-			ROS_DEBUG("Dispatch message.");
 			(*it)(msg);
 		}
 	}
 	else
 	{
-		ROS_WARN("Message ignored: %d", msg->getCid());
+		ROS_WARN("SeatracCore: No callbacks for message CID=0x%x [%s]", msg->getCid(),
+						SeatracFactory::getResponseName(msg->getCid()).c_str());
 	}
 	return true;
 }
 
 bool SeatracCore::outgoingMsg(const SeatracMessage::ConstPtr& msg)
 {
-	ROS_INFO("SeatracCore: Relay controller message.");
 	return comms->send(msg);
 }
 

@@ -30,48 +30,41 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  Author : Dula Nad
+ *  Created: 26.03.2013.
  *********************************************************************/
-#ifndef SEATRAC_SEATRACFACTORY_H_
-#define SEATRAC_SEATRACFACTORY_H_
-#include <labust/seatrac/seatrac_messages.h>
-#include <boost/function.hpp>
-#include <map>
-#include <sstream>
+#include <auv_msgs/NavSts.h>
+#include <ros/ros.h>
 
-namespace labust
+#include <vector>
+
+int main(int argc, char* argv[])
 {
-	namespace seatrac
+	ros::init(argc,argv,"static_beacon");
+	ros::NodeHandle nh,ph("~");
+
+	ros::Publisher pos = nh.advertise<auv_msgs::NavSts>("position", 1);
+
+	std::vector<double> position(3,0), orientation(3,0);
+	ph.param("position", position, position);
+	ph.param("orientation", orientation, orientation);
+
+	enum {x=0,y,z};
+	enum {roll=0,pitch,yaw};
+	auv_msgs::NavSts out;
+	out.position.north = position[x];
+	out.position.east = position[y];
+	out.position.depth = position[z];
+	out.orientation.roll = orientation[roll];
+	out.orientation.pitch = orientation[pitch];
+	out.orientation.yaw = orientation[yaw];
+
+	//Latch the position of the device.
+	ros::Rate rate(10);
+	while (ros::ok())
 	{
-		///Generic instance creator
-		template <class Type>	inline SeatracMessage* createInstance(){return new Type();}
-
-
-		///Factory for Seatrac message creation.
-		class SeatracFactory
-		{
-			///Creator function callback
-			typedef boost::function<SeatracMessage*(void)> Builder;
-			///Creator Map
-			typedef std::map<int, Builder> CID2ClassMap;
-			///Name map for CID
-			typedef std::map<int, std::string> NameMap;
-		public:
-			///Create a command message based on the supplied CID.
-			static SeatracMessage::Ptr createCommand(int cid);
-			///Create a response message based on the supplied CID.
-			static SeatracMessage::Ptr createResponse(int cid);
-			///Return the human readable name of the message given a CID.
-			static const std::string& getCommandName(int cid);
-			///Return the human readable name of the message given a CID.
-			static const std::string& getResponseName(int cid);
-
-		protected:
-			static CID2ClassMap cmdmap;
-			static CID2ClassMap respmap;
-			static NameMap cmdnames;
-			static NameMap respnames;
-		};
+		pos.publish(out);
+		rate.sleep();
 	}
 }
-/* SEATRAC_SEATRACFACTORY_H */
-#endif

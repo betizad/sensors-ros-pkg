@@ -119,6 +119,7 @@ add_library(seatrac_sdk
    src/seatrac_node/usbl_controller.cpp
    src/seatrac_sdk/serialization.cpp
    src/seatrac_sdk/seatrac_sim.cpp
+   src/seatrac_node/nav_listener.cpp
 )
 
 
@@ -133,12 +134,15 @@ add_executable(seatrac_node
     
 add_executable(seatrac_core
     src/seatrac_node/seatrac_core.cpp)
+    
+add_executable(static_beacon src/static_beacon/static_beacon.cpp)
 
 if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(seatrac_node ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_core ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_serialization_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_sdk ${catkin_EXPORTED_TARGETS})
+ add_dependencies(static_beacon ${catkin_EXPORTED_TARGETS})
 endif()
 
 ## Add cmake target dependencies of the executable/library
@@ -180,6 +184,8 @@ target_link_libraries(seatrac_factory_tester
 target_link_libraries(ac_medium_sim
    ${catkin_LIBRARIES}
 )
+
+target_link_libraries(static_beacon ${catkin_LIBRARIES})
 
 
 #############

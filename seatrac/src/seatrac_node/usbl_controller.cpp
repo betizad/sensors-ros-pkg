@@ -72,8 +72,8 @@ bool USBLController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	ph.param("transponders", transponders, transponders);
 
 	outSub = nh.subscribe<underwater_msgs::ModemTransmission>("outgoing",
-			0, &USBLController::onOutgoing,this);
-	opMode = nh.subscribe<std_msgs::Bool>("auto_mode",	0,
+			1, &USBLController::onOutgoing,this);
+	opMode = nh.subscribe<std_msgs::Bool>("auto_mode",	1,
 			&USBLController::onAutoMode,this);
 	usbl_timeout = nh.advertise<std_msgs::Bool>("usbl_timeout",1);
 
@@ -189,7 +189,7 @@ void USBLController::sendPkg()
 	{
 		if (!(is_busy = this->sender(message)))
 		{
-			ROS_WARN("USBLController::sendPkg(): Message sending failed for %d", message->getCid());
+			ROS_WARN("USBLController: Message sending failed for CID=0x%d", message->getCid());
 			return;
 		}
 
@@ -216,7 +216,7 @@ void USBLController::autorun()
 
 	while(ros::ok() && auto_mode)
 	{
-		ROS_INFO("Sending ping.");
+		ROS_INFO("USBLController: Sending ping to %d", transponders[nextId]);
 		boost::mutex::scoped_lock l(data_mux);
 		if (outgoing.empty())
 		{
@@ -257,22 +257,26 @@ bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	{
 		const PingError::ConstPtr err(
 				boost::dynamic_pointer_cast<PingError const>(msg));
-		ROS_ERROR("USBLController: ping error code: %x", err->status);
+		ROS_ERROR("USBLController: PingError: 0x%x", err->status);
 		unlock = true;
 	}
 	else if (cid == PingSendResp::CID)
 	{
 		const PingSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<PingSendResp const>(msg));
-		ROS_ERROR("USBLController: ping error code: %x", resp->status);
+		ROS_ERROR("USBLController: PingError: 0x%x", resp->status);
 		unlock = (resp->status != CST::OK);
 	}
 	else
 	{
-		ROS_WARN("USBLController::onPingErrors : unhandled CID=%x",cid);
+		ROS_WARN("USBLController: No handling for PingError: 0x%x",cid);
 	}
 
-	if (unlock) this->unlock();
+	if (unlock)
+	{
+		ROS_DEBUG("USBLController: Unlocking wait.");
+		this->unlock();
+	}
 
 	return true;
 }
@@ -284,15 +288,17 @@ bool USBLController::onPingReplies(const SeatracMessage::ConstPtr& msg)
 
 	if (cid == PingResp::CID)
 	{
-		ROS_INFO("USBLController: Ping response received.");
+		const PingResp::ConstPtr resp(boost::dynamic_pointer_cast<PingResp const>(msg));
+		ROS_DEBUG("USBLController: Ping response received from %d.", resp->acofix.src);
 	}
 	else if (cid == DatReceive::CID)
 	{
-		ROS_INFO("USBLController: Data reply received.");
+		const DatReceive::ConstPtr resp(boost::dynamic_pointer_cast<DatReceive const>(msg));
+		ROS_DEBUG("USBLController: Data reply received from %d.", resp->acofix.src);
 	}
 	else
 	{
-		ROS_WARN("USBLController::onPingReplies : unhandled CID=%x",cid);
+		ROS_WARN("USBLController: No unhandled CID=%x",cid);
 	}
 
 	this->unlock();

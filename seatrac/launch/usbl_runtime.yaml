@@ -7,6 +7,9 @@ listener_plugins: ["labust::seatrac::StatusListener"]
 auto_mode: true
 transponders: [2]
 
+# NavListener setup
+transponder_names: ["diver"]
+
 # Serial connection parameters
 port_name: "/dev/ttyS0"
 baud: 115200
