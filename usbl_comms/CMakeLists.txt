@@ -4,7 +4,7 @@ project(usbl_comms)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp nodelet auv_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp nodelet auv_msgs snippets)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -68,12 +68,12 @@ include_directories(include
 
 ## Declare a cpp library
 add_library(usbl_comms src/USBLManager.cpp src/DiverMsg.cpp)
-#add_library(uros_usbl src/uros/UROSManager.cpp src/DiverMsg.cpp)
 
 ## Declare a cpp executable
 add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)
 add_executable(encoding_test src/test/bitencoding.cpp src/DiverMsg.cpp)
 add_executable(uros_modem src/uros/UROSModem.cpp src/DiverMsg.cpp)
+add_executable(encoding_v2_test src/test/encoding_v2.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -85,6 +85,7 @@ if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(uros_modem ${catkin_EXPORTED_TARGETS})
  add_dependencies(divermsg_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(encoding_test ${catkin_EXPORTED_TARGETS})
+ add_dependencies(encoding_v2_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 ## Specify libraries to link a library or executable target against

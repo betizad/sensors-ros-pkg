@@ -72,7 +72,7 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 	navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
 			&SeatracSim::onNavSts, this);
-	medium_in = nh.subscribe<underwater_msgs::MediumTransmission>("medium_in", 10,
+	medium_in = nh.subscribe<underwater_msgs::MediumTransmission>("medium_in", 16,
 			&SeatracSim::onMediumTransmission, this);
 
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_out",1);

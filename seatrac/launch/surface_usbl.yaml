@@ -6,7 +6,7 @@ listener_plugins: ["labust::seatrac::StatusListener",
 
 # USBLController configuration
 auto_mode: true
-transponders: [2,3]
+transponders: [2]
 
 #Simulation parameters
 sim_node_id: 1
