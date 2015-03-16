@@ -71,17 +71,26 @@ namespace labust
 				double temperature;
 				double latitude;
 				double longitude;
+				//This will be defined in the XML
+				const double rhodamine_adc_min;
+				const double rhodamine_adc_max;
+				const uint64_t rhodamine_adc_bits;
+				const double rhodamine_adc_precission;
+				//This will be defined in the XML
+				const double latitude_min;
+				const double latitude_max;
+				const uint64_t latitude_bits;
+				const double latitude_precission;
 
-				//This will be defined in the XML
-				const double rhodamine_adc_min = 0;
-				const double rhodamine_adc_max = 1024;
-				const uint64_t rhodamine_adc_bits = 10;
-				const double rhodamine_adc_precission = 1;
-				//This will be defined in the XML
-				const double latitude_min = -10;
-				const double latitude_max = 50;
-				const uint64_t latitude_bits = 22;
-				const double latitude_precission = 0.0000001;
+				RhodamineReport():
+				  rhodamine_adc_min(0),
+				  rhodamine_adc_max(1024),
+				  rhodamine_adc_bits(10),
+				  rhodamine_adc_precission(1),
+				  latitude_min(-10),
+				  latitude_max(50),
+				  latitude_bits(22),
+				  latitude_precission(0.0000001){};
 
 				uint64_t encode()
 				{
