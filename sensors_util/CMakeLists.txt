@@ -80,7 +80,8 @@ add_library(sensors_util ${SRC} ${HPP})
 # )
 
 ## Declare a cpp executable
-# add_executable(snippets_node src/snippets_node.cpp)
+add_executable(serial_sink src/serial_sink.cpp)
+target_link_libraries(serial_sink ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

@@ -64,6 +64,10 @@ namespace labust
 			static const std::string& getCommandName(int cid);
 			///Return the human readable name of the message given a CID.
 			static const std::string& getResponseName(int cid);
+			///Make the whole command message packet from a SeatracMessage type.
+			static void encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet);
+			///Validate and decode the data into a SeatracMessage type from the whole packet.
+			static bool decodePacket(const std::string* const packet, SeatracMessage::Ptr& msg);
 
 		protected:
 			static CID2ClassMap cmdmap;

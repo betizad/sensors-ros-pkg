@@ -31,55 +31,51 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#ifndef SEATRAC_SEATRACMESSAGES_H_
-#define SEATRAC_SEATRACMESSAGES_H_
-#include <labust/seatrac/datatypes.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
+#include <labust/seatrac/bridge_controller.h>
+#include <labust/seatrac/seatrac_messages.h>
+#include <labust/seatrac/seatrac_definitions.h>
+#include <labust/seatrac/seatrac_factory.h>
+#include <labust/seatrac/mediator.h>
+#include <pluginlib/class_list_macros.h>
 
-#include <cstdint>
-#include <vector>
-#include <map>
+#include <string>
 #include <sstream>
 
-namespace labust
+using namespace labust::seatrac;
+
+BridgeController::BridgeController()
 {
-	namespace seatrac
+	registrations[ALL_MSG_CID] = boost::bind(&BridgeController::onMsg,this,_1);
+}
+
+bool BridgeController::onMsg(const SeatracMessage::ConstPtr& msg)
+{
+	std_msgs::String::Ptr out(new std_msgs::String());
+	SeatracFactory::encodePacket(msg, &out->data);
+	outgoing.publish(out);
+	return true;
+}
+
+bool BridgeController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+{
+	incoming = nh.subscribe<std_msgs::String>("incoming",
+			1, &BridgeController::onIncoming,this);
+	outgoing = nh.advertise<std_msgs::String>("outgoing", 1);
+	return true;
+}
+
+
+void BridgeController::onIncoming(const std_msgs::String::ConstPtr& msg)
+{
+	SeatracMessage::Ptr in;
+	if (SeatracFactory::decodePacket(&msg->data, in))
 	{
-		/**
-		 * The Seatrac message base to allow dynamic polymorphism.
-		 */
-		class SeatracMessage
-		{
-		public:
-			///Data buffer typedef
-			typedef std::vector<char> DataBuffer;
-			///Smart pointer to the data buffer
-			typedef boost::shared_ptr<std::stringbuf> DataBufferPtr;
-			///Define a constant pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage const> ConstPtr;
-			///Define a simple pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage> Ptr;
-
-			///Generic virtual destructor.
-			virtual ~SeatracMessage(){};
-
-			///Retrieve the current message CID
-			virtual int getCid() const = 0;
-
-			///Test if the message is in reponse or command form.
-			virtual bool isCommand() const = 0;
-
-			///Pack the message into the supplied data buffer
-			virtual bool pack(SeatracMessage::DataBuffer& out) const = 0;
-
-			///Unpack the message into the supplied data buffer
-			virtual bool unpack(const SeatracMessage::DataBuffer& in) = 0;
-		};
-
-		#include <labust/seatrac/detail/command_defs.h>
-		#include <labust/seatrac/detail/response_defs.h>
+		this->sender(in);
+	}
+	else
+	{
+		ROS_ERROR("BridgeController: packet decoding failed.");
 	}
 }
-/* SEATRAC_SEATRACMESSAGES_H */
-#endif
+
+PLUGINLIB_EXPORT_CLASS(labust::seatrac::BridgeController, labust::seatrac::DeviceController)

@@ -36,6 +36,7 @@
  *********************************************************************/
 #include <labust/seatrac/seatrac_core.h>
 #include <labust/seatrac/seatrac_factory.h>
+#include <labust/seatrac/seatrac_definitions.h>
 #include <ros/ros.h>
 
 using namespace labust::seatrac;
@@ -74,7 +75,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	ROS_INFO("SeatracCore: loading plugins ...");
 
 	//Configure comms
-	std::string commsplug, conplug;
+	std::string commsplug("NONE"), conplug("NONE");
 	ph.param("comms_plugin",commsplug,commsplug);
 	comms = comms_loader.createInstance(commsplug);
 	if ((comms == 0) || !comms->configure(nh, ph))
@@ -134,7 +135,24 @@ void SeatracCore::addRegistrationMap(const MessageListener::RegisterMap& lmap)
 
 bool SeatracCore::incomingMsg(const SeatracMessage::ConstPtr& msg)
 {
-	CallbackMap::const_iterator it = callbacks.find(msg->getCid());
+	//Handle special subscriptions for all message forward.
+	bool general(false);
+	CallbackMap::const_iterator it = callbacks.find(ALL_MSG_CID);
+	if (it != callbacks.end())
+	{
+		const CallbackList& tlist = it->second;
+		for (CallbackList::const_iterator it = tlist.begin();
+				it != tlist.end();
+				++it)
+		{
+			general = true;
+			(*it)(msg);
+		}
+	}
+
+
+	//Handle regular subscriptions
+	it = callbacks.find(msg->getCid());
 
 	if (it != callbacks.end())
 	{
@@ -149,8 +167,11 @@ bool SeatracCore::incomingMsg(const SeatracMessage::ConstPtr& msg)
 	}
 	else
 	{
-		ROS_WARN("SeatracCore: No callbacks for message CID=0x%x [%s]", msg->getCid(),
+		if (!general)
+		{
+			ROS_WARN("SeatracCore: No callbacks for message CID=0x%x [%s]", msg->getCid(),
 						SeatracFactory::getResponseName(msg->getCid()).c_str());
+		}
 	}
 	return true;
 }

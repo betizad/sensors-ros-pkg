@@ -30,56 +30,63 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  Author : Dula Nad
+ *  Created: 23.01.2013.
  *********************************************************************/
-#ifndef SEATRAC_SEATRACMESSAGES_H_
-#define SEATRAC_SEATRACMESSAGES_H_
-#include <labust/seatrac/datatypes.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
+#include <labust/comms/ascii_serial.h>
+#include <std_msgs/String.h>
+#include <ros/ros.h>
 
-#include <cstdint>
-#include <vector>
-#include <map>
-#include <sstream>
-
-namespace labust
+void outgoing(const ros::Publisher& pub, const std::string& message)
 {
-	namespace seatrac
-	{
-		/**
-		 * The Seatrac message base to allow dynamic polymorphism.
-		 */
-		class SeatracMessage
-		{
-		public:
-			///Data buffer typedef
-			typedef std::vector<char> DataBuffer;
-			///Smart pointer to the data buffer
-			typedef boost::shared_ptr<std::stringbuf> DataBufferPtr;
-			///Define a constant pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage const> ConstPtr;
-			///Define a simple pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage> Ptr;
-
-			///Generic virtual destructor.
-			virtual ~SeatracMessage(){};
-
-			///Retrieve the current message CID
-			virtual int getCid() const = 0;
-
-			///Test if the message is in reponse or command form.
-			virtual bool isCommand() const = 0;
-
-			///Pack the message into the supplied data buffer
-			virtual bool pack(SeatracMessage::DataBuffer& out) const = 0;
-
-			///Unpack the message into the supplied data buffer
-			virtual bool unpack(const SeatracMessage::DataBuffer& in) = 0;
-		};
-
-		#include <labust/seatrac/detail/command_defs.h>
-		#include <labust/seatrac/detail/response_defs.h>
-	}
+	std_msgs::String::Ptr out(new std_msgs::String());
+	out->data.assign(message);
+	pub.publish(out);
 }
-/* SEATRAC_SEATRACMESSAGES_H */
-#endif
+
+void incoming(labust::comms::ASCIISerial& port, const std_msgs::String::ConstPtr& data)
+{
+	port.send(data->data + "\r\n");
+}
+
+int main(int argc, char* argv[])
+{
+	ros::init(argc,argv,"serial_sink");
+
+	ros::NodeHandle nh, ph("~");
+	//Get serial port data
+	std::string port_name("/dev/ttyUSB0");
+	int baud(115200);
+	ph.param("port_name",port_name,port_name);
+	ph.param("baud",baud,baud);
+
+	labust::comms::ASCIISerial serial;
+	//Try connecting
+	while(ros::ok())
+	{
+		try
+		{
+			if (serial.connect(port_name, baud)) break;
+		}
+		catch (std::exception& e)
+		{
+			ROS_ERROR("%s: Serial connection failed. %s",
+							ros::this_node::getName().c_str(), e.what());
+		}
+		ros::Duration(1.0).sleep();
+	}
+	ROS_INFO("Opened serial port %s at baud %d.", port_name.c_str(), baud);
+
+	ros::Publisher pub = nh.advertise<std_msgs::String>("incoming",1);
+	ros::Subscriber sub = nh.subscribe<std_msgs::String>("outgoing",1,
+					boost::bind(&incoming, boost::ref(serial),_1));
+
+	serial.registerCallback(boost::bind(&outgoing, boost::ref(pub),_1));
+
+	ros::spin();
+
+	return 0;
+}
+
+

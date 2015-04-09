@@ -52,11 +52,6 @@ def create_messages(xmlroot, prefix, folder = ''):
     structs = []
     for node in xmlroot.findall('struct'):
         s = Structure(node)
-        #'''Add automatic CID field'''
-        #v = Variable()
-        #v.vname = 'cid'
-        #v.vtype = 'uint8_t' 
-        #s.svariables.insert(0,v)
 
         '''Add automatic inheritance and virtual method implementations'''
         s.sinherit = 'SeatracMessage'
@@ -71,6 +66,18 @@ def create_messages(xmlroot, prefix, folder = ''):
         f.fret = 'int'
         f.fbody = 'return ' + s.sname + '::CID;'
         f.finline = True
+        f.fqual = 'const'
+        s.smethods.append(f)
+        
+        #Test message type
+        f = Function()
+        f.fname = 'isCommand'
+        f.fret = 'bool'
+        if prefix == "command":
+            f.fbody = 'return true;'
+        else:
+            f.fbody = 'return false;'
+            
         f.fqual = 'const'
         s.smethods.append(f)
                 

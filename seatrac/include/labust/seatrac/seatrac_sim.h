@@ -202,7 +202,9 @@ namespace labust
 			bool registered;
 
 			///The internal message queue
-			std::queue<DatQueueSetCmd::Ptr> reply_queue;
+			std::queue<DatQueueSetCmd::ConstPtr> reply_queue;
+			///Mutex for the reply queue
+			boost::mutex reply_queue_mux;
 		};
 	}
 }

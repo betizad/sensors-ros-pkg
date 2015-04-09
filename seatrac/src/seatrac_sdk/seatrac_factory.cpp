@@ -32,6 +32,9 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 #include <labust/seatrac/seatrac_factory.h>
+#include <labust/tools/StringUtilities.hpp>
+#include <boost/crc.hpp>
+#include <sstream>
 
 using namespace labust::seatrac;
 
@@ -101,4 +104,55 @@ const std::string& SeatracFactory::getResponseName(int cid)
 		throw std::runtime_error(out.str());
 	}
 	return it->second;
+}
+
+void SeatracFactory::encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet)
+{
+	SeatracMessage::DataBuffer binary;
+	msg->pack(binary);
+	boost::crc_16_type checksum;
+	checksum.process_bytes(&binary[0], binary.size());
+	uint16_t chk = checksum.checksum();
+	char* pt = reinterpret_cast<char*>(&chk);
+	binary.push_back(pt[0]);
+	binary.push_back(pt[1]);
+
+	std::ostringstream out("");
+	if (msg->isCommand()) out<<"#"; else out<<"$";
+	labust::tools::binaryToHex(binary.begin(), binary.end(), out);
+	out<<'\r'<<'\n';
+	packet->assign(out.str());
+}
+
+bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessage::Ptr& msg)
+{
+	enum {PSTART=1, PTRUNC=2, CRC_BYTES=2, MIN_SIZE=6};
+	//Check size
+	if (packet->size() < 6) return false;
+	//Fail if the packet does not start correctly
+	if (packet->at(0) != '$' && packet->at(0) != '#') return false;
+
+	//Skip '$' and '\r\n'
+	SeatracMessage::DataBuffer binary;
+	labust::tools::hexToBinary(packet->begin()+PSTART, packet->end()-PTRUNC, &binary);
+	//Checksum
+	boost::crc_16_type checksum;
+	checksum.process_bytes(binary.data(), binary.size() - CRC_BYTES);
+	uint16_t* chk = reinterpret_cast<uint16_t*>(&binary[binary.size() - CRC_BYTES]);
+
+	if ((*chk) != checksum.checksum()) return false;
+
+	if (packet->at(0) == '$')
+	{
+		msg = SeatracFactory::createResponse(binary[0]);
+	}
+	else
+	{
+		msg = SeatracFactory::createCommand(binary[0]);
+	}
+
+	for (int i=0; i<CRC_BYTES;++i) 	binary.pop_back();
+	msg->unpack(binary);
+
+	return true;
 }

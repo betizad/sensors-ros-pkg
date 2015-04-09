@@ -42,7 +42,10 @@ namespace labust
 {
 	namespace seatrac
 	{
-		///Base class for Seatrac messages listeners.
+		/**
+		 * Base class for Seatrac device controllers.
+		 * \todo Consider adding the callback member directly here (will no longer be an interface only class).
+		 */
 		class DeviceController : public virtual MessageListener
 		{
 		public:

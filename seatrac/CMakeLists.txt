@@ -117,6 +117,7 @@ add_library(seatrac_sdk
    src/seatrac_sdk/seatrac_factory.cpp
    src/seatrac_node/status_listener.cpp
    src/seatrac_node/usbl_controller.cpp
+   src/seatrac_node/bridge_controller.cpp
    src/seatrac_sdk/serialization.cpp
    src/seatrac_sdk/seatrac_sim.cpp
    src/seatrac_node/nav_listener.cpp

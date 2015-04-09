@@ -6,4 +6,12 @@
 			option and multi-id tracking.
 		</description>
 	</class>
+	<class type="labust::seatrac::BridgeController" 
+	    base_class_type="labust::seatrac::DeviceController">
+		<description>
+			The bridging controller will externalize all messages comming from the comms
+			and forward any messages to comms comming from ROS. This can be used to simulate
+			the modem protocol for external hardware devices like the underwater tablet.
+		</description>
+	</class>
 </library>

@@ -8,6 +8,7 @@ typedef boost::shared_ptr< StatusCmd const >  ConstPtr;
 {
   return StatusCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
   StatusBits status_output;
@@ -23,6 +24,7 @@ typedef boost::shared_ptr< PingSendCmd const >  ConstPtr;
 {
   return PingSendCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
   uint8_t dest;
@@ -39,6 +41,7 @@ typedef boost::shared_ptr< DatSendCmd const >  ConstPtr;
 {
   return DatSendCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
   uint8_t dest;
@@ -56,6 +59,7 @@ typedef boost::shared_ptr< DatQueueSetCmd const >  ConstPtr;
 {
   return DatQueueSetCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
   uint8_t dest;
@@ -72,6 +76,7 @@ typedef boost::shared_ptr< DatQueueClearCmd const >  ConstPtr;
 {
   return DatQueueClearCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
 };
@@ -86,6 +91,7 @@ typedef boost::shared_ptr< DatQueueStatusCmd const >  ConstPtr;
 {
   return DatQueueStatusCmd::CID;
 };
+  bool isCommand() const;
   bool pack(SeatracMessage::DataBuffer& out) const;
   bool unpack(const SeatracMessage::DataBuffer& in);
 };

@@ -41,6 +41,8 @@
 
 #include <underwater_msgs/AcSimRegister.h>
 
+#include <labust/tools/StringUtilities.hpp>
+
 using namespace labust::seatrac;
 
 SeatracSim::SeatracSim():
@@ -185,6 +187,13 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 		}
 
 		this->setState(WAIT_DATA_REPLY);
+	}
+	else if (msg->getCid() == DatQueueSetCmd::CID)
+	{
+		//\todo Send back acknowledgement ?
+		boost::mutex::scoped_lock l(reply_queue_mux);
+		DatQueueSetCmd::ConstPtr dat = boost::dynamic_pointer_cast<DatQueueSetCmd const>(msg);
+		reply_queue.push(dat);
 	}
 	else
 	{
@@ -351,24 +360,30 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 				rep->receiver = msg->sender;
 				rep->duration = ping_duration;
 
+				boost::mutex::scoped_lock l(reply_queue_mux);
 				if (reply_queue.empty())
 				{
 					//If nothing to reply, return only the pinging part of data
 					rep->message.push_back(DatSendCmd::CID);
-					this->sendToMedium(rep);
 				}
 				else
 				{
-					///TODO Start using DataQueueSetCmd::dest_id to decide if message in queue should be sent
 					SeatracMessage::DataBuffer buf;
-					DatQueueSetCmd::Ptr mr = reply_queue.front();
-					DatSendCmd ret;
-					ret.dest = msg->sender;
-					ret.data = mr->data;
-					ret.pack(buf);
-					rep->message.assign(buf.begin(), buf.end());
-					rep->duration += 8*mr->data.size()/bps;
+					DatQueueSetCmd::ConstPtr mr = reply_queue.front();
+					if (msg->sender == mr->dest)
+					{
+						DatSendCmd ret;
+						ret.dest = mr->dest;
+						ret.data = mr->data;
+						ret.pack(buf);
+						rep->message.assign(buf.begin(), buf.end());
+						rep->duration += 8*mr->data.size()/bps;
+						reply_queue.pop();
+					}
 				}
+				l.unlock();
+
+				this->sendToMedium(rep);
 			}
 		}
 
@@ -411,8 +426,8 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		else
 		{
 			ROS_DEBUG("SeatracSim: Waited for data cmd reply (%d->%d). Received data cmd from %d.", node_id, expected_id, msg->sender);
-			//Send PING_ERROR with XCVR_RESP_WRONG
-			PingError::Ptr err(new PingError());
+			//Send DAT_ERROR with XCVR_RESP_WRONG
+			DatError::Ptr err(new DatError());
 			err->beacon_id = expected_id;
 			err->status = CST::XCVR::RESP_WRONG;
 			out = err;
