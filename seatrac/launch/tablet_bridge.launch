@@ -1,0 +1,26 @@
+<launch>
+	<!-- The surface USBL -->
+	<remap from="medium_out" to="/medium_out" />
+	<remap from="medium_in" to="/medium_in" />
+	<remap from="register_modem" to="/register_modem" />
+
+	<!-- The diver modem -->
+	<group ns="diver">
+		<node pkg="seatrac" type="seatrac_core" name="diver_sim">
+			<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
+			<param name="controller_plugin" value="labust::seatrac::BridgeController" />
+			<param name="sim_node_id" value="2" />
+			<param name="sim_is_modem" value="true" />
+			<remap from="navsts" to="position" />
+		</node>
+
+		<node pkg="seatrac" type="static_beacon" name="diver_pos">
+			<rosparam param="position">[0.0,1.0,10.0]</rosparam>
+		</node>
+	</group>
+
+	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
+
+	<node pkg="rqt_gui" type="rqt_gui" name="debuger"
+		args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" />
+</launch>
