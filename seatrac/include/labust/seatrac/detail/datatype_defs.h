@@ -19,6 +19,14 @@ struct AcoFixBits
 };
 BOOST_STATIC_ASSERT((sizeof(AcoFixBits) == 1) && ("AcoFixBits structure is assumed as size 1 bytes."));
 
+struct BitMessageTest
+{
+  uint8_t type: 4;
+  int32_t lat: 22;
+  int32_t lon: 22;
+};
+BOOST_STATIC_ASSERT((sizeof(BitMessageTest) == 8) && ("BitMessageTest structure is assumed as size 8 bytes."));
+
 struct MagCalibration
 {
   uint8_t buffer;

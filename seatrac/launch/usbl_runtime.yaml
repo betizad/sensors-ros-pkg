@@ -11,7 +11,7 @@ transponders: [2]
 transponder_names: ["diver"]
 
 # Serial connection parameters
-port_name: "/dev/ttyS0"
+port_name: "/dev/ttyUSB0"
 baud: 115200
 
 #Simulation parameters

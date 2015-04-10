@@ -2,6 +2,8 @@ BOOST_CLASS_IMPLEMENTATION(labust::seatrac::StatusBits, boost::serialization::pr
 
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::AcoFixBits, boost::serialization::primitive_type)
 
+BOOST_CLASS_IMPLEMENTATION(labust::seatrac::BitMessageTest, boost::serialization::primitive_type)
+
 BOOST_CLASS_IMPLEMENTATION(labust::seatrac::MagCalibration, boost::serialization::object_serializable)
 namespace boost { namespace serialization {
 template<class Archive>

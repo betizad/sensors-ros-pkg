@@ -1,5 +1,6 @@
 <seatrac_messages>
-	<struct name="StatusBits" assert_size="1" serialization="primitive_type">
+	<struct name="StatusBits" assert_size="1" serialization="primitive_type" 
+	    bitfield="TRUE">
 	    <var type="bool" name="ENVIRONMENT" bits="1"/>
 	    <var type="bool" name="ATTITUDE" bits="1" />
 	    <var type="bool" name="MAG_CAL" bits="1" />
@@ -8,12 +9,20 @@
 	    <var type="bool" name="AHRS_COMP_DATA" bits="1" />
 	</struct>
 	
-	<struct name="AcoFixBits" assert_size="1" serialization="primitive_type">
+	<struct name="AcoFixBits" assert_size="1" serialization="primitive_type"
+	    bitfield="TRUE">
 	    <var type="bool" name="RANGE_VALID" bits="1" />
 	    <var type="bool" name="USBL_VALID" bits="1" />
 	    <var type="bool" name="POSITION_VALID" bits="1" />
 	    <var type="bool" name="POSITION_ENHANCED" bits="1" />
 	    <var type="bool" name="POSITION_FLT_ERROR" bits="1" />
+	</struct>
+	
+	<struct name="BitMessageTest" assert_size="8" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="type" bits="4" />
+	    <var type="int32_t" name="lat" bits="22" />
+	    <var type="int32_t" name="lon" bits="22" />
 	</struct>
 	
 	<struct name="MagCalibration" serialization="object_serializable" > 
