@@ -47,7 +47,14 @@ void outgoing(const ros::Publisher& pub, const std::string& message)
 
 void incoming(labust::comms::ASCIISerial& port, const std_msgs::String::ConstPtr& data)
 {
-	port.send(data->data + "\r\n");
+	try
+	{
+		port.send(data->data + "\r\n");
+	}
+	catch (std::exception& e)
+	{
+		ROS_ERROR("Sending failed with: %s. Is the bluetooth device connected ?", e.what());
+	}
 }
 
 int main(int argc, char* argv[])
