@@ -96,7 +96,7 @@ bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& reques
 }
 
 void AcMediumSim::onMediumTransmission(const
-underwater_msgs::MediumTransmission::ConstPtr& msg)
+	underwater_msgs::MediumTransmission::ConstPtr& msg)
 {
 	//The node has to be registered (if no NavSts message is received the default is NavSts()).
 	boost::mutex::scoped_lock l(state_mux);
@@ -133,7 +133,7 @@ void AcMediumSim::distributeToMedium(const DistanceMap& dist,
 		timer_list.push_back(nh.createTimer(ros::Duration(it->second/vos),
 					boost::bind(&AcMediumSim::transportMessage, this, it->first, msg, _1),
 							true, true));
-		ROS_INFO("Sent message from %d to %d. Distance is %f.",msg->sender, it->first, it->second);
+		ROS_DEBUG("Sent message from %d to %d. Distance is %f.",msg->sender, it->first, it->second);
 	}
 }
 
@@ -161,7 +161,7 @@ void AcMediumSim::transportMessage(int node_id,
 		const ros::TimerEvent& event)
 {
 	//Message arrived to the node_id transponder
-	ROS_INFO("Message arrived at %d.", node_id);
+	ROS_DEBUG("Message arrived at %d.", node_id);
 	boost::mutex::scoped_lock l(delivery_mux);
 
 	TimerMap::iterator it(delivery_timers.find(node_id));
@@ -170,6 +170,7 @@ void AcMediumSim::transportMessage(int node_id,
 		//Is already receiving a different message
 		if (it->second.hasPending())
 		{
+			ROS_WARN("Conflict in communication on acoustic node %d.", node_id);
 			it->second.stop();
 			return;
 		}
@@ -185,7 +186,8 @@ void AcMediumSim::receiveMessage(int node_id,
 		underwater_msgs::MediumTransmission::ConstPtr msg,
 		const ros::TimerEvent& event)
 {
-	ROS_INFO("Forwarding message from %d to %d", msg->sender, node_id);
+	ROS_INFO("Message (sender=%d, receiver=%d) arrived at node %d.",
+					msg->sender, msg->receiver, node_id);
 	underwater_msgs::MediumTransmission::Ptr msgout(new underwater_msgs::MediumTransmission(*msg));
 	msgout->listener_id = node_id;
 	///TODO Check mutexing here
@@ -194,7 +196,7 @@ void AcMediumSim::receiveMessage(int node_id,
 	msgout->position = it->second;
 	ls.unlock();
 	boost::mutex::scoped_lock l(medium_mux);
-	medium_out.publish(msg);
+	medium_out.publish(msgout);
 }
 
 void AcMediumSim::getDistances(int node_id, const auv_msgs::NavSts& npos, DistanceMap& map)

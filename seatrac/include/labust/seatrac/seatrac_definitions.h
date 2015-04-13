@@ -107,14 +107,14 @@ namespace labust
 				 * PING protocol handler.	PING messages provide the simplest (and quickest)
 				 * method of validating the presence of a beacon, and determining its position.
 				 */
-				pload_ping = 0,
+				PLOAD_PING = 0,
 				/**
 				 * Specified an acoustic message payload should	be interpreted by the
 				 * ECHO protocol handler.	ECHO messages allow the function and reliability
 				 * of a beacon to be tested, by requesting the payload contents of the
 				 * message be returned back to the sender.
 				 */
-				pload_echo,
+				PLOAD_ECHO,
 				/**
 				 * Specified an acoustic message payload should be interpreted by the
 				 * NAV (Navigation)	protocol handler.	NAV messages allow tracking and
@@ -122,14 +122,14 @@ namespace labust
 				 * allow remote parameters of	beacons (such as heading, attitude, water
 				 * temperature etc) to be queried.
 				 */
-				pload_nav,
+				PLOAD_NAV,
 				/**
 				 * Specified an acoustic message payload should be interpreted by
 				 * the DAT (Datagram) protocol handler.	DAT messages for the
 				 * simplest method of data exchange between beacons, and provide
 				 * a method of acknowledging data reception.
 				 */
-				pload_dat,
+				PLOAD_DAT,
 				/**
 				 * Specified an acoustic message payload should be interpreted
 				 * by the DEX (Data Exchange)	protocol handler. DEX messages
@@ -137,7 +137,7 @@ namespace labust
 				 * socket based data exchange with timeouts, acknowledgments
 				 * and retry schemes.
 				 */
-				pload_dex
+				PLOAD_DEX
 			};
 		}
 
@@ -151,21 +151,21 @@ namespace labust
 				 *  ranging or position fix will be available on receipt on
 				 *  this message.
 				 */
-				no_ack = 0,
+				NO_ACK = 0,
 				/**
 				 * Data is sent one-way with a USBL signal request (AMsgType is MSG_OWAYU),
 				 * but no response acknowledgment is required. As a USBL signal is transmitted
 				 * with the data, the remote beacon can determine incoming signal angle,
 				 * but not range or position.
 				 */
-				no_ack_usbl,
+				NO_ACK_USBL,
 				/**
 				 * Data is sent as a request message where the acknowledgment will be the
 				 * response, but no	USBL response is required (AMsgType is MSG_RESP).
 				 * As no USBL signal information is transmitted, but a response is returned,
 				 * ranging information will be available for the remote	beacon.
 				 */
-				ack,
+				ACK,
 				/**
 				 * Data is sent as a request message where the acknowledgment will be the
 				 * response, and a USBL signal is required (AMsgType is	MSG_RESPU).	As both
@@ -173,7 +173,7 @@ namespace labust
 				 * positioning and range information for the remote beacon will be available
 				 * to the sender.
 				 */
-				ack_usbl
+				ACK_USBL
 			};
 		};
 
@@ -196,7 +196,8 @@ namespace labust
 
 		enum{
 			///Data broadcast address
-			beacon_all = 0
+			BEACON_ALL = 0,
+			ALL_MSG_CID=-1
 		};
 
 	}

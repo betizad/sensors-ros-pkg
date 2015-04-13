@@ -30,56 +30,41 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  Author : Dula Nad
+ *  Created: 26.03.2013.
  *********************************************************************/
-#ifndef SEATRAC_SEATRACMESSAGES_H_
-#define SEATRAC_SEATRACMESSAGES_H_
-#include <labust/seatrac/datatypes.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
+#include <auv_msgs/NavSts.h>
+#include <ros/ros.h>
 
-#include <cstdint>
 #include <vector>
-#include <map>
-#include <sstream>
 
-namespace labust
+int main(int argc, char* argv[])
 {
-	namespace seatrac
+	ros::init(argc,argv,"static_beacon");
+	ros::NodeHandle nh,ph("~");
+
+	ros::Publisher pos = nh.advertise<auv_msgs::NavSts>("position", 1);
+
+	std::vector<double> position(3,0), orientation(3,0);
+	ph.param("position", position, position);
+	ph.param("orientation", orientation, orientation);
+
+	enum {x=0,y,z};
+	enum {roll=0,pitch,yaw};
+	auv_msgs::NavSts out;
+	out.position.north = position[x];
+	out.position.east = position[y];
+	out.position.depth = position[z];
+	out.orientation.roll = orientation[roll];
+	out.orientation.pitch = orientation[pitch];
+	out.orientation.yaw = orientation[yaw];
+
+	//Latch the position of the device.
+	ros::Rate rate(10);
+	while (ros::ok())
 	{
-		/**
-		 * The Seatrac message base to allow dynamic polymorphism.
-		 */
-		class SeatracMessage
-		{
-		public:
-			///Data buffer typedef
-			typedef std::vector<char> DataBuffer;
-			///Smart pointer to the data buffer
-			typedef boost::shared_ptr<std::stringbuf> DataBufferPtr;
-			///Define a constant pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage const> ConstPtr;
-			///Define a simple pointer to SeatracMessage
-			typedef boost::shared_ptr<SeatracMessage> Ptr;
-
-			///Generic virtual destructor.
-			virtual ~SeatracMessage(){};
-
-			///Retrieve the current message CID
-			virtual int getCid() const = 0;
-
-			///Test if the message is in reponse or command form.
-			virtual bool isCommand() const = 0;
-
-			///Pack the message into the supplied data buffer
-			virtual bool pack(SeatracMessage::DataBuffer& out) const = 0;
-
-			///Unpack the message into the supplied data buffer
-			virtual bool unpack(const SeatracMessage::DataBuffer& in) = 0;
-		};
-
-		#include <labust/seatrac/detail/command_defs.h>
-		#include <labust/seatrac/detail/response_defs.h>
+		pos.publish(out);
+		rate.sleep();
 	}
 }
-/* SEATRAC_SEATRACMESSAGES_H */
-#endif

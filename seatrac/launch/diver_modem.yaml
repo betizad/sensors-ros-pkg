@@ -9,4 +9,5 @@ transponders: []
 
 # Simulation parameters
 sim_node_id: 2
+sim_is_modem: true
 

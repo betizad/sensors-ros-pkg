@@ -113,9 +113,9 @@ void SeaTracNode::onInit()
 		ph.param("timeout",ping_timeout,ping_timeout);
 		ph.param("id", transponderId, transponderId);
 		ph.param("only_ack", onlyAck, onlyAck);
-		///\todo remove this hardcoded part and replace with configuration
-		if (transponderId == 1) trackId.push_back(2);
-		else trackId.push_back(1);
+		///\todo remove this hardcoded part and replace with configuration only
+		if (transponderId == 1) trackId.push_back(2); else trackId.push_back(1);
+		ph.param("track_ids", trackId, trackId);
 
 		//Register message handlers
 		dispatch[CID_XCVR::fix] = boost::bind(&NavHandler::operator(), &nav,_1,_2);

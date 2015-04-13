@@ -47,6 +47,7 @@ namespace labust
 	{
 		/**
 		 * The class implements the Seatrac ASCII serial protocol.
+		 * \todo Change to use the SeatracFactory methods for decoding and encoding
 		 */
 		class SeatracSerial : public virtual SeatracComms
 		{

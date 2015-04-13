@@ -19,10 +19,18 @@ struct AcoFixBits
 };
 BOOST_STATIC_ASSERT((sizeof(AcoFixBits) == 1) && ("AcoFixBits structure is assumed as size 1 bytes."));
 
+struct BitMessageTest
+{
+  uint8_t type: 4;
+  int32_t lat: 22;
+  int32_t lon: 22;
+};
+BOOST_STATIC_ASSERT((sizeof(BitMessageTest) == 8) && ("BitMessageTest structure is assumed as size 8 bytes."));
+
 struct MagCalibration
 {
   uint8_t buffer;
-  bool valid;
+  uint8_t valid;
   uint32_t age;
   uint8_t fit;
 };
@@ -66,7 +74,14 @@ struct USBLData
 
 struct AcoFix
 {
+  enum {RANGE_SC = 10};
+  enum {ANGLE_SC = 10};
+  enum {x = 1};
+  enum {y = 0};
+  enum {z = 2};
+
   uint8_t dest;
+  uint8_t src;
   AcoFixBits flags;
   uint8_t msg_type;
   vec3si attitude;

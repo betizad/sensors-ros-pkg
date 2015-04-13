@@ -43,7 +43,10 @@ namespace labust
 {
 	namespace seatrac
 	{
-		///Base class for Seatrac messages listeners.
+		/**
+		 * Base class for Seatrac messages listeners.
+		 * \todo Consider adding the registration map directly in this class (it will no longer be an interface)
+		 */
 		class MessageListener : public virtual ROSConfigure
 		{
 		public:

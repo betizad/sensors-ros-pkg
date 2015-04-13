@@ -5,4 +5,10 @@
 			The USBL diagnostics listener.
 		</description>
 	</class>
+	<class type="labust::seatrac::NavListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			The AcoFix message parser for USBL/modem navigation data.
+		</description>
+	</class>
 </library>

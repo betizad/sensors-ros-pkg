@@ -1,5 +1,6 @@
 <seatrac_messages>
-	<struct name="StatusBits" assert_size="1" serialization="primitive_type">
+	<struct name="StatusBits" assert_size="1" serialization="primitive_type" 
+	    bitfield="TRUE">
 	    <var type="bool" name="ENVIRONMENT" bits="1"/>
 	    <var type="bool" name="ATTITUDE" bits="1" />
 	    <var type="bool" name="MAG_CAL" bits="1" />
@@ -8,7 +9,8 @@
 	    <var type="bool" name="AHRS_COMP_DATA" bits="1" />
 	</struct>
 	
-	<struct name="AcoFixBits" assert_size="1" serialization="primitive_type">
+	<struct name="AcoFixBits" assert_size="1" serialization="primitive_type"
+	    bitfield="TRUE">
 	    <var type="bool" name="RANGE_VALID" bits="1" />
 	    <var type="bool" name="USBL_VALID" bits="1" />
 	    <var type="bool" name="POSITION_VALID" bits="1" />
@@ -16,9 +18,16 @@
 	    <var type="bool" name="POSITION_FLT_ERROR" bits="1" />
 	</struct>
 	
+	<struct name="BitMessageTest" assert_size="8" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="type" bits="4" />
+	    <var type="int32_t" name="lat" bits="22" />
+	    <var type="int32_t" name="lon" bits="22" />
+	</struct>
+	
 	<struct name="MagCalibration" serialization="object_serializable" > 
 	    <var type="uint8_t" name="buffer" />
-	    <var type="bool" name="valid" />
+	    <var type="uint8_t" name="valid" />
 	    <var type="uint32_t" name="age" />
 	    <var type="uint8_t" name="fit" />
 	</struct>
@@ -56,7 +65,13 @@
 	</struct>
 	
 	<struct name="AcoFix" serialization="object_serializable" >
+	    <enum name="RANGE_SC" value="10" />
+	    <enum name="ANGLE_SC" value="10" />
+	    <enum name="x" value="1" />
+	    <enum name="y" value="0" />
+	    <enum name="z" value="2" />
 		<var type="uint8_t" name="dest" />
+		<var type="uint8_t" name="src" />
 		<var type="AcoFixBits" name="flags" />
 		<var type="uint8_t" name="msg_type" />
 		<var type="vec3si" name="attitude" />

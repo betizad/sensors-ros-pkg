@@ -19,6 +19,21 @@ def gen_factory_initializer(structs, bindent = '', indent = '  '):
     #Remove the last comma and newline
     return code[:-2]
 
+def gen_names(structs, bindent = '', indent = '  '):
+    """
+    Generates the human readable names of CIDs.
+        
+    bindent -- the current indent in the document
+    indent -- the usual minimum indentation
+    """
+    code = ''
+    for struct in structs:
+        code = code + indent + '{' + struct.sname + '::CID, \"' + struct.sname + '\"},\n'   
+    
+    #Remove the last comma and newline
+    return code[:-2]
+
+
 def create_datatypes(xmlroot, folder = ''):
     structs = []
     for node in xmlroot.findall('struct'):
@@ -37,11 +52,6 @@ def create_messages(xmlroot, prefix, folder = ''):
     structs = []
     for node in xmlroot.findall('struct'):
         s = Structure(node)
-        #'''Add automatic CID field'''
-        #v = Variable()
-        #v.vname = 'cid'
-        #v.vtype = 'uint8_t' 
-        #s.svariables.insert(0,v)
 
         '''Add automatic inheritance and virtual method implementations'''
         s.sinherit = 'SeatracMessage'
@@ -56,6 +66,18 @@ def create_messages(xmlroot, prefix, folder = ''):
         f.fret = 'int'
         f.fbody = 'return ' + s.sname + '::CID;'
         f.finline = True
+        f.fqual = 'const'
+        s.smethods.append(f)
+        
+        #Test message type
+        f = Function()
+        f.fname = 'isCommand'
+        f.fret = 'bool'
+        if prefix == "command":
+            f.fbody = 'return true;'
+        else:
+            f.fbody = 'return false;'
+            
         f.fqual = 'const'
         s.smethods.append(f)
                 
@@ -88,6 +110,10 @@ def create_messages(xmlroot, prefix, folder = ''):
     
     cmi = open(filebase + '_factory_initializer.h','w')
     cmi.write(gen_factory_initializer(structs))
+    cmi.close()
+    
+    cmi = open(filebase + '_names.h','w')
+    cmi.write(gen_names(structs))
     cmi.close()
     
     smsg = open(filebase + '_defs.h','w')

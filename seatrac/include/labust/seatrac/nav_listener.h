@@ -31,14 +31,20 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRAC_SEATRACCORE_H
-#define SEATRAC_SEATRACCORE_H
-#include <labust/seatrac/seatrac_comms.h>
-#include <labust/seatrac/device_controller.h>
+#ifndef SEATRAC_NAVLISTENER_H
+#define SEATRAC_NAVLISTENER_H
 #include <labust/seatrac/message_listener.h>
-#include <pluginlib/class_loader.h>
+#include <labust/seatrac/seatrac_messages.h>
 
-#include <list>
+#include <auv_msgs/NavSts.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2_ros/transform_listener.h>
+#include <ros/ros.h>
+
+#include <Eigen/Dense>
+
+#include <vector>
+#include <string>
 #include <map>
 
 namespace labust
@@ -46,57 +52,60 @@ namespace labust
 	namespace seatrac
 	{
 		/**
-		 * The class implements the Seatrac USBL and modem node.
-		 * \todo Implement additional messages
-		 * \todo Add CID type ID to structures
-		 * \todo Automatic detection of local ID, USBL/Modem, etc.
-		 * \todo Split the master/slave implementation into states for the State design pattern
-		 * \todo Remove backward capability.
-		 * \todo Optimization for ARM/UDOO ?
+		 * The class implements the status publisher and decoder.
 		 */
-		class SeatracCore
+		class NavListener : virtual public MessageListener
 		{
-			typedef std::list<SeatracComms::CallbackType> CallbackList;
-			typedef std::map<int, CallbackList> CallbackMap;
+			typedef std::map<int, ros::Publisher> PublisherMap;
 		public:
 			///Main constructor
-			SeatracCore();
-			///Default destructor
-			~SeatracCore();
-			///Initialize and setup the Seatrac core.
-			void onInit();
+			NavListener();
+
+			///Listener configuration.
+			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+			///Register for messages
+			const RegisterMap& getRegistrations(){return registrations;}
 
 		private:
-			///Helper function for plugin setup
-			void setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph);
-			///Function handler
-			bool incomingMsg(const SeatracMessage::ConstPtr& msg);
-			///Function handler
-			bool outgoingMsg(const SeatracMessage::ConstPtr& msg);
-			///Helper function for registrations
-			void addRegistrationMap(const MessageListener::RegisterMap& lmap);
+			///Registration map
+			RegisterMap registrations;
 
-			//Communication layer
-			///Comms loader
-			pluginlib::ClassLoader<SeatracComms> comms_loader;
-			///Comms handle
-			SeatracComms::Ptr comms;
+			///Handle any response with an acofix message.
+			template<class Type>
+			void onAcoFixMessage(const Type& resp)
+			{
+				this->processAcoFix(resp.acofix);
+			}
 
-			//Controller and listener layer
-			///Comms loader
-			pluginlib::ClassLoader<DeviceController> control_loader;
-			///Comms handle
-			DeviceController::Ptr controller;
+			///AcoFix message processor
+			void processAcoFix(const AcoFix& fix);
+			///Status processor
+			void onStatus(const StatusResp& resp);
+			///Calculate the full navigation solution
+			void calculateNavSts(auv_msgs::NavSts& nav,	const Eigen::Vector3d& pos,
+							const geometry_msgs::TransformStamped& trans);
 
-			///Listeners loader
-			pluginlib::ClassLoader<MessageListener> listener_loader;
-			///Listener list
-			std::list<MessageListener::Ptr> listeners;
-			///Callback map for listeners
-			CallbackMap callbacks;
+			///Transponder fix publishers
+			PublisherMap fix_pub;
+			///Transponder relative position publishers
+			PublisherMap point_pub;
+
+			///Internal status data
+			double vos;
+
+			///Internal AHRS compensation
+			bool use_ahrs;
+			///Assumed time delay to use for AHRS compensation
+			double ahrs_delay;
+			///TF broadcast listener buffer
+			tf2_ros::Buffer buffer;
+			///TF broadcast listener
+			tf2_ros::TransformListener listener;
+			///Transponder map
+			std::map<int, std::string> ids;
 		};
 	}
 }
 
-/* SEATRAC_SEATRACCORE_H */
+/* SEATRAC_NAVLISTENER_H */
 #endif

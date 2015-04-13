@@ -41,6 +41,7 @@
 
 typedef double vec3d[3];
 typedef float vec3f[3];
+typedef float vec4f[4];
 
 namespace labust
 {
@@ -59,7 +60,8 @@ namespace labust
 				RTCMCorrections = 55,
 				PacketTimerPeriod = 180,
 				PacketsPeriod = 181,
-				SensorRanges = 184
+				SensorRanges = 184,
+				QuaternionOrientation = 40
 			};
 		};
 
@@ -75,7 +77,8 @@ namespace labust
 				ExternalVelocity = 24,
 				PacketTimerPeriod = 4,
 				PacketsPeriod = 7,
-				SensorRanges = 4
+				SensorRanges = 4,
+				QuaternionOrientation = 40
 			};
 		};
 	}
@@ -142,6 +145,11 @@ PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN(
 		ExternalVelocity,
 		(vec3f, velocity)
 		(vec3f, velocityStdDev))
+
+PP_LABUST_DEFINE_BOOST_SERIALIZED_STRUCT_CLEAN(
+		(labust)(spatial),
+		QuaternionOrientation,
+		(vec4f, quat))
 
 //SPATIALMESSAGES_HPP_
 #endif

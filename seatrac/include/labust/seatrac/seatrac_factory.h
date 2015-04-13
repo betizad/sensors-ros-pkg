@@ -53,15 +53,27 @@ namespace labust
 			typedef boost::function<SeatracMessage*(void)> Builder;
 			///Creator Map
 			typedef std::map<int, Builder> CID2ClassMap;
+			///Name map for CID
+			typedef std::map<int, std::string> NameMap;
 		public:
 			///Create a command message based on the supplied CID.
 			static SeatracMessage::Ptr createCommand(int cid);
 			///Create a response message based on the supplied CID.
 			static SeatracMessage::Ptr createResponse(int cid);
+			///Return the human readable name of the message given a CID.
+			static const std::string& getCommandName(int cid);
+			///Return the human readable name of the message given a CID.
+			static const std::string& getResponseName(int cid);
+			///Make the whole command message packet from a SeatracMessage type.
+			static void encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet);
+			///Validate and decode the data into a SeatracMessage type from the whole packet.
+			static bool decodePacket(const std::string* const packet, SeatracMessage::Ptr& msg);
 
 		protected:
 			static CID2ClassMap cmdmap;
 			static CID2ClassMap respmap;
+			static NameMap cmdnames;
+			static NameMap respnames;
 		};
 	}
 }

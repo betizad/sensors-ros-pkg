@@ -97,7 +97,6 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 	ROS_INFO("\t Range valid:%d", fix.header.flags.RANGE_VALID);
 	ROS_INFO("\t Range:%d", fix.range_data.range_count);
 	ROS_INFO("\t Count rssi:%d", fix.usbl_data.usbl_rssi.size());
-	ROS_INFO("\t Remote depth:%d", fix.position[2]);
 	ROS_INFO("\t East:%d, North:%d, Depth:%d", fix.position[0], fix.position[1], fix.position[2]);
 
 	if (fix.header.flags.POSITION_ENHANCED)	ROS_WARN("Depth aided positioning not implemented.");
@@ -190,7 +189,6 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 		outfix->sound_speed = fix.header.vos/10.;
 		outfix->elevation = fix.usbl_data.usbl_elevation/10.;
 		outfix->bearing = fix.usbl_data.usbl_azimuth/10.;
-		outfix->remote_depth = fix.position[2]/10.;
 
 		outfix->type = underwater_msgs::USBLFix::FULL_FIX;
 		if (fix.header.flags.RANGE_VALID && !fix.header.flags.USBL_VALID)
