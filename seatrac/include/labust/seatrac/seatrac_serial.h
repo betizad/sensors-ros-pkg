@@ -131,7 +131,7 @@ namespace labust
 			///Muxer for the callback
 			boost::mutex callback_mux;
 			///Last encoded packet
-			std::stringstream out;
+			std::string out;
 		};
 	}
 }

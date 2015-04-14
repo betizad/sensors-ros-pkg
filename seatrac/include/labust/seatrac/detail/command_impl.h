@@ -1,102 +1,146 @@
 
-bool StatusCmd::isCommand() const
+
+  bool StatusCmd::isCommand() const
 {
   return true;
-}
+};
 
-bool StatusCmd::pack(SeatracMessage::DataBuffer& out) const
+  void StatusCmd::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    status_output.pack(out);
 
-bool StatusCmd::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void StatusCmd::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    status_output.unpack(in);
+
+};
 
 
 
-bool PingSendCmd::isCommand() const
-{
-  return true;
-}
-
-bool PingSendCmd::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool PingSendCmd::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool DatSendCmd::isCommand() const
+  bool PingSendCmd::isCommand() const
 {
   return true;
-}
+};
 
-bool DatSendCmd::pack(SeatracMessage::DataBuffer& out) const
+  void PingSendCmd::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<dest;
+  out <<msg_type;
 
-bool DatSendCmd::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void PingSendCmd::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> dest;
+  in >> msg_type;
+
+};
 
 
 
-bool DatQueueSetCmd::isCommand() const
-{
-  return true;
-}
-
-bool DatQueueSetCmd::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool DatQueueSetCmd::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool DatQueueClearCmd::isCommand() const
+  bool DatSendCmd::isCommand() const
 {
   return true;
-}
+};
 
-bool DatQueueClearCmd::pack(SeatracMessage::DataBuffer& out) const
+  void DatSendCmd::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<dest;
+  out <<msg_type;
+    uint8_t data_len(data.size());
+  out << data_len;
+  for(int i=0; i<data.size(); ++i) out << data[i];
 
-bool DatQueueClearCmd::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void DatSendCmd::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> dest;
+  in >> msg_type;
+    uint8_t data_len;
+in >> data_len;
+  data.resize(data_len);
+  for(int i=0; i<data.size(); ++i) in >> data[i];
+
+};
 
 
 
-bool DatQueueStatusCmd::isCommand() const
+
+
+
+  bool DatQueueSetCmd::isCommand() const
 {
   return true;
-}
+};
 
-bool DatQueueStatusCmd::pack(SeatracMessage::DataBuffer& out) const
+  void DatQueueSetCmd::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<dest;
+    uint8_t data_len(data.size());
+  out << data_len;
+  for(int i=0; i<data.size(); ++i) out << data[i];
 
-bool DatQueueStatusCmd::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void DatQueueSetCmd::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> dest;
+    uint8_t data_len;
+in >> data_len;
+  data.resize(data_len);
+  for(int i=0; i<data.size(); ++i) in >> data[i];
+
+};
+
+
+
+
+
+
+  bool DatQueueClearCmd::isCommand() const
+{
+  return true;
+};
+
+  void DatQueueClearCmd::pack(boost::archive::binary_oarchive& out) const
+{
+  
+};
+
+  void DatQueueClearCmd::unpack(boost::archive::binary_iarchive& in) 
+{
+  
+};
+
+
+
+
+
+
+  bool DatQueueStatusCmd::isCommand() const
+{
+  return true;
+};
+
+  void DatQueueStatusCmd::pack(boost::archive::binary_oarchive& out) const
+{
+  
+};
+
+  void DatQueueStatusCmd::unpack(boost::archive::binary_iarchive& in) 
+{
+  
+};
+
+
 
 

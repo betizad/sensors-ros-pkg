@@ -33,6 +33,9 @@
  *********************************************************************/
 #include <labust/seatrac/seatrac_factory.h>
 #include <labust/tools/StringUtilities.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/stream.hpp>
 #include <boost/crc.hpp>
 #include <sstream>
 
@@ -109,7 +112,15 @@ const std::string& SeatracFactory::getResponseName(int cid)
 void SeatracFactory::encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet)
 {
 	SeatracMessage::DataBuffer binary;
-	msg->pack(binary);
+	using namespace boost::iostreams;
+	typedef back_insert_device<SeatracMessage::DataBuffer> smsink;
+	smsink sink(binary);
+	stream<smsink> os(sink);
+	boost::archive::binary_oarchive outser(os, boost::archive::no_header);
+	uint8_t cid = msg->getCid();
+	outser << cid;
+	msg->pack(outser);
+
 	boost::crc_16_type checksum;
 	checksum.process_bytes(&binary[0], binary.size());
 	uint16_t chk = checksum.checksum();
@@ -152,7 +163,14 @@ bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessag
 	}
 
 	for (int i=0; i<CRC_BYTES;++i) 	binary.pop_back();
-	msg->unpack(binary);
+
+	using namespace boost::iostreams;
+  array_source source(binary.data(), binary.size()-CRC_BYTES);
+  stream<array_source> is(source);
+	boost::archive::binary_iarchive inser(is, boost::archive::no_header);
+	uint8_t cid;
+	inser>>cid;
+	msg->unpack(inser);
 
 	return true;
 }

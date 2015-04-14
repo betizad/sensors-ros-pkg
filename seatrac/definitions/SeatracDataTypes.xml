@@ -18,7 +18,7 @@
 	    <var type="bool" name="POSITION_FLT_ERROR" bits="1" />
 	</struct>
 	
-	<struct name="BitMessageTest" assert_size="8" serialization="primitive_type"
+	<struct name="BitMessageTest" assert_size="6" serialization="primitive_type"
 	    bitfield="TRUE">
 	    <var type="uint8_t" name="type" bits="4" />
 	    <var type="int32_t" name="lat" bits="22" />
@@ -41,14 +41,14 @@
 	</struct>
 	
 	<struct name="AccCalibration" serialization="object_serializable" > 
-	    <var type="vec3si" name="lim_min" />
-	    <var type="vec3si" name="lim_max" />
+	    <var type="int16_t[3]" name="lim_min" />
+	    <var type="int16_t[3]" name="lim_max" />
 	</struct>
 	
 	<struct name="AHRSData" serialization="object_serializable" > 
-	    <var type="vec3si" name="acc" />
-	    <var type="vec3si" name="mag" />
-	    <var type="vec3si" name="gyro" />
+	    <var type="int16_t[3]" name="acc" />
+	    <var type="int16_t[3]" name="mag" />
+	    <var type="int16_t[3]" name="gyro" />
 	</struct>
 	
 	<struct name="RangeData" serialization="object_serializable" > 
@@ -58,7 +58,7 @@
 	</struct>
 	
 	<struct name="USBLData" serialization="object_serializable" > 
-		<var type="USBLRSSIVec" name="rssi" />
+		<var type="int16_t[]" name="rssi" />
 		<var type="int16_t" name="azimuth" />
 		<var type="int16_t" name="elevation" />
 		<var type="int16_t" name="fit_error" />
@@ -74,14 +74,14 @@
 		<var type="uint8_t" name="src" />
 		<var type="AcoFixBits" name="flags" />
 		<var type="uint8_t" name="msg_type" />
-		<var type="vec3si" name="attitude" />
+		<var type="int16_t[3]" name="attitude" />
 		<var type="uint16_t" name="depth_local" />
 		<var type="uint16_t" name="vos" />
 		<var type="int16_t" name="rssi" />
 		
 		<var type="RangeData" name="range" if="flags.RANGE_VALID" />		
 		<var type="USBLData" name="usbl" if="flags.USBL_VALID" />
-	    <var type="vec3si" name="position" if="flags.POSITION_VALID" />		
+	    <var type="int16_t[3]" name="position" if="flags.POSITION_VALID" />		
 	</struct>
 	
 	<struct name="Status" serialization="object_serializable">
@@ -99,7 +99,7 @@
 	    <var type="uint64_t" name="timestamp" />
 	    
 	    <var type="EnvStatus" name="env" if="status_output.ENVIRONMENT" />    
-	    <var type="vec3si" name="attitude" if="status_output.ATTITUDE" />
+	    <var type="int16_t[3]" name="attitude" if="status_output.ATTITUDE" />
 	    <var type="MagCalibration" name="mag_cal" if="status_output.MAG_CAL" />
 	    <var type="AccCalibration" name="acc" if="status_output.ACC_CAL" />
 	    <var type="AHRSData" name="ahrs_raw" if="status_output.AHRS_RAW_DATA" />
@@ -112,7 +112,7 @@
 		<var type="uint8_t" name="msg_type" />
 		<var type="uint16_t" name="depth" />
 		<var type="uint8_t" name="payload_id" />
-		<var type="PayloadType" name="payload" />
+		<var type="uint8_t[]" name="payload" />
 	</struct>
 	
 </seatrac_messages>

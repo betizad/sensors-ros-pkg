@@ -38,7 +38,7 @@
         <enum name="CID" value="0x61" />
         <var type="AcoFix" name="acofix" />
 	    <var type="uint8_t" name="ack_flag" />
-	    <var type="PayloadType" name="data" />
+	    <var type="uint8_t[]" name="data" />
 	</struct>
 	
 	<struct name="DatError">

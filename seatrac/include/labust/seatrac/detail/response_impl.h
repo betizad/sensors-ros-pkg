@@ -1,187 +1,259 @@
 
-bool StatusResp::isCommand() const
+
+  bool StatusResp::isCommand() const
 {
   return false;
-}
+};
 
-bool StatusResp::pack(SeatracMessage::DataBuffer& out) const
+  void StatusResp::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    status.pack(out);
 
-bool StatusResp::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void StatusResp::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    status.unpack(in);
+
+};
 
 
 
-bool PingSendResp::isCommand() const
-{
-  return false;
-}
-
-bool PingSendResp::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool PingSendResp::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool PingReq::isCommand() const
+  bool PingSendResp::isCommand() const
 {
   return false;
-}
+};
 
-bool PingReq::pack(SeatracMessage::DataBuffer& out) const
+  void PingSendResp::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<status;
+  out <<beacon_id;
 
-bool PingReq::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void PingSendResp::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> status;
+  in >> beacon_id;
+
+};
 
 
 
-bool PingResp::isCommand() const
-{
-  return false;
-}
-
-bool PingResp::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool PingResp::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool PingError::isCommand() const
+  bool PingReq::isCommand() const
 {
   return false;
-}
+};
 
-bool PingError::pack(SeatracMessage::DataBuffer& out) const
+  void PingReq::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    acofix.pack(out);
 
-bool PingError::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void PingReq::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    acofix.unpack(in);
+
+};
 
 
 
-bool DatSendResp::isCommand() const
-{
-  return false;
-}
-
-bool DatSendResp::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool DatSendResp::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool DatReceive::isCommand() const
+  bool PingResp::isCommand() const
 {
   return false;
-}
+};
 
-bool DatReceive::pack(SeatracMessage::DataBuffer& out) const
+  void PingResp::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    acofix.pack(out);
 
-bool DatReceive::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void PingResp::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    acofix.unpack(in);
+
+};
 
 
 
-bool DatError::isCommand() const
-{
-  return false;
-}
-
-bool DatError::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool DatError::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool DatQueueSetResp::isCommand() const
+  bool PingError::isCommand() const
 {
   return false;
-}
+};
 
-bool DatQueueSetResp::pack(SeatracMessage::DataBuffer& out) const
+  void PingError::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<status;
+  out <<beacon_id;
 
-bool DatQueueSetResp::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void PingError::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> status;
+  in >> beacon_id;
+
+};
 
 
 
-bool DatQueueClearResp::isCommand() const
-{
-  return false;
-}
-
-bool DatQueueClearResp::pack(SeatracMessage::DataBuffer& out) const
-{
-  return seatrac_serialize(this, out);
-}
-
-bool DatQueueClearResp::unpack(const SeatracMessage::DataBuffer& in)
-{
-  return seatrac_deserialize(this, in);
-}
 
 
 
-bool DatQueueStatusResp::isCommand() const
+  bool DatSendResp::isCommand() const
 {
   return false;
-}
+};
 
-bool DatQueueStatusResp::pack(SeatracMessage::DataBuffer& out) const
+  void DatSendResp::pack(boost::archive::binary_oarchive& out) const
 {
-  return seatrac_serialize(this, out);
-}
+    out <<status;
+  out <<beacon_id;
 
-bool DatQueueStatusResp::unpack(const SeatracMessage::DataBuffer& in)
+};
+
+  void DatSendResp::unpack(boost::archive::binary_iarchive& in) 
 {
-  return seatrac_deserialize(this, in);
-}
+    in >> status;
+  in >> beacon_id;
+
+};
+
+
+
+
+
+
+  bool DatReceive::isCommand() const
+{
+  return false;
+};
+
+  void DatReceive::pack(boost::archive::binary_oarchive& out) const
+{
+    acofix.pack(out);
+  out <<ack_flag;
+    uint8_t data_len(data.size());
+  out << data_len;
+  for(int i=0; i<data.size(); ++i) out << data[i];
+
+};
+
+  void DatReceive::unpack(boost::archive::binary_iarchive& in) 
+{
+    acofix.unpack(in);
+  in >> ack_flag;
+    uint8_t data_len;
+in >> data_len;
+  data.resize(data_len);
+  for(int i=0; i<data.size(); ++i) in >> data[i];
+
+};
+
+
+
+
+
+
+  bool DatError::isCommand() const
+{
+  return false;
+};
+
+  void DatError::pack(boost::archive::binary_oarchive& out) const
+{
+    out <<status;
+  out <<beacon_id;
+
+};
+
+  void DatError::unpack(boost::archive::binary_iarchive& in) 
+{
+    in >> status;
+  in >> beacon_id;
+
+};
+
+
+
+
+
+
+  bool DatQueueSetResp::isCommand() const
+{
+  return false;
+};
+
+  void DatQueueSetResp::pack(boost::archive::binary_oarchive& out) const
+{
+    out <<status;
+
+};
+
+  void DatQueueSetResp::unpack(boost::archive::binary_iarchive& in) 
+{
+    in >> status;
+
+};
+
+
+
+
+
+
+  bool DatQueueClearResp::isCommand() const
+{
+  return false;
+};
+
+  void DatQueueClearResp::pack(boost::archive::binary_oarchive& out) const
+{
+    out <<status;
+
+};
+
+  void DatQueueClearResp::unpack(boost::archive::binary_iarchive& in) 
+{
+    in >> status;
+
+};
+
+
+
+
+
+
+  bool DatQueueStatusResp::isCommand() const
+{
+  return false;
+};
+
+  void DatQueueStatusResp::pack(boost::archive::binary_oarchive& out) const
+{
+    out <<packet_len;
+
+};
+
+  void DatQueueStatusResp::unpack(boost::archive::binary_iarchive& in) 
+{
+    in >> packet_len;
+
+};
+
+
 
 
