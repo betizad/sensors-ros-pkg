@@ -139,6 +139,7 @@ add_executable(seatrac_core
 add_executable(static_beacon src/static_beacon/static_beacon.cpp)
 
 if (DEFINED catkin_EXPORTED_TARGETS)
+ add_dependencies(ac_medium_sim ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_node ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_core ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_serialization_test ${catkin_EXPORTED_TARGETS})
