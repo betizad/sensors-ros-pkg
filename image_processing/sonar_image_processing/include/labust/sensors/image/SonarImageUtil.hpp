@@ -37,6 +37,7 @@
 #include <aris/SonarInfo.h>
 #include <aris/ARISConfig.h>
 #include <opencv2/opencv.hpp>
+#include <labust/sensors/image/ObjectDetector.hpp>
 
 namespace labust {
   namespace sensors {
@@ -99,58 +100,113 @@ namespace labust {
             sonar_info = si;
           }
 
+          void saveCartesianImageSize(cv::Size sz) {
+            cartesian_img_size = sz;
+          }
+
           double getPixMM() {
             return pix_mm;
           }
 
-          cv::Point pixelToCoordinate(cv::Point p) {
-
+          cv::Point2f pixelToCoordinate(cv::Point p) {
+            return pix_mm * p;
           }
           
         private:
-          /*void recalculateParams() {
-            calculatePixMM();
-          }
-
           void calculatePixMM() {
-            pix_mm = (params.window_length - params.window_start) * 1000.0 / params.iysize;
-          }*/
+            pix_mm = (sonar_info.window_length - sonar_info.window_start) * 1000.0 / cartesian_img_size.height;
+          }
           aris::SonarInfo sonar_info;
+          cv::Size cartesian_img_size;
           bool polar;
           double pix_mm;
       };
-     
 
-
-      typedef cv::vector<std::pair<double, cv::vector<cv::Point> > > contourtype;
-
-      bool compareContoursAndArea(const std::pair<double, cv::vector<cv::Point> > a, const std::pair<double, cv::vector<cv::Point> > b) {
-          return (a.first < b.first);
-      }
-
-      cv::vector<cv::vector<cv::Point> > findAndSortContours(cv::Mat image, bool sort=true, int mode=CV_RETR_EXTERNAL, int method=CV_CHAIN_APPROX_NONE) {
-        cv::vector<cv::vector<cv::Point> > contours;
-        cv::vector<cv::Vec4i> hierarchy;
-        cv::findContours(image, contours, hierarchy, mode, method, cv::Point(0,0));
-        if (sort) {
-          contourtype contoursAndArea(contours.size());
-          for (int i=0; i<contours.size(); ++i) {
-            contoursAndArea[i].second = contours[i];
-            contoursAndArea[i].first = cv::contourArea(contours[i]);
+      
+      class Contours {
+        public:
+          
+          class Contour {
+            public:
+              cv::vector<cv::Point> contour;
+              double size;
+              cv::Point center;
+              bool operator < (const Contour other) const {
+                return size < other.size;
+              }    
+              bool operator > (const Contour other) const {
+                return size > other.size;
+              }
+          };
+          
+          Contours() {}
+          Contours(cv::vector<cv::vector<cv::Point> > cntrs) {
+            this->setContours(cntrs);
           }
-          std::sort(contoursAndArea.begin(), contoursAndArea.end(), compareContoursAndArea);
-          for (int i=0; i<contours.size(); ++i) {
-            contours[i] = contoursAndArea[i].second;
+
+          void setContours(cv::vector<cv::vector<cv::Point> > cntrs) {
+            contours.resize(cntrs.size());
+            for (int i=0; i<cntrs.size(); ++i) {
+              contours[i].contour = cntrs[i];
+              contours[i].size = cv::contourArea(contours[i].contour);
+              cv::Moments mu = cv::moments(contours[i].contour, false);
+              contours[i].center = cv::Point(mu.m10/mu.m00, mu.m01/mu.m00);
+            }
           }
-        }
-        return contours;
-      }
 
-      cv::vector<cv::vector<cv::Point> > findContours(cv::Mat image, int mode=CV_RETR_EXTERNAL, int method=CV_CHAIN_APPROX_NONE) {
-        return findAndSortContours(image, false, mode, method);
-      }
+          void sort() {
+            std::sort(contours.begin(), contours.end());
+          }
+          
+          cv::vector<Contour> contours;
+      };
 
+      class SonarDetector: public ObjectDetector {
+        public:
+          SonarDetector() :
+            blur_size(5),
+            thresh_size(40),
+            thresh_offset(-30),
+            flood_fill_value(127) {}
+         
+          ~SonarDetector() {}
+         
+          virtual void detect(cv::Mat& image, cv::Point2f& center, double& area) {
+            cvtColor(image, image, CV_BGR2GRAY);
+            thresholdImage(image);
+          }
+        
+        private:
+          void thresholdImage(cv::Mat image) {
+            // Flood fill outside of useful sonar image with neutral gray.
+            cv::floodFill(image, cv::Point(1,1), flood_fill_value);
+            cv::floodFill(image, cv::Point(image.cols-1, 1), flood_fill_value);
+            cv::floodFill(image, cv::Point(1, image.rows-1), flood_fill_value);
+            cv::floodFill(image, cv::Point(image.cols-1, image.rows-1), flood_fill_value);
+          
+            // Perform blurring to remove noise.
+            cv::GaussianBlur(image, image, cv::Size(blur_size*2+1, blur_size*2+1), 0, 0, cv::BORDER_DEFAULT);
+          
+            // Threshold the image
+            cv::adaptiveThreshold(image, image, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, thresh_size*2+3, thresh_offset);
+          }
 
+          void findInterestingRegions(cv::Mat image_thr) {
+            // Find contours and sort them by size
+            cv::vector<cv::vector<cv::Point> > cntrs;
+            cv::vector<cv::Vec4i> hierarchy;
+            cv::findContours(image_thr.clone(), cntrs, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_NONE); 
+            Contours contours(cntrs);
+            contours.sort();
+
+            // Cluster detected contours
+            
+          }
+
+          cv::Scalar flood_fill_value;
+          int blur_size, thresh_size, thresh_offset;
+
+      };
     }
   }
 }

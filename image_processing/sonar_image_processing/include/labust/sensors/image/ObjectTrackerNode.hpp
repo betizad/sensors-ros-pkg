@@ -62,6 +62,7 @@ namespace labust {
         ros::Subscriber sonar_info_sub;
         image_transport::Subscriber image_sub;
         ArisSonar aris;
+        SonarDetector sonar_detector;
       };
 
     }

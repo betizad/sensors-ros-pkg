@@ -57,10 +57,12 @@ ObjectTrackerNode::ObjectTrackerNode() :
   this->onInit();
 };
 
+ObjectTrackerNode::~ObjectTrackerNode() {};
+
 void ObjectTrackerNode::onInit() {
   ros::Rate rate(1);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartessian", 1, &ObjectTrackerNode::processFrame, this);
+  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::processFrame, this);
 }
 
 void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
@@ -77,11 +79,14 @@ void ObjectTrackerNode::processFrame(const sensor_msgs::ImageConstPtr &img) {
     ROS_ERROR("cv_bridge exception: %s", e.what());
     return;
   }
+  aris.saveCartesianImageSize(cv_image_bgr->image.size());
+  sonar_detector.detect(cv_image_bgr->image, center, area);
 }
 
 int main(int argc, char **argv) {
- 
+
   ros::init(argc, argv, "diver_tracker_node"); 
+  ObjectTrackerNode node; 
   ros::spin();
 
   return 0;
