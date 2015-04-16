@@ -39,6 +39,7 @@
 #include <opencv2/opencv.hpp>
 #include <labust/sensors/image/ObjectDetector.hpp>
 
+
 namespace labust {
   namespace sensors {
     namespace image {
@@ -122,6 +123,55 @@ namespace labust {
           double pix_mm;
       };
 
+      class UnionFind {
+        public:
+          UnionFind(int N) {
+            cnt = N;
+            parent.resize(N);
+            size.resize(N); 
+            for (int i=0; i<N; ++i) {
+              parent[i] = i;
+              size[i] = 1;
+            }
+          }
+
+          int count() {
+            return cnt;
+          }
+
+          bool connected(int a, int b) {
+            return find(a) == find(b);
+          }
+
+          int find(int a) {
+            int root = a;
+            while (root != parent[root]) root = parent[root];
+            while (a != root) {
+              int new_a = parent[a];
+              parent[a] = root;
+              a = new_a;
+            }
+            return root;
+          }
+
+          void unite(int a, int b) {
+            int root_a = find(a);
+            int root_b = find(b);
+            if (root_a == root_b) return;
+            if (size[root_a] < size[root_b] ) {
+              parent[root_a] = root_b;
+              size[root_b] += size[root_a];
+            } else {
+              parent[root_b] = root_a;
+              size[root_a] += size[root_b];
+            }
+            cnt--;
+          }
+
+        private:
+          std::vector<int> parent, size;
+          int cnt;
+      };
       
       class Contours {
         public:
@@ -129,13 +179,26 @@ namespace labust {
           class Contour {
             public:
               cv::vector<cv::Point> contour;
+              cv::Point2f center;
               double size;
-              cv::Point center;
               bool operator < (const Contour other) const {
                 return size < other.size;
               }    
               bool operator > (const Contour other) const {
                 return size > other.size;
+              }
+          };
+
+          template <class First, class Second, class Third>
+          class Triplet {
+            public:
+              Triplet(First a, Second b, Third c) :
+                a(a), b(b), c(c) {}
+              First a;
+              Second b;
+              Third c;
+              bool operator < (const Triplet<First, Second, Third> other) {
+                return a < other.a;
               }
           };
           
@@ -148,14 +211,49 @@ namespace labust {
             contours.resize(cntrs.size());
             for (int i=0; i<cntrs.size(); ++i) {
               contours[i].contour = cntrs[i];
-              contours[i].size = cv::contourArea(contours[i].contour);
-              cv::Moments mu = cv::moments(contours[i].contour, false);
-              contours[i].center = cv::Point(mu.m10/mu.m00, mu.m01/mu.m00);
+              cv::Rect brect = cv::boundingRect(contours[i].contour);
+              contours[i].size = brect.height * brect.width;
+              contours[i].center = 0.5 * (brect.tl() + brect.br());
             }
           }
 
           void sort() {
-            std::sort(contours.begin(), contours.end());
+            std::sort(contours.begin(), contours.end(), std::greater<Contour>());
+          }
+
+          std::vector<std::vector<int> > cluster(double max_pix_dist, double min_contour_size) {
+            int end = 0;
+            while (contours[end++].size > min_contour_size);
+
+            // Estimate mutual distances of contours
+            std::vector<Triplet<double, int, int> > mutual_distances;
+            for (int i=0; i<end; ++i) {
+              for (int j=i+1; j<end; ++j) {
+                double dist = sqrt( 
+                    (contours[i].center.x - contours[j].center.x)*(contours[i].center.x - contours[j].center.x) +
+                    (contours[i].center.y - contours[j].center.y)*(contours[i].center.y - contours[j].center.y) 
+                  ) - (sqrt(contours[i].size/M_PI) + sqrt(contours[j].size/M_PI));
+                if (dist < max_pix_dist) 
+                  mutual_distances.push_back(Triplet<double, int, int>(dist, i, j));
+              }
+            }
+
+            // Cluster the contours
+            UnionFind uf(end);
+            for (int i=0; i<mutual_distances.size(); ++i) {
+              uf.unite(mutual_distances[i].b, mutual_distances[i].c);
+            }
+            int n_clusters = uf.count();
+            std::vector<std::vector<int> > clusters(n_clusters), temp(end);
+            for (int i=0; i<end; ++i) {
+              temp[uf.find(i)].push_back(i);
+            }
+            int curr_cluster = 0;
+            for (int i=0; i<end; ++i) {
+              if (temp[i].size() == 0) continue;
+              clusters[curr_cluster++] = temp[i];
+            }
+            return clusters;
           }
           
           cv::vector<Contour> contours;
@@ -171,9 +269,16 @@ namespace labust {
          
           ~SonarDetector() {}
          
+          void setContourClusteringParams(double max_conn_dist, double min_cont_sz, double min_roi_sz) {
+            max_connected_distance = max_conn_dist;
+            min_contour_size = min_cont_sz;
+            min_roi_size = min_roi_sz;
+          }
+          
           virtual void detect(cv::Mat& image, cv::Point2f& center, double& area) {
             cvtColor(image, image, CV_BGR2GRAY);
             thresholdImage(image);
+            findInterestingRegions(image);
           }
         
         private:
@@ -200,12 +305,25 @@ namespace labust {
             contours.sort();
 
             // Cluster detected contours
+            std::vector<std::vector<int> > clusters = contours.cluster(max_connected_distance, min_contour_size);
+            if (clusters.size() == 0) return;
+            int ind = 0;
+            for (int i=0; i<clusters.size(); ++i) {
+              int curr_cluster_size = 0;
+              for (int j=0; j<clusters[i].size(); ++j) {
+                curr_cluster_size += contours.contours[clusters[i][j]].size;
+              }
+              if (curr_cluster_size > min_roi_size) {
+                clusters[ind++] = clusters[i];
+              }
+            }
+            clusters.resize(ind);
             
           }
 
           cv::Scalar flood_fill_value;
           int blur_size, thresh_size, thresh_offset;
-
+          double max_connected_distance, min_contour_size, min_roi_size;
       };
     }
   }
