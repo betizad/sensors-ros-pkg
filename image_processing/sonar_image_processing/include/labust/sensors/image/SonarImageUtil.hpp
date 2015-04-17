@@ -38,6 +38,8 @@
 #include <aris/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 #include <labust/sensors/image/ObjectDetector.hpp>
+#include <labust/sensors/image/ImageProcessingUtil.hpp>
+
 
 
 namespace labust {
@@ -101,6 +103,18 @@ namespace labust {
             sonar_info = si;
           }
 
+          void saveSonarImage(const sensor_msgs::Image::ConstPtr &image) {
+            sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);;
+          }
+
+          aris::SonarInfo getSonarInfo() {
+            return sonar_info;
+          }
+
+          cv_bridge::CvImagePtr getSonarImage() {
+            return sonar_cv_image;
+          }
+
           void saveCartesianImageSize(cv::Size sz) {
             cartesian_img_size = sz;
           }
@@ -118,6 +132,7 @@ namespace labust {
             pix_mm = (sonar_info.window_length - sonar_info.window_start) * 1000.0 / cartesian_img_size.height;
           }
           aris::SonarInfo sonar_info;
+          cv_bridge::CvImagePtr sonar_cv_image;
           cv::Size cartesian_img_size;
           bool polar;
           double pix_mm;
@@ -265,7 +280,8 @@ namespace labust {
             blur_size(5),
             thresh_size(40),
             thresh_offset(-30),
-            flood_fill_value(127) {}
+            flood_fill_value(127),
+            is_initialized(false) {}
          
           ~SonarDetector() {}
          
@@ -275,25 +291,52 @@ namespace labust {
             min_roi_size = min_roi_sz;
           }
           
+          void setSonarInfo(aris::SonarInfo si) {
+            if (si.window_start != sonar_info.window_start || si.window_length != sonar_info.window_length) {
+              is_initialized = false;
+            }
+            sonar_info = si;
+          }
+
           virtual void detect(cv::Mat& image, cv::Point2f& center, double& area) {
             cvtColor(image, image, CV_BGR2GRAY);
+            if (!is_initialized) {
+              recalculateBackgroundMask(image);
+            }
             thresholdImage(image);
             findInterestingRegions(image);
           }
         
         private:
+          void recalculateBackgroundMask(cv::Mat image) {
+            mask = cv::Mat::zeros(image.size()+cv::Size(2,2), CV_8UC1);
+            cv::floodFill(image, mask, cv::Point(1,1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, 1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::Rect roi(cv::Point(2,2), image.size());
+            mask = mask(roi);
+            mask = cv::Scalar::all(255) - mask;
+            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(27,27), cv::Point(13,13));
+            cv::erode(mask, mask, kernel);
+
+            pix_mm = 1000.0 * sonar_info.window_length / image.rows; 
+            is_initialized = true;
+          }
+
           void thresholdImage(cv::Mat image) {
             // Flood fill outside of useful sonar image with neutral gray.
-            cv::floodFill(image, cv::Point(1,1), flood_fill_value);
+            /*cv::floodFill(image, cv::Point(1,1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, 1), flood_fill_value);
             cv::floodFill(image, cv::Point(1, image.rows-1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, image.rows-1), flood_fill_value);
-          
+            */
             // Perform blurring to remove noise.
             cv::GaussianBlur(image, image, cv::Size(blur_size*2+1, blur_size*2+1), 0, 0, cv::BORDER_DEFAULT);
           
             // Threshold the image
             cv::adaptiveThreshold(image, image, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, thresh_size*2+3, thresh_offset);
+            image &= mask;
           }
 
           void findInterestingRegions(cv::Mat image_thr) {
@@ -318,12 +361,32 @@ namespace labust {
               }
             }
             clusters.resize(ind);
-            
+           
+            // Create ROI bounding rectangles for each of the candidate clusters
+            for (int i=0; i<clusters.size(); ++i) {
+              cv::Rect brect;
+              double size = 0;
+              for (int j=0; j<clusters[i].size(); ++j) {
+                if (brect == cv::Rect()) {
+                  brect = cv::boundingRect(contours.contours[clusters[i][j]].contour);
+                } else {
+                  brect |= cv::boundingRect(contours.contours[clusters[i][j]].contour);
+                }
+                size += contours.contours[clusters[i][j]].size;
+              }
+              cv::rectangle(image_thr, brect, cv::Scalar(170), 5);
+              roi_rects.push_back(brect);
+            }
           }
 
+          aris::SonarInfo sonar_info;
+          cv::Mat mask;
           cv::Scalar flood_fill_value;
+          double pix_mm;
+          cv::vector<cv::Rect> roi_rects;
           int blur_size, thresh_size, thresh_offset;
           double max_connected_distance, min_contour_size, min_roi_size;
+          bool is_initialized;
       };
     }
   }

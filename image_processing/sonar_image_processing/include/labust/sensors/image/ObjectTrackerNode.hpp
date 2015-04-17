@@ -56,13 +56,15 @@ namespace labust {
       private:
         void onInit();
         void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
-        void processFrame(const sensor_msgs::ImageConstPtr &img);
+        void setSonarImage(const sensor_msgs::ImageConstPtr &img);
+        void processFrame();
         ros::NodeHandle nh;
         image_transport::ImageTransport it;
         ros::Subscriber sonar_info_sub;
         image_transport::Subscriber image_sub;
         ArisSonar aris;
         SonarDetector sonar_detector;
+        sensor_msgs::ImageConstPtr frame;
       };
 
     }
