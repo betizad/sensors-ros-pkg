@@ -62,24 +62,33 @@ ObjectTrackerNode::~ObjectTrackerNode() {};
 void ObjectTrackerNode::onInit() {
   ros::Rate rate(1);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::processFrame, this);
+  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
 }
 
 void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   aris.saveSonarInfo(*msg);
+  cv_bridge::CvImagePtr frame = aris.getSonarImage();
+  if (frame == 0) return;
+  if (frame->header.stamp == msg->header.stamp) {
+    processFrame();
+  }
 }
 
-void ObjectTrackerNode::processFrame(const sensor_msgs::ImageConstPtr &img) {
-  cv_bridge::CvImagePtr cv_image_bgr;
+void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
+  aris.saveSonarImage(img);
+  aris::SonarInfo si = aris.getSonarInfo();
+  if (img->header.stamp == si.header.stamp) {
+    processFrame();
+  }
+}
+
+void ObjectTrackerNode::processFrame() {
+  cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   cv::Point2f center;
   double area;
-  try {
-    cv_image_bgr = sensorImage2CvImage(img, sensor_msgs::image_encodings::BGR8);
-  } catch (cv_bridge::Exception &e) {
-    ROS_ERROR("cv_bridge exception: %s", e.what());
-    return;
-  }
   aris.saveCartesianImageSize(cv_image_bgr->image.size());
+  sonar_detector.setContourClusteringParams(50,10,200);
+  sonar_detector.setSonarInfo(aris.getSonarInfo());
   sonar_detector.detect(cv_image_bgr->image, center, area);
 }
 
