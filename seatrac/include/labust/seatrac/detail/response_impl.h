@@ -22,6 +22,28 @@
 
 
 
+  bool XcvrFix::isCommand() const
+{
+  return false;
+};
+
+  void XcvrFix::pack(boost::archive::binary_oarchive& out) const
+{
+    acofix.pack(out);
+
+};
+
+  void XcvrFix::unpack(boost::archive::binary_iarchive& in) 
+{
+    acofix.unpack(in);
+
+};
+
+
+
+
+
+
   bool PingSendResp::isCommand() const
 {
   return false;

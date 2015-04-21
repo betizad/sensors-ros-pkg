@@ -120,6 +120,7 @@ void SeatracFactory::encodePacket(const SeatracMessage::ConstPtr& msg, std::stri
 	uint8_t cid = msg->getCid();
 	outser << cid;
 	msg->pack(outser);
+	os.close();
 
 	boost::crc_16_type checksum;
 	checksum.process_bytes(&binary[0], binary.size());
@@ -141,7 +142,7 @@ bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessag
 	//Check size
 	if (packet->size() < 6) return false;
 	//Fail if the packet does not start correctly
-	if (packet->at(0) != '$' && packet->at(0) != '#') return false;
+	if ((packet->at(0) != '$') && (packet->at(0) != '#')) return false;
 
 	//Skip '$' and '\r\n'
 	SeatracMessage::DataBuffer binary;
@@ -161,8 +162,6 @@ bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessag
 	{
 		msg = SeatracFactory::createCommand(binary[0]);
 	}
-
-	for (int i=0; i<CRC_BYTES;++i) 	binary.pop_back();
 
 	using namespace boost::iostreams;
   array_source source(binary.data(), binary.size()-CRC_BYTES);

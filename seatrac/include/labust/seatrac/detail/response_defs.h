@@ -20,6 +20,28 @@ public:
 };
 
 
+struct XcvrFix : public SeatracMessage {
+public:
+  typedef boost::shared_ptr< XcvrFix >  Ptr;
+  typedef boost::shared_ptr< XcvrFix const >  ConstPtr;
+  enum { CID = 0x39};
+
+  int getCid() const
+{
+  return XcvrFix::CID;
+};
+
+  bool isCommand() const;
+
+  void pack(boost::archive::binary_oarchive& out) const;
+
+  void unpack(boost::archive::binary_iarchive& in) ;
+
+  AcoFix acofix;
+
+};
+
+
 struct PingSendResp : public SeatracMessage {
 public:
   typedef boost::shared_ptr< PingSendResp >  Ptr;

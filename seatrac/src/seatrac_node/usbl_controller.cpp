@@ -130,12 +130,21 @@ SeatracMessage::Ptr USBLController::makePingCmd(const underwater_msgs::ModemTran
 	cmd->msg_type = (enhanced_usbl)?AMsgType::MSG_REQX : AMsgType::MSG_REQU;
 	return boost::dynamic_pointer_cast<SeatracMessage>(cmd);
 }
+SeatracMessage::Ptr USBLController::makeReply(const underwater_msgs::ModemTransmission::ConstPtr& msg)
+{
+	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
+	cmd->dest = msg->receiver;
+	cmd->data.assign(msg->payload.begin(), msg->payload.end());
+	return boost::dynamic_pointer_cast<SeatracMessage>(cmd);
+}
 
 void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr& msg)
 {
 	//Sort messages by priorities ?
 	SeatracMessage::Ptr message;
-	bool has_data(msg->payload.size() == 0);
+	bool has_data(msg->payload.size() != 0);
+	ROS_INFO("Data size: %d", msg->payload.size());
+	has_data = true;
 
 	switch (msg->action)
 	{
@@ -160,6 +169,7 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 		break;
 	case underwater_msgs::ModemTransmission::SET_REPLY:
 		///This USBL controller does not implement this action
+		message = makeReply(msg);
 		break;
 	default:
 		break;
@@ -177,6 +187,11 @@ void USBLController::sendPkg()
 {
 	SeatracMessage::Ptr message;
 	boost::mutex::scoped_lock l(data_mux);
+	//Debug turn-around time measurement
+	static ros::Time ltime;
+	ROS_INFO("Turnaround: %f",(ros::Time::now() - ltime).toSec());
+	ltime = ros::Time::now();
+
 	if (outgoing.size())
 	{
 		message = outgoing.front();
@@ -216,7 +231,6 @@ void USBLController::autorun()
 
 	while(ros::ok() && auto_mode)
 	{
-		ROS_INFO("USBLController: Sending ping to %d", transponders[nextId]);
 		boost::mutex::scoped_lock l(data_mux);
 		if (outgoing.empty())
 		{
@@ -228,6 +242,7 @@ void USBLController::autorun()
 				delay.sleep();
 				continue;
 			}
+			ROS_INFO("USBLController: Sending ping to %d", transponders[nextId]);
 			//If there is a firing sequence, fire next
 			PingSendCmd::Ptr cmd(new PingSendCmd());
 			cmd->dest = transponders[nextId];
@@ -264,8 +279,22 @@ bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	{
 		const PingSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<PingSendResp const>(msg));
-		ROS_ERROR("USBLController: PingError: 0x%x", resp->status);
-		unlock = (resp->status != CST::OK);
+		if ((unlock = (resp->status != CST::OK)))
+				ROS_ERROR("USBLController: PingSendResp: 0x%x", resp->status);
+	}
+	else if (cid == DatSendResp::CID)
+	{
+		const DatSendResp::ConstPtr resp(
+				boost::dynamic_pointer_cast<DatSendResp const>(msg));
+		if ((unlock = (resp->status != CST::OK)))
+				ROS_ERROR("USBLController: DatSendResp: 0x%x", resp->status);
+	}
+	else if (cid == DatError::CID)
+	{
+		const DatError::ConstPtr err(
+				boost::dynamic_pointer_cast<DatError const>(msg));
+		ROS_ERROR("USBLController: DatError: 0x%x", err->status);
+		unlock = true;
 	}
 	else
 	{
@@ -295,6 +324,7 @@ bool USBLController::onPingReplies(const SeatracMessage::ConstPtr& msg)
 	{
 		const DatReceive::ConstPtr resp(boost::dynamic_pointer_cast<DatReceive const>(msg));
 		ROS_DEBUG("USBLController: Data reply received from %d.", resp->acofix.src);
+		ROS_INFO("Data size: %d, Data byte 1: %d", resp->data.size(), resp->data[0]);
 	}
 	else
 	{

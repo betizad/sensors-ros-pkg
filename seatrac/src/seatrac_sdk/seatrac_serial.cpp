@@ -103,12 +103,13 @@ bool SeatracSerial::send(const SeatracMessage::ConstPtr& msg)
 try
 {
 	SeatracFactory::encodePacket(msg, &out);
+	ROS_INFO("Sending:%s",out.c_str());
 	boost::asio::write(port, boost::asio::buffer(out));
 	return true;
 }
 catch (std::exception& e)
 {
-	std::cerr<<e.what()<<std::endl;
+	ROS_ERROR("%s", e.what());
 	return false;
 }
 
@@ -149,12 +150,12 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		}
 		catch (std::exception& e)
 		{
-			ROS_ERROR("%s",e.what());
+			ROS_ERROR("SeatracSerial: %s",e.what());
 		}
 	}
 	else
 	{
-		ROS_WARN("Sync character not recognized.");
+		ROS_WARN("SeatracSerial: Comms reception failed.");
 	};
 
 	this->startReceive();
