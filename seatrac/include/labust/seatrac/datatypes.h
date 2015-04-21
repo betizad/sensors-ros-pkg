@@ -35,6 +35,8 @@
 #define SEATRAC_DATATYPES_H
 #include <labust/seatrac/detail/typedefs.h>
 #include <boost/static_assert.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 
 namespace labust

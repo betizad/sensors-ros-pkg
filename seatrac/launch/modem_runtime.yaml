@@ -6,12 +6,12 @@ listener_plugins: ["labust::seatrac::StatusListener",
 
 # USBLController configuration
 auto_mode: false
-transponders: [2,3]
+transponders: [1,3]
 
 # NavListener setup
-transponder_names: ["diver","buddy"]
+transponder_names: ["surface","buddy"]
 
 # Serial connection parameters
-port_name: "/dev/ttyUSB2"
+port_name: "/dev/ttyUSB1"
 baud: 115200
 

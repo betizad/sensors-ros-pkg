@@ -45,6 +45,7 @@ namespace labust
 {
 	namespace seatrac
 	{
+		#include <labust/seatrac/detail/datatype_impl.h>
 		#include <labust/seatrac/detail/command_impl.h>
 		#include <labust/seatrac/detail/response_impl.h>
 	}

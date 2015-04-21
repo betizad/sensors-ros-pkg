@@ -1,4 +1,5 @@
   {StatusResp::CID, "StatusResp"},
+  {XcvrFix::CID, "XcvrFix"},
   {PingSendResp::CID, "PingSendResp"},
   {PingReq::CID, "PingReq"},
   {PingResp::CID, "PingResp"},

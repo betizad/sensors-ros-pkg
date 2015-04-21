@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 	test->msg_type = 2;
 	std::cout<<"test:"<<msg1->getCid()<<std::endl;
 	SeatracMessage::DataBuffer buf;
-	test->pack(buf);
+	//test->pack(buf);
 
 	std::cout<<"Data:";
 	for(int i=0; i<buf.size(); ++i)

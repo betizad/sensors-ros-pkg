@@ -92,7 +92,7 @@ generate_dynamic_reconfigure_options(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES seatrac
 #  CATKIN_DEPENDS roscpp snippets std_msgs underwater_msgs
 #  DEPENDS system_lib
@@ -127,6 +127,7 @@ add_library(seatrac_sdk
 ## Declare a cpp executable
 add_executable(seatrac_serialization_test src/test/serialization_test.cpp)
 add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
+add_executable(bitfield_encoding_test src/test/bitfield_encodings.cpp)
 add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
 add_executable(seatrac_node 
     src/seatrac_node/SeatracNode.cpp
@@ -178,6 +179,12 @@ target_link_libraries(seatrac_serialization_test
 )
 
 target_link_libraries(seatrac_factory_tester
+   ${catkin_LIBRARIES}
+   ${Boost_SERIALIZATION_LIBRARY}
+   seatrac_sdk
+)
+
+target_link_libraries(bitfield_encoding_test
    ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARY}
    seatrac_sdk

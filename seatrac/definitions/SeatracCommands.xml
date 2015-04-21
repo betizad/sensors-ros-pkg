@@ -17,13 +17,13 @@
         <enum name="CID" value="0x60" />
 	    <var type="uint8_t" name="dest" />
 	    <var type="uint8_t" name="msg_type" />
-	    <var type="PayloadType" name="data" />
+	    <var type="uint8_t[]" name="data" />
 	</struct>
 	
 	<struct name="DatQueueSetCmd">
         <enum name="CID" value="0x64" />
 	   	<var type="uint8_t" name="dest" />
-	    <var type="PayloadType" name="data" />
+	    <var type="uint8_t[]" name="data" />
 	</struct>	
 	
 	<struct name="DatQueueClearCmd">

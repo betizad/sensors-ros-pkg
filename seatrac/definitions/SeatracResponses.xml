@@ -3,6 +3,12 @@
 	    <enum name="CID" value="0x10" />
 	    <var type="Status" name="status" />
 	</struct>	
+	
+	<!-- XVCR MESSAGES -->
+	<struct name="XcvrFix" inherit="SeatracMessage">
+		<enum name="CID" value="0x39" />
+		<var type="AcoFix" name="acofix" />
+	</struct>
     
     <!-- PING MESSAGES -->
 	<struct name="PingSendResp" inherit="SeatracMessage">
@@ -38,7 +44,7 @@
         <enum name="CID" value="0x61" />
         <var type="AcoFix" name="acofix" />
 	    <var type="uint8_t" name="ack_flag" />
-	    <var type="PayloadType" name="data" />
+	    <var type="uint8_t[]" name="data" />
 	</struct>
 	
 	<struct name="DatError">

@@ -1,4 +1,5 @@
   {StatusResp::CID, createInstance<StatusResp>},
+  {XcvrFix::CID, createInstance<XcvrFix>},
   {PingSendResp::CID, createInstance<PingSendResp>},
   {PingReq::CID, createInstance<PingReq>},
   {PingResp::CID, createInstance<PingResp>},

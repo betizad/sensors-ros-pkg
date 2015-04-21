@@ -99,60 +99,25 @@ void SeatracSerial::startReceive()
 			boost::bind(&SeatracSerial::onData, this, _1,_2));
 }
 
-void SeatracSerial::convertToBinary(const std::string& data,
-		SeatracMessage::DataBuffer& binary)
-{
-	for(int i=0; i<data.size()/2; ++i)
-	{
-		std::stringstream d2;
-		d2<<data[2*i]<<data[2*i+1];
-		int temp;
-		d2>>std::hex>>temp;
-		binary.push_back(temp);
-	}
-}
-
-void SeatracSerial::convertToAscii(const SeatracMessage::DataBuffer& binary)
-{
-	for(int i=0; i<binary.size(); ++i)
-	{
-		out.width(2);
-		out.fill('0');
-		out<<std::hex<<std::fixed<<int(uint8_t(binary[i]));
-	}
-}
-
 bool SeatracSerial::send(const SeatracMessage::ConstPtr& msg)
 try
 {
-	SeatracMessage::DataBuffer binary;
-	msg->pack(binary);
-	boost::crc_16_type checksum;
-	checksum.process_bytes(&binary[0], binary.size());
-	uint16_t chk = checksum.checksum();
-	char* pt = reinterpret_cast<char*>(&chk);
-	binary.push_back(pt[0]);
-	binary.push_back(pt[1]);
-
-	out.str("");
-	out<<"#";
-	convertToAscii(binary);
-	ROS_DEBUG("Sending data: %s",out.str().c_str());
-	out<<'\r'<<'\n';
-	boost::asio::write(port, boost::asio::buffer(out.str()));
+	SeatracFactory::encodePacket(msg, &out);
+	ROS_INFO("Sending:%s",out.c_str());
+	boost::asio::write(port, boost::asio::buffer(out));
 	return true;
 }
 catch (std::exception& e)
 {
-	std::cerr<<e.what()<<std::endl;
+	ROS_ERROR("%s", e.what());
 	return false;
 }
 
 bool SeatracSerial::resend()
 try
 {
-	ROS_DEBUG("Re-sending data: %s", out.str().c_str());
-	boost::asio::write(port, boost::asio::buffer(out.str()));
+	ROS_DEBUG("SeatracSerial: Re-sending data: %s", out.c_str());
+	boost::asio::write(port, boost::asio::buffer(out));
 	return true;
 }
 catch (std::exception& e)
@@ -170,45 +135,28 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		std::string data(size,'\0');
 		is.read(&data[0],size);
 
-		if (data[0] == '$')
+		SeatracMessage::Ptr msg;
+		try
 		{
-			//Skip '$' and '\r\n'
-			SeatracMessage::DataBuffer binary;
-			enum {PSTART=1, PTRUNC=2};
-			std::string frame = data.substr(PSTART, data.size()-PTRUNC);
-			convertToBinary(frame, binary);
-			//Checksum
-			boost::crc_16_type checksum;
-			checksum.process_bytes(binary.data(), binary.size() - CRC_BYTES);
-			uint16_t* chk = reinterpret_cast<uint16_t*>(&binary[binary.size() - CRC_BYTES]);
-
-			if ((*chk) == checksum.checksum())
+			if (SeatracFactory::decodePacket(&data, msg))
 			{
-				ROS_DEBUG("Response received. Checksum ok.");
-				try
-				{
-					SeatracMessage::Ptr msg = SeatracFactory::createResponse(binary[0]);
-	   				//Remove CRC
-					for (int i=0; i<CRC_BYTES;++i) 	binary.pop_back();
-					msg->unpack(binary);
-					boost::mutex::scoped_lock l(callback_mux);
-					if (!callback.empty()) callback(msg);
-				}
-				catch (std::exception& e)
-				{
-					ROS_ERROR("%s",e.what());
-				}
+				boost::mutex::scoped_lock l(callback_mux);
+				if (!callback.empty()) callback(msg);
 			}
 			else
 			{
-				ROS_WARN("Checksum failed.");
+				ROS_WARN("SeatracSerial: Message encoding failed.");
 			}
 		}
-		else
+		catch (std::exception& e)
 		{
-			ROS_WARN("Sync character not recognized.");
-		};
+			ROS_ERROR("SeatracSerial: %s",e.what());
+		}
 	}
+	else
+	{
+		ROS_WARN("SeatracSerial: Comms reception failed.");
+	};
 
 	this->startReceive();
 }

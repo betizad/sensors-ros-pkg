@@ -36,6 +36,8 @@
 #include <labust/seatrac/datatypes.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 #include <cstdint>
 #include <vector>
@@ -71,10 +73,12 @@ namespace labust
 			virtual bool isCommand() const = 0;
 
 			///Pack the message into the supplied data buffer
-			virtual bool pack(SeatracMessage::DataBuffer& out) const = 0;
+			//virtual bool pack(SeatracMessage::DataBuffer& out) const = 0;
+			virtual void pack(boost::archive::binary_oarchive& out) const = 0;
 
 			///Unpack the message into the supplied data buffer
-			virtual bool unpack(const SeatracMessage::DataBuffer& in) = 0;
+			//virtual bool unpack(const SeatracMessage::DataBuffer& in) = 0;
+			virtual void unpack(boost::archive::binary_iarchive& in) = 0;
 		};
 
 		#include <labust/seatrac/detail/command_defs.h>

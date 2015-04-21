@@ -66,7 +66,7 @@ bool StatusListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 void StatusListener::processAttitude(const vec3si& attitude)
 {
 	auv_msgs::RPY::Ptr rpy(new auv_msgs::RPY());
-	rpy->roll = float(attitude[Status::YAW])/Status::ATT_SC;
+	rpy->roll = float(attitude[Status::ROLL])/Status::ATT_SC;
 	rpy->pitch = float(attitude[Status::PITCH])/Status::ATT_SC;
 	rpy->yaw = float(attitude[Status::YAW])/Status::ATT_SC;
 	this->attitude.publish(rpy);

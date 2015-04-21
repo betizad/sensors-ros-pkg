@@ -206,7 +206,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 	//Pack ping and send
 	//\todo avoid copy ?
 	SeatracMessage::DataBuffer buf;
-	msg->pack(buf);
+	//msg->pack(buf);
 	tomedium->message.assign(buf.begin(), buf.end());
 	this->sendToMedium(tomedium);
 	this->startTimer(2*tomedium->duration + 2*max_distance/vos + time_overhead);
@@ -343,7 +343,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 	SeatracMessage::DataBuffer buf;
 	buf.assign(msg->message.begin(), msg->message.end());
 	DatSendCmd incoming;
-	incoming.unpack(buf);
+	//incoming.unpack(buf);
 	ROS_DEBUG("SeatracSim: Processing arrived DatCmd (%d->%d). Current state is ID=%d.", msg->sender, msg->receiver, state);
 
 	if (state == IDLE)
@@ -375,7 +375,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 						DatSendCmd ret;
 						ret.dest = mr->dest;
 						ret.data = mr->data;
-						ret.pack(buf);
+						//ret.pack(buf);
 						rep->message.assign(buf.begin(), buf.end());
 						rep->duration += 8*mr->data.size()/bps;
 						reply_queue.pop();
