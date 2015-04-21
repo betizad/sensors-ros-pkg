@@ -38,6 +38,8 @@
 #include <std_msgs/String.h>
 #include <ros/ros.h>
 
+#include <sys/stat.h>
+
 void outgoing(const ros::Publisher& pub, const std::string& message)
 {
 	std_msgs::String::Ptr out(new std_msgs::String());
@@ -74,7 +76,15 @@ int main(int argc, char* argv[])
 	{
 		try
 		{
-			if (serial.connect(port_name, baud)) break;
+			struct stat buffer;
+			if (stat (port_name.c_str(), &buffer))
+			{
+				ROS_ERROR("Serial port does not exist yet.");
+			}
+			else
+			{
+				if (serial.connect(port_name, baud)) break;
+			}
 		}
 		catch (std::exception& e)
 		{

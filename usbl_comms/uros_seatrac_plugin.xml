@@ -1,0 +1,9 @@
+<library path="lib/liburos_comms">
+	<class type="labust::seatrac::UROSModemController" 
+	    base_class_type="labust::seatrac::DeviceController">
+		<description>
+			The UROS modem controller that assembles and queues up
+			data and navigation from the Lupis Rhodamine probe and frontseat.
+		</description>
+	</class>
+</library>

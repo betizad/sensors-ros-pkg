@@ -1,0 +1,39 @@
+<launch>
+    <!-- Common remappings -->
+    <remap from="medium_out" to="/medium_out" />
+    <remap from="medium_in" to="/medium_in" />
+    <remap from="register_modem" to="/register_modem" />
+    
+    <!-- Surface acoustics -->
+    <group ns="surface">
+    	<node pkg="seatrac" type="seatrac_core" name="surface">
+    		<!-- Core parameters -->
+    		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
+    		<param name="controller_plugin" value="labust::seatrac::UROSUSBLController" />
+    		<param name="listener_plugins" value="labust::seatrac::StatusListener" />
+    		<!-- Simulation parameters -->
+    		<param name="sim_node_id" value="1" />
+    		<param name="sim_is_modem" value="false" />
+    		<!-- Remappings -->
+    		<remap from="navsts" to="position" />
+		</node>
+    </group>
+    
+    <!-- Lupis acoustics -->
+    <group ns="lupis">
+		<node pkg="seatrac" type="seatrac_core" name="diver_sim">
+    		<!-- Core parameters -->
+    		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
+    		<param name="controller_plugin" value="labust::seatrac::UROSModemController" />
+    		<param name="listener_plugins" value="labust::seatrac::StatusListener" />
+    		<!-- Simulation parameters -->
+    		<param name="sim_node_id" value="2" />
+    		<param name="sim_is_modem" value="true" />
+    		<!-- Remappings -->
+    		<remap from="navsts" to="position" />
+		</node>
+    </group>
+
+ 	<!-- Acoustic medium simulation -->
+	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
+</launch>

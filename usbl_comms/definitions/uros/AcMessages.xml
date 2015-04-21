@@ -1,5 +1,0 @@
-<uros_acoustic_messages>
-    <struct name="LupisReply">
-        <param type="double" name="latitude" bits="18" 
-    </struct>
-</uros_acoustic_messages>

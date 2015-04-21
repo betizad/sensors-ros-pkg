@@ -6,11 +6,11 @@ using namespace labust::comms::uros;
 
 int main(int argc, char* argv[])
 {
-	RhodamineReport a;
-	a.rhodamine_adc = 800;
+	/*RhodamineData a;
+	a.adc = 800;
 	a.adc_gain = 1;
-	a.latitude = 42.12345678;
-	a.longitude = 15.12345678;
+	a.lat = 42.12345678;
+	a.lon = 15.12345678;
 
 	uint64_t out = a.encode();
 
@@ -21,6 +21,6 @@ int main(int argc, char* argv[])
 
 	std::cout<<"Before encoding: adc="<<a.rhodamine_adc<<", lat="<<a.latitude<<std::endl;
 	std::cout<<"After encoding: adc="<<b.rhodamine_adc<<", lat="<<b.latitude<<std::endl;
-
+*/
 	return 0;
 }

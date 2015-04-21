@@ -32,26 +32,10 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  *  Author: Dula Nad
- *  Created: 05.03.2015.
+ *  Created: 02.04.2013.
  *********************************************************************/
-#ifndef USBL_COMMS_UROS_MESSAGES_H
-#define USBL_COMMS_UROS_MESSAGES_H
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <cstdint>
+#include <labust/comms/uros/uros_messages.h>
 
-namespace labust
-{
-	namespace comms
-	{
-		namespace uros
-		{
-			#include <labust/comms/uros/detail/uros_payload_defs.h>
-		}
-	}
-}
-/* USBL_COMMS_UROS_MESSAGES_H */
-#endif
+using namespace labust::comms::uros;
 
-
-
+#include <labust/comms/uros/detail/uros_payload_impl.h>
