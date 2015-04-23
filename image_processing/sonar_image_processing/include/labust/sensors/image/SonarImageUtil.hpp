@@ -104,7 +104,7 @@ namespace labust {
           }
 
           void saveSonarImage(const sensor_msgs::Image::ConstPtr &image) {
-            sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);;
+            sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);
           }
 
           aris::SonarInfo getSonarInfo() {
@@ -238,9 +238,9 @@ namespace labust {
 
           std::vector<std::vector<int> > cluster(double max_pix_dist, double min_contour_size) {
             std::vector<std::vector<int> > clusters;
-            if (contours.size() ==0) return clusters; 
-            int end = -1;
-            while (contours[++end].size > min_contour_size);
+            if (contours.size() == 0) return clusters; 
+            int end = 0;
+            while (end < contours.size() && contours[end].size > min_contour_size) end++;
 
             // Estimate mutual distances of contours
             std::vector<Triplet<double, int, int> > mutual_distances;
@@ -302,7 +302,6 @@ namespace labust {
           }
 
           virtual void detect(cv::Mat image, cv::Point2f& center, double& area) {
-            cv::imshow("frame", image); cv::waitKey(1);
             cvtColor(image, image, CV_BGR2GRAY);
             if (!is_initialized) {
               recalculateBackgroundMask(image);
@@ -314,10 +313,10 @@ namespace labust {
         private:
           void recalculateBackgroundMask(cv::Mat image) {
             mask = cv::Mat::zeros(image.size()+cv::Size(2,2), CV_8UC1);
-            cv::floodFill(image, mask, cv::Point(1,1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(image.cols-1, 1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(image.cols-1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(1,1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, 1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(1, image.rows-1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, image.rows-1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
             cv::Rect roi(cv::Point(2,2), image.size());
             mask = mask(roi);
             mask = cv::Scalar::all(255) - mask;
@@ -371,7 +370,6 @@ namespace labust {
               cv::Rect brect;
               double size = 0;
               for (int j=0; j<clusters[i].size(); ++j) {
-                std::cout << contours.contours[clusters[i].at(j)].contour.size() << std::endl;
                 if (brect == cv::Rect()) {
                   brect = cv::boundingRect(contours.contours[clusters[i][j]].contour);
                 } else {
@@ -382,8 +380,6 @@ namespace labust {
               cv::rectangle(image_thr, brect, cv::Scalar(170), 5);
               roi_rects.push_back(brect);
             }
-            cv::imshow("test", image_thr); cv::waitKey(1);
-
           }
 
           aris::SonarInfo sonar_info;
