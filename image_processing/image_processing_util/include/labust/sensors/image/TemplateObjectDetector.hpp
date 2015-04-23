@@ -49,7 +49,7 @@ namespace labust {
         ~TemplateObjectDetector();
         void addImageTemplate(const char *filename);
         void addImageTemplate(cv::Mat &img_template);
-        virtual void detect(cv::Mat &image, cv::Point2f &center, double &area);
+        virtual void detect(cv::Mat image, cv::Point2f &center, double &area);
         virtual void setEnableVideoDisplay(bool enable_video_display);
 
       private:

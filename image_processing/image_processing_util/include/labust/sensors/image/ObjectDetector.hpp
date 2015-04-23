@@ -49,7 +49,7 @@ namespace labust {
 
       public:
         virtual ~ObjectDetector() {};
-        virtual void detect(cv::Mat &image, cv::Point2f &center, double &area) = 0;
+        virtual void detect(cv::Mat image, cv::Point2f &center, double &area) = 0;
         virtual void setEnableVideoDisplay(bool enable_video_display, std::string window_name) {
           enable_video_display_ = enable_video_display;
           WINDOW_ = window_name;

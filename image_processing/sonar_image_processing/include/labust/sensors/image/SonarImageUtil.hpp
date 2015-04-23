@@ -104,7 +104,7 @@ namespace labust {
           }
 
           void saveSonarImage(const sensor_msgs::Image::ConstPtr &image) {
-            sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);;
+            sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);
           }
 
           aris::SonarInfo getSonarInfo() {
@@ -237,8 +237,10 @@ namespace labust {
           }
 
           std::vector<std::vector<int> > cluster(double max_pix_dist, double min_contour_size) {
+            std::vector<std::vector<int> > clusters;
+            if (contours.size() == 0) return clusters; 
             int end = 0;
-            while (contours[end++].size > min_contour_size);
+            while (end < contours.size() && contours[end].size > min_contour_size) end++;
 
             // Estimate mutual distances of contours
             std::vector<Triplet<double, int, int> > mutual_distances;
@@ -259,7 +261,8 @@ namespace labust {
               uf.unite(mutual_distances[i].b, mutual_distances[i].c);
             }
             int n_clusters = uf.count();
-            std::vector<std::vector<int> > clusters(n_clusters), temp(end);
+            std::vector<std::vector<int> > temp(end);
+            clusters.resize(n_clusters);
             for (int i=0; i<end; ++i) {
               temp[uf.find(i)].push_back(i);
             }
@@ -298,7 +301,7 @@ namespace labust {
             sonar_info = si;
           }
 
-          virtual void detect(cv::Mat& image, cv::Point2f& center, double& area) {
+          virtual void detect(cv::Mat image, cv::Point2f& center, double& area) {
             cvtColor(image, image, CV_BGR2GRAY);
             if (!is_initialized) {
               recalculateBackgroundMask(image);
@@ -310,10 +313,10 @@ namespace labust {
         private:
           void recalculateBackgroundMask(cv::Mat image) {
             mask = cv::Mat::zeros(image.size()+cv::Size(2,2), CV_8UC1);
-            cv::floodFill(image, mask, cv::Point(1,1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(image.cols-1, 1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
-            cv::floodFill(image, mask, cv::Point(image.cols-1, image.rows-1), flood_fill_value, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(1,1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, 1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(1, image.rows-1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
+            cv::floodFill(image, mask, cv::Point(image.cols-1, image.rows-1), 255, 0, cv::Scalar(), cv::Scalar(),  4 + (255 << 8) + cv::FLOODFILL_MASK_ONLY);
             cv::Rect roi(cv::Point(2,2), image.size());
             mask = mask(roi);
             mask = cv::Scalar::all(255) - mask;
@@ -326,11 +329,11 @@ namespace labust {
 
           void thresholdImage(cv::Mat image) {
             // Flood fill outside of useful sonar image with neutral gray.
-            /*cv::floodFill(image, cv::Point(1,1), flood_fill_value);
+            cv::floodFill(image, cv::Point(1,1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, 1), flood_fill_value);
             cv::floodFill(image, cv::Point(1, image.rows-1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, image.rows-1), flood_fill_value);
-            */
+            
             // Perform blurring to remove noise.
             cv::GaussianBlur(image, image, cv::Size(blur_size*2+1, blur_size*2+1), 0, 0, cv::BORDER_DEFAULT);
           
