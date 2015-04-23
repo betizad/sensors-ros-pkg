@@ -237,8 +237,10 @@ namespace labust {
           }
 
           std::vector<std::vector<int> > cluster(double max_pix_dist, double min_contour_size) {
-            int end = 0;
-            while (contours[end++].size > min_contour_size);
+            std::vector<std::vector<int> > clusters;
+            if (contours.size() ==0) return clusters; 
+            int end = -1;
+            while (contours[++end].size > min_contour_size);
 
             // Estimate mutual distances of contours
             std::vector<Triplet<double, int, int> > mutual_distances;
@@ -259,7 +261,8 @@ namespace labust {
               uf.unite(mutual_distances[i].b, mutual_distances[i].c);
             }
             int n_clusters = uf.count();
-            std::vector<std::vector<int> > clusters(n_clusters), temp(end);
+            std::vector<std::vector<int> > temp(end);
+            clusters.resize(n_clusters);
             for (int i=0; i<end; ++i) {
               temp[uf.find(i)].push_back(i);
             }
@@ -298,7 +301,8 @@ namespace labust {
             sonar_info = si;
           }
 
-          virtual void detect(cv::Mat& image, cv::Point2f& center, double& area) {
+          virtual void detect(cv::Mat image, cv::Point2f& center, double& area) {
+            cv::imshow("frame", image); cv::waitKey(1);
             cvtColor(image, image, CV_BGR2GRAY);
             if (!is_initialized) {
               recalculateBackgroundMask(image);
@@ -326,11 +330,11 @@ namespace labust {
 
           void thresholdImage(cv::Mat image) {
             // Flood fill outside of useful sonar image with neutral gray.
-            /*cv::floodFill(image, cv::Point(1,1), flood_fill_value);
+            cv::floodFill(image, cv::Point(1,1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, 1), flood_fill_value);
             cv::floodFill(image, cv::Point(1, image.rows-1), flood_fill_value);
             cv::floodFill(image, cv::Point(image.cols-1, image.rows-1), flood_fill_value);
-            */
+            
             // Perform blurring to remove noise.
             cv::GaussianBlur(image, image, cv::Size(blur_size*2+1, blur_size*2+1), 0, 0, cv::BORDER_DEFAULT);
           
@@ -367,6 +371,7 @@ namespace labust {
               cv::Rect brect;
               double size = 0;
               for (int j=0; j<clusters[i].size(); ++j) {
+                std::cout << contours.contours[clusters[i].at(j)].contour.size() << std::endl;
                 if (brect == cv::Rect()) {
                   brect = cv::boundingRect(contours.contours[clusters[i][j]].contour);
                 } else {
@@ -377,6 +382,8 @@ namespace labust {
               cv::rectangle(image_thr, brect, cv::Scalar(170), 5);
               roi_rects.push_back(brect);
             }
+            cv::imshow("test", image_thr); cv::waitKey(1);
+
           }
 
           aris::SonarInfo sonar_info;

@@ -89,7 +89,7 @@ void ObjectTrackerNode::processFrame() {
   aris.saveCartesianImageSize(cv_image_bgr->image.size());
   sonar_detector.setContourClusteringParams(50,10,200);
   sonar_detector.setSonarInfo(aris.getSonarInfo());
-  sonar_detector.detect(cv_image_bgr->image, center, area);
+  sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
 }
 
 int main(int argc, char **argv) {
