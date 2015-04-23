@@ -82,7 +82,7 @@ bool compare(cv::vector<cv::Point> a, cv::vector<cv::Point> b) {
   return (a.size() > b.size());
 }
 
-void ColorObjectDetector::detect(cv::Mat &image_bgr, cv::Point2f &center, double &area) {
+void ColorObjectDetector::detect(cv::Mat image_bgr, cv::Point2f &center, double &area) {
   cv::Mat image_hsv, image_thresholded;
   cv::cvtColor(image_bgr, image_hsv, CV_BGR2HSV);
   cv::inRange(image_hsv, cv::Scalar(iLowH, iLowS, iLowV), cv::Scalar(iHighH, iHighS, iHighV), image_thresholded); 

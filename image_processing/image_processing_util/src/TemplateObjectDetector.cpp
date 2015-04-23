@@ -76,7 +76,7 @@ TemplateObjectDetector::~TemplateObjectDetector() {
   cv::destroyWindow(WINDOW_);
 }
 
-void TemplateObjectDetector::detect(cv::Mat &image, cv::Point2f &center, double &area) {
+void TemplateObjectDetector::detect(cv::Mat image, cv::Point2f &center, double &area) {
   double minVal, maxVal;
   double bestMaxVal = 0;
   cv::Point minLoc, bestMaxLoc, maxLoc;

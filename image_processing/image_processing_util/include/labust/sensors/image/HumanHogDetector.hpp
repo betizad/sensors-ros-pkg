@@ -49,7 +49,7 @@ namespace labust {
       public:
         HumanHogDetector();
         ~HumanHogDetector();
-        virtual void detect(cv::Mat &image, cv::Point2f &center, double &size);
+        virtual void detect(cv::Mat image, cv::Point2f &center, double &size);
         virtual void setEnableVideoDisplay(bool enable_video_display);
 
       private:

@@ -74,7 +74,7 @@ HumanCascadeClassifierDetector::~HumanCascadeClassifierDetector() {
   cv::destroyWindow(WINDOW_);
 }
 
-void HumanCascadeClassifierDetector::detect(cv::Mat &image, cv::Point2f &center, double &area) {
+void HumanCascadeClassifierDetector::detect(cv::Mat image, cv::Point2f &center, double &area) {
   cv::Mat image_gray;
   cv::cvtColor(image, image_gray, CV_BGR2GRAY);
   cv::equalizeHist(image_gray, image_gray);
