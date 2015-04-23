@@ -31,8 +31,8 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRAC_USBLCONTROLLER_H
-#define SEATRAC_USBLCONTROLLER_H
+#ifndef SEATRAC_QUEUEDPINGER_H
+#define SEATRAC_QUEUEDPINGER_H
 #include <labust/seatrac/device_controller.h>
 #include <labust/seatrac/seatrac_messages.h>
 
@@ -45,23 +45,36 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <map>
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the status publisher and decoder.
+		 * The class implements a USBL device controller that queues messages
+		 * to be send to the USBL and executes a ping when the USBL is not busy.
+		 * The messages can be prioritized to enhance the sending speed.
+		 * The class is designed to be used for inheritance where the derived classes
+		 * can then implement the message assembly and interrogation scheme without
+		 * worrying about controlling the low-level part of the USBL.
+		 * The device controller does not perform automatic interrogation.
+		 *
+		 * \todo Add callback registration for onTimeout events
+		 * \todo Add failed deliveries tracking
 		 */
-		class USBLController : virtual public DeviceController
+		class QueuedPinger : virtual public DeviceController
 		{
-			typedef std::queue<SeatracMessage::Ptr> MessageQueue;
+			//Map of prioritized queues
+			typedef std::map<uint8_t,
+					std::queue<underwater_msgs::ModemTransmission::ConstPtr> >
+			MessagePriorityQueue;
 
 		public:
 			///Main constructor
-			USBLController();
+			QueuedPinger();
 			///Default destructor
-			~USBLController();
+			~QueuedPinger();
 
 			///Listener configuration.
 			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
@@ -70,25 +83,24 @@ namespace labust
 			///Register callback for interrogation.
 			void registerCallback(const SeatracComms::CallbackType& callback){this->sender = callback;};
 
-			///Start the controller
-			void start();
-			///Stop the controller
-			void stop();
+			///Enqueue a new message
+			void addToQueue(const underwater_msgs::ModemTransmission::ConstPtr& msg);
+
+			/**
+			 * The function for queue processing. This function should be called explicitly.
+			 * Note: this is a blocking function.
+			 */
+			void processQueue();
+
+		protected:
+			///Registration map
+			RegisterMap registrations;
+			///Sender callback
+			SeatracComms::CallbackType sender;
 
 		private:
-			/**
-			 * Handles outgoing messages requests.
-			 */
-			void onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr& msg);
-			/**
-			 * Handles automatic/manual mode option.
-			 */
-			void onAutoMode(const std_msgs::Bool::ConstPtr& mode);
-
-			///The auto interrogation.
-			void autorun();
-			///Helper function to send a single message from the queue.
-			void sendPkg();
+			//Helper function for packet sending
+			void sendPkg(const SeatracMessage::ConstPtr& message);
 
 			///Helper method for message assembly
 			SeatracMessage::Ptr makeDataCmd(const underwater_msgs::ModemTransmission::ConstPtr& msg,
@@ -104,16 +116,7 @@ namespace labust
 			bool onPingReplies(const SeatracMessage::ConstPtr& msg);
 			///Helper method for unlocking the waiting condition.
 			void unlock();
-			///The timeout indicator publisher
-			ros::Publisher usbl_timeout;
-			///The modem transmission request subscription.
-			ros::Subscriber outSub;
-			///Automatic mode flag subscriber
-			ros::Subscriber opMode;
-			///Configuration service
 
-			///Automatic mode configuration (default: false)
-			bool auto_mode;
 			///Flag for enhanced USBL requests (default: false)
 			bool enhanced_usbl;
 			///Flag for enhanced data sends - ill add info with data (default: false)
@@ -126,27 +129,23 @@ namespace labust
 			 * data bytes * 100ms.
 			 */
 			double timeout;
-			/**
-			 * The interrogation ID list (default: []). This uses a
-			 * vector which means that [1,2,2] is a valid interrogation
-			 * sequence.
-			 */
-			std::vector<int> transponders;
-			///The nextId to ping (default: 0)
-			int nextId;
-			///Mutex for data protection
-			boost::mutex data_mux;
+
 			///Mutex for pinging condition variable
 			boost::mutex ping_mux;
 			///The ping lock condition variable.
 			boost::condition_variable ping_condition;
-			///Worker thread for auto-interrogation
-			boost::thread worker;
+
+			///The queue lock condition variable.
+			boost::condition_variable queue_condition;
+			///Mutex for data protection
+			boost::mutex queue_mux;
 			///The outgoing queue
-			MessageQueue outgoing;
+			MessagePriorityQueue outgoing;
+			///The queue processor thread
+			boost::thread queue_processor;
 		};
 	}
 }
 
-/* SEATRAC_USBLCONTROLLER_H */
+/* SEATRAC_QUEUEDPINGER_H */
 #endif

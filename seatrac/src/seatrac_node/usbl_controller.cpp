@@ -49,12 +49,12 @@ USBLController::USBLController():
 	timeout(2.0),
 	nextId(0)
 {
-	registrations[PingError::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
-	registrations[PingSendResp::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
-	registrations[PingResp::CID] = boost::bind(&USBLController::onPingReplies,this,_1);
-	registrations[DatError::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
-	registrations[DatSendResp::CID] = boost::bind(&USBLController::onPingErrors,this,_1);
-	registrations[DatReceive::CID] = boost::bind(&USBLController::onPingReplies,this,_1);
+	registrations[PingError::CID].push_back(boost::bind(&USBLController::onPingErrors,this,_1));
+	registrations[PingSendResp::CID].push_back(boost::bind(&USBLController::onPingErrors,this,_1));
+	registrations[PingResp::CID].push_back(boost::bind(&USBLController::onPingReplies,this,_1));
+	registrations[DatError::CID].push_back(boost::bind(&USBLController::onPingErrors,this,_1));
+	registrations[DatSendResp::CID].push_back(boost::bind(&USBLController::onPingErrors,this,_1));
+	registrations[DatReceive::CID].push_back(boost::bind(&USBLController::onPingReplies,this,_1));
 }
 
 USBLController::~USBLController()

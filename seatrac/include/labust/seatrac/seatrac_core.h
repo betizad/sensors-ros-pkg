@@ -56,8 +56,9 @@ namespace labust
 		 */
 		class SeatracCore
 		{
-			typedef std::list<SeatracComms::CallbackType> CallbackList;
-			typedef std::map<int, CallbackList> CallbackMap;
+			typedef MessageListener::CallbackList CallbackList;
+			typedef MessageListener::RegisterMap CallbackMap;
+
 		public:
 			///Main constructor
 			SeatracCore();

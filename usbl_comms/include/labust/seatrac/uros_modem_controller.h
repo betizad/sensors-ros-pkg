@@ -61,17 +61,8 @@ namespace labust
 
 			///Listener configuration.
 			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
-			///Register for messages
-			const RegisterMap& getRegistrations(){return registrations;}
-			///Register callback for interrogation.
-			void registerCallback(const SeatracComms::CallbackType& callback){this->sender = callback;};
 
 		private:
-			///Registration map
-			RegisterMap registrations;
-			///Sender callback
-			SeatracComms::CallbackType sender;
-
 			/**
 			 * Handles outgoing messages requests.
 			 */

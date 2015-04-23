@@ -110,6 +110,7 @@ const std::string& SeatracFactory::getResponseName(int cid)
 void SeatracFactory::encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet)
 {
 	SeatracMessage::DataBuffer binary;
+	binary.push_back(msg->getCid());
 	labust::tools::encodePackable(*msg, &binary);
 
 	boost::crc_16_type checksum;
@@ -126,17 +127,17 @@ void SeatracFactory::encodePacket(const SeatracMessage::ConstPtr& msg, std::stri
 	packet->assign(out.str());
 }
 
-bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessage::Ptr& msg)
+bool SeatracFactory::decodePacket(const std::string& packet, SeatracMessage::Ptr& msg)
 {
 	enum {PSTART=1, PTRUNC=2, CRC_BYTES=2, MIN_SIZE=6};
 	//Check size
-	if (packet->size() < 6) return false;
+	if (packet.size() < 6) return false;
 	//Fail if the packet does not start correctly
-	if ((packet->at(0) != '$') && (packet->at(0) != '#')) return false;
+	if ((packet.at(0) != '$') && (packet.at(0) != '#')) return false;
 
 	//Skip '$' and '\r\n'
 	SeatracMessage::DataBuffer binary;
-	labust::tools::hexToBinary(packet->begin()+PSTART, packet->end()-PTRUNC, &binary);
+	labust::tools::hexToBinary(packet.begin()+PSTART, packet.end()-PTRUNC, &binary);
 	//Checksum
 	boost::crc_16_type checksum;
 	checksum.process_bytes(binary.data(), binary.size() - CRC_BYTES);
@@ -144,7 +145,7 @@ bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessag
 
 	if ((*chk) != checksum.checksum()) return false;
 
-	if (packet->at(0) == '$')
+	if (packet.at(0) == '$')
 	{
 		msg = SeatracFactory::createResponse(binary[0]);
 	}
@@ -153,6 +154,20 @@ bool SeatracFactory::decodePacket(const std::string* const packet, SeatracMessag
 		msg = SeatracFactory::createCommand(binary[0]);
 	}
 
-	labust::tools::decodePackable(binary, msg.get());
+	try
+	{
+		using namespace boost::iostreams;
+		array_source source(reinterpret_cast<const char*>(binary.data()),
+				binary.size());
+		stream<array_source> is(source);
+		boost::archive::binary_iarchive inser(is, boost::archive::no_header);
+		uint8_t cid;
+		inser>>cid;
+		msg->unpack(inser);
+	}
+	catch (std::exception& e)
+	{
+		return false;
+	}
 	return true;
 }

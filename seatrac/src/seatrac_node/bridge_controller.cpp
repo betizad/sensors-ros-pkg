@@ -45,7 +45,7 @@ using namespace labust::seatrac;
 
 BridgeController::BridgeController()
 {
-	registrations[ALL_MSG_CID] = boost::bind(&BridgeController::onMsg,this,_1);
+	registrations[ALL_MSG_CID].push_back(boost::bind(&BridgeController::onMsg,this,_1));
 }
 
 bool BridgeController::onMsg(const SeatracMessage::ConstPtr& msg)
@@ -68,7 +68,7 @@ bool BridgeController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 void BridgeController::onIncoming(const std_msgs::String::ConstPtr& msg)
 {
 	SeatracMessage::Ptr in;
-	if (SeatracFactory::decodePacket(&msg->data, in))
+	if (SeatracFactory::decodePacket(msg->data, in))
 	{
 		this->sender(in);
 	}

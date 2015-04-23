@@ -128,7 +128,8 @@ void SeatracCore::addRegistrationMap(const MessageListener::RegisterMap& lmap)
 			it != lmap.end();
 			++it)
 	{
-		callbacks[it->first].push_back(it->second);
+		CallbackList& vec=callbacks[it->first];
+		vec.insert(vec.end(), it->second.begin(), it->second.end());
 	}
 }
 
@@ -149,7 +150,6 @@ bool SeatracCore::incomingMsg(const SeatracMessage::ConstPtr& msg)
 			(*it)(msg);
 		}
 	}
-
 
 	//Handle regular subscriptions
 	it = callbacks.find(msg->getCid());

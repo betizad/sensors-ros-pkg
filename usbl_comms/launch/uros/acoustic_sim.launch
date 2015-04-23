@@ -10,22 +10,23 @@
     		<!-- Core parameters -->
     		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
     		<param name="controller_plugin" value="labust::seatrac::UROSUSBLController" />
-    		<param name="listener_plugins" value="labust::seatrac::StatusListener" />
+    		<!-- <param name="listener_plugins" value="labust::seatrac::StatusListener" /> -->
     		<!-- Simulation parameters -->
     		<param name="sim_node_id" value="1" />
     		<param name="sim_is_modem" value="false" />
     		<!-- Remappings -->
     		<remap from="navsts" to="position" />
+    		<remap from="register_mode" to="reas" />
 		</node>
     </group>
     
     <!-- Lupis acoustics -->
     <group ns="lupis">
-		<node pkg="seatrac" type="seatrac_core" name="diver_sim">
+		<node pkg="seatrac" type="seatrac_core" name="lupis_sim">
     		<!-- Core parameters -->
     		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
     		<param name="controller_plugin" value="labust::seatrac::UROSModemController" />
-    		<param name="listener_plugins" value="labust::seatrac::StatusListener" />
+    		<!-- <param name="listener_plugins" value="labust::seatrac::StatusListener" /> -->
     		<!-- Simulation parameters -->
     		<param name="sim_node_id" value="2" />
     		<param name="sim_is_modem" value="true" />
@@ -36,4 +37,7 @@
 
  	<!-- Acoustic medium simulation -->
 	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
+		
+ 	<node pkg="rqt_gui" type="rqt_gui" name="debuger" 
+ 		args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" />
 </launch>

@@ -138,7 +138,7 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		SeatracMessage::Ptr msg;
 		try
 		{
-			if (SeatracFactory::decodePacket(&data, msg))
+			if (SeatracFactory::decodePacket(data, msg))
 			{
 				boost::mutex::scoped_lock l(callback_mux);
 				if (!callback.empty()) callback(msg);

@@ -76,7 +76,8 @@ include_directories(include
 add_library(usbl_comms src/USBLManager.cpp src/DiverMsg.cpp)
 
 add_library(uros_comms src/uros/uros_messages.cpp 
-    src/uros/uros_modem_controller.cpp)
+    src/uros/uros_modem_controller.cpp
+    src/uros/uros_usbl_controller.cpp)
 
 ## Declare a cpp executable
 add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)

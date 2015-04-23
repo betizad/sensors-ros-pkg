@@ -36,7 +36,7 @@
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/message_listener.h>
 
-#include <map>
+#include <boost/shared_ptr.hpp>
 
 namespace labust
 {
@@ -49,22 +49,24 @@ namespace labust
 		class DeviceController : public virtual MessageListener
 		{
 		public:
-			///Registration map definition
-			typedef std::map<int, SeatracComms::CallbackType> RegisterMap;
 			///Shared pointer to instances
 			typedef boost::shared_ptr<DeviceController> Ptr;
 
 			///Generic virtual destructor
 			virtual ~DeviceController(){};
 
-			///Register callback for message forwarding
-			virtual void registerCallback(const SeatracComms::CallbackType& callback) = 0;
+			///Register callback for message forwarding.
+			virtual void registerCallback(const SeatracComms::CallbackType& callback){this->sender = callback;};
 
 			///Start the device controller
 			virtual void start(){};
 
 			///Stop the device controller
 			virtual void stop(){};
+
+		protected:
+			///Sender callback
+			SeatracComms::CallbackType sender;
 		};
 	}
 }

@@ -61,9 +61,6 @@ namespace labust
 			const RegisterMap& getRegistrations(){return registrations;}
 
 		private:
-			///Registration map
-			RegisterMap registrations;
-
 			///Handle status message
 			void onStatus(const StatusResp& resp);
 

@@ -49,6 +49,7 @@ namespace labust
 	{
 		/**
 		 * The class implements the Seatrac ROS simulation.
+		 * \todo Add map based disptach handlers for ping and data commands (send/receive)
 		 */
 		class SeatracSim : public virtual SeatracComms
 		{
@@ -97,7 +98,8 @@ namespace labust
 				underwater_msgs::MediumTransmission::ConstPtr& msg);
 			///Helper method for received Data
 			void processDataCmd(const
-							underwater_msgs::MediumTransmission::ConstPtr& msg);
+							underwater_msgs::MediumTransmission::ConstPtr& msg,
+							const DatSendCmd& incoming);
 			///Helper method for USBL loop
 			void onUSBLTimeout(const ros::TimerEvent& e);
 			///Helper method for registration
@@ -202,7 +204,7 @@ namespace labust
 			bool registered;
 
 			///The internal message queue
-			std::queue<DatQueueSetCmd::ConstPtr> reply_queue;
+			std::queue<DatSendCmd::Ptr> reply_queue;
 			///Mutex for the reply queue
 			boost::mutex reply_queue_mux;
 		};

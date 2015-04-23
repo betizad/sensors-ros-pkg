@@ -49,8 +49,8 @@ StatusListener::StatusListener():
 		supply_flag(true),
 		min_voltage(12.0)
 {
-	registrations[StatusResp::CID] = Mediator<StatusResp>::makeCallback(
-			boost::bind(&StatusListener::onStatus,this,_1));
+	registrations[StatusResp::CID].push_back(Mediator<StatusResp>::makeCallback(
+			boost::bind(&StatusListener::onStatus,this,_1)));
 }
 
 bool StatusListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)

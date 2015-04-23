@@ -31,44 +31,56 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef SEATRAC_MESSAGELISTENER_H
-#define SEATRAC_MESSAGELISTENER_H
+#ifndef SEATRAC_PINGER_H
+#define SEATRAC_PINGER_H
+#include <labust/seatrac/message_listener.h>
 #include <labust/seatrac/seatrac_messages.h>
-#include <labust/seatrac/seatrac_comms.h>
-#include <ros/ros.h>
 
-#include <map>
-#include <list>
+#include <boost/thread.hpp>
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * Base class for Seatrac messages listeners.
-		 * \todo Consider adding the registration map directly in this class (it will no longer be an interface)
+		 * Helper class that implements a blocking send of an acoustic transmission.
+		 * The class constructor requires the sender callback and registration map to
+		 * superimpose its configuration.
 		 */
-		class MessageListener : public virtual ROSConfigure
+		class Pinger
 		{
 		public:
-			///Registration map definition
-			typedef std::list<SeatracComms::CallbackType> CallbackList;
-			typedef std::map<int, CallbackList > RegisterMap;
-			///Shared pointer to instances
-			typedef boost::shared_ptr<MessageListener> Ptr;
+			///Main constructor
+			Pinger(SeatracComms::CallbackType& sender, MessageListener::RegisterMap& registrations);
+			///Default destructor
+			~Pinger();
 
-			///Generic virtual destructor
-			virtual ~MessageListener(){};
+			/**
+			 * Send an blocking acoustic transmission.
+			 * \return Returns true if the message was acknowledged
+			 */
+			bool send(const SeatracMessage::ConstPtr& msg, double timeout = 2.0, bool wait_for_ack = true);
 
-			///Register for messages
-			virtual const RegisterMap& getRegistrations(){return registrations;};
+		private:
+			///Sender callback
+			SeatracComms::CallbackType& sender;
 
-		protected:
-			///Registration map
-			RegisterMap registrations;
+			///Helper method for handling returned errors
+			bool onPingErrors(const SeatracMessage::ConstPtr& msg);
+			///Helper method for handling returned messages
+			bool onPingReplies(const SeatracMessage::ConstPtr& msg);
+			///Helper method for unlocking the waiting condition.
+			void unlock();
+
+			///Mutex for pinging condition variable
+			boost::mutex ping_mux;
+			///The ping lock condition variable.
+			boost::condition_variable ping_condition;
+			///Busy flag for in-operation indicator (default: false)
+			bool is_busy;
 		};
 	}
 }
 
-/* SEATRAC_MESSAGELISTENER_H */
+/* SEATRAC_PINGER_H */
 #endif

@@ -31,7 +31,7 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/seatrac/uros_modem_controller.h>
+#include <labust/seatrac/uros_usbl_controller.h>
 #include <labust/comms/uros/uros_messages.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
@@ -40,61 +40,74 @@
 
 #include <pluginlib/class_list_macros.h>
 
-#include <std_msgs/UInt8.h>
-#include <sensor_msgs/NavSatFix.h>
+#include <misc_msgs/RhodamineData.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::uros;
 
-UROSModemController::UROSModemController()
+UROSUSBLController::UROSUSBLController():
+		pinger(sender, registrations),
+		id(2),
+		msg_updated(false)
 {
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&UROSModemController::onData,this,_1)));
+			boost::bind(&UROSUSBLController::onData,this,_1)));
 }
 
-UROSModemController::~UROSModemController(){}
-
-bool UROSModemController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+UROSUSBLController::~UROSUSBLController()
 {
-	adc_sub = nh.subscribe("rhodamine", 1, &UROSModemController::onAdc,this);
-	state_sub = nh.subscribe("position",	1, &UROSModemController::onNavSts,this);
-	cmd_pub = nh.advertise<std_msgs::UInt8>("cmd",1);
-	nav_pub = nh.advertise<sensor_msgs::NavSatFix>("acoustic_fix",1);
+	run_flag = false;
+	worker.join();
+}
+
+bool UROSUSBLController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+{
+	ph.param("lupis_id", id, id);
+
+	cmd_sub = nh.subscribe("cmd", 1,&UROSUSBLController::onCommand, this);
+	nav_sub = nh.subscribe("lupis_pos_local", 1, &UROSUSBLController::onEstimatedPos, this);
+
+	adc_pub = nh.advertise<misc_msgs::RhodamineData>("rhodamine", 1);
+	state_pub = nh.advertise<auv_msgs::NavSts>("lupis_pos_remote",	1);
+	status_pub = nh.advertise<std_msgs::UInt8>("lupis_status",	1);
+
+	run_flag = true;
+	worker = boost::thread(boost::bind(&UROSUSBLController::run, this));
 
 	return true;
 }
 
-void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
+void UROSUSBLController::run()
 {
-	RhodamineData out;
-	out.adc = msg->adc;
-	out.adc_gain = msg->gain;
-	out.depth = position.position.depth * RhodamineData::DEPTH_SC;
-	labust::tools::LatLon2Bits conv;
-	conv.convert(position.global_position.latitude,
-			position.global_position.longitude, llbits);
-	out.lat = conv.lat;
-	out.lon = conv.lon;
-
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
-	labust::tools::encodePackable(out, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
-
-	if (!sender.empty())
+	while(ros::ok() && run_flag)
 	{
-		sender(clr);
-		sender(cmd);
+		DatSendCmd::Ptr data(new DatSendCmd());
+		data->dest = id;
+		data->msg_type = AMsgType::MSG_REQU;
+
+		boost::mutex::scoped_lock lock(message_mux);
+		if (msg_updated)
+		{
+			SeatracMessage::DataBuffer buf;
+			labust::tools::encodePackable(message,&buf);
+			data->data.assign(buf.begin(),buf.end());
+			msg_updated = false;
+		}
+		//Note: no message update sends an empty ping
+		lock.unlock();
+
+		if (!pinger.send(boost::dynamic_pointer_cast<SeatracMessage>(data), TIMEOUT))
+		{
+			ROS_ERROR("URSOUSBLController: Message sending failed.");
+		}
 	}
 }
 
-void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
+void UROSUSBLController::onData(const labust::seatrac::DatReceive& msg)
 {
-	LupisUpdate dat;
+	RhodamineData dat;
 	if (!labust::tools::decodePackable(msg.data, &dat))
 	{
 		ROS_WARN("UROSUSBLController: Empty message received from modem.");
@@ -102,24 +115,28 @@ void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
 	}
 
 	//Update the position
-	{
-		boost::mutex::scoped_lock l(position_mux);
-		latlon.setInitLatLon(position.origin.latitude,
-				position.origin.longitude);
-	}
-	latlon.convert(dat.lat, dat.lon, llbits);
+	latlon.convert(dat.lat, dat.lon, LLBITS);
 
-	//Process LUPIS update
-	//Get lat-lon and publish NavSatFix ?
-	sensor_msgs::NavSatFix::Ptr fix(new sensor_msgs::NavSatFix());
+	//Publish Rhodamine data
+	misc_msgs::RhodamineData::Ptr rh(new misc_msgs::RhodamineData());
+	rh->position.latitude = latlon.latitude;
+	rh->position.longitude = latlon.longitude;
+	rh->adc.adc = dat.adc;
+	rh->adc.gain = dat.adc_gain;
+	rh->header.stamp = ros::Time::now();
+	adc_pub.publish(rh);
+
+	//Publish remote position
+	auv_msgs::NavSts::Ptr fix(new auv_msgs::NavSts());
 	fix->header.stamp = ros::Time::now();
-	fix->latitude = latlon.latitude;
-	fix->longitude = latlon.longitude;
-	nav_pub.publish(fix);
-	//Publish command flag
+	fix->global_position.latitude = latlon.latitude;
+	fix->global_position.longitude = latlon.longitude;
+	state_pub.publish(fix);
+
+	//Publish status flag
 	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
-	cmd->data = dat.cmd_flag;
-	cmd_pub.publish(cmd);
+	cmd->data = dat.status_flag;
+	status_pub.publish(cmd);
 }
 
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::UROSModemController, labust::seatrac::DeviceController)
+PLUGINLIB_EXPORT_CLASS(labust::seatrac::UROSUSBLController, labust::seatrac::DeviceController)

@@ -67,7 +67,13 @@ namespace labust
 			///Make the whole command message packet from a SeatracMessage type.
 			static void encodePacket(const SeatracMessage::ConstPtr& msg, std::string* packet);
 			///Validate and decode the data into a SeatracMessage type from the whole packet.
-			static bool decodePacket(const std::string* const packet, SeatracMessage::Ptr& msg);
+			static bool decodePacket(const std::string& packet, SeatracMessage::Ptr& msg);
+			///Make the whole command message packet from a SeatracMessage type.
+			template <class MessageType>
+			static void encodePacket(const typename MessageType::ConstPtr& msg, std::string* packet)
+			{
+				encodePacket(boost::static_pointer_cast<SeatracMessage>(msg), packet);
+			}
 
 		protected:
 			static CID2ClassMap cmdmap;

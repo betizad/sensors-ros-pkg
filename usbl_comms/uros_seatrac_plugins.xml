@@ -6,4 +6,11 @@
 			data and navigation from the Lupis Rhodamine probe and frontseat.
 		</description>
 	</class>
+	<class type="labust::seatrac::UROSUSBLController" 
+	    base_class_type="labust::seatrac::DeviceController">
+		<description>
+			The UROS USBL controller assembles the estimated Lupis position with
+			command flag data to be sent to Lupis for updates.
+		</description>
+	</class> 
 </library>

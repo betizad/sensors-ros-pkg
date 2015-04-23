@@ -49,7 +49,7 @@ SeatracSim::SeatracSim():
 	state(IDLE),
 	expected_id(0),
 	node_id(1),
-	ping_duration(0.7),
+	ping_duration(0.65),
 	max_distance(500.0),
 	vos(1500),
 	time_overhead(0.1),
@@ -193,7 +193,20 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 		//\todo Send back acknowledgement ?
 		boost::mutex::scoped_lock l(reply_queue_mux);
 		DatQueueSetCmd::ConstPtr dat = boost::dynamic_pointer_cast<DatQueueSetCmd const>(msg);
-		reply_queue.push(dat);
+		DatSendCmd::Ptr data(new DatSendCmd());
+		data->dest = dat->dest;
+		data->data = dat->data;
+		data->msg_type = AMsgType::MSG_OWAY;
+		reply_queue.push(data);
+		ROS_ERROR("Queue size: %d",reply_queue.size());
+		return true;
+	}
+	else if (msg->getCid() == DatQueueClearCmd::CID)
+	{
+		//\todo Send back acknowledgement ?
+		boost::mutex::scoped_lock l(reply_queue_mux);
+		while (!reply_queue.empty()) reply_queue.pop();
+		return true;
 	}
 	else
 	{
@@ -204,10 +217,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 
 	//Same for all valid messages
 	//Pack ping and send
-	//\todo avoid copy ?
-	SeatracMessage::DataBuffer buf;
-	//msg->pack(buf);
-	tomedium->message.assign(buf.begin(), buf.end());
+	SeatracFactory::encodePacket(msg, &tomedium->message);
 	this->sendToMedium(tomedium);
 	this->startTimer(2*tomedium->duration + 2*max_distance/vos + time_overhead);
 
@@ -234,23 +244,26 @@ void SeatracSim::onMediumTransmission(const
 	//Test if it is possible to hear the message
 
 	//Throw dice if we will have a CRC error
-
-	//Dispatch message based on CID (PING, DATA)
-	//If more message types should be handled switch to map dispatch for readability.
-	if (msg->message[0] == PingSendCmd::CID)
+	//Unpack message
+	SeatracMessage::Ptr message;
+	if (SeatracFactory::decodePacket(msg->message, message))
 	{
-		processPingCmd(msg);
+		//Dispatch message based on CID (PING, DATA)
+		//If more message types should be handled switch to map dispatch for readability.
+		if (message->getCid() == PingSendCmd::CID)
+		{
+			processPingCmd(msg);
+		}
+		else if (message->getCid() == DatSendCmd::CID)
+		{
+			processDataCmd(msg, *boost::dynamic_pointer_cast<DatSendCmd>(message));
+		}
+		else
+		{
+			ROS_ERROR("No receive handler for CID=0x%x [%s]", message->getCid(),
+						SeatracFactory::getResponseName(message->getCid()).c_str());
+		}
 	}
-	else if (msg->message[0] == DatSendCmd::CID)
-	{
-		processDataCmd(msg);
-	}
-	else
-	{
-		ROS_ERROR("Not receive handler for CID=0x%x [%s]", msg->message[0],
-						SeatracFactory::getResponseName(msg->message[0]).c_str());
-	}
-
 }
 
 void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg)
@@ -269,7 +282,8 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 			rep->sender = node_id;
 			rep->receiver = msg->sender;
 			rep->duration = ping_duration;
-			rep->message.push_back(PingSendCmd::CID);
+			PingSendCmd::Ptr repcmd(new PingSendCmd());
+			SeatracFactory::encodePacket(repcmd, &rep->message);
 			this->sendToMedium(rep);
 		}
 
@@ -336,14 +350,10 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 	this->sendMessage(out);
 }
 
-void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg)
+void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg, const DatSendCmd& incoming)
 {
 	SeatracMessage::ConstPtr out;
 	int state = getState();
-	SeatracMessage::DataBuffer buf;
-	buf.assign(msg->message.begin(), msg->message.end());
-	DatSendCmd incoming;
-	//incoming.unpack(buf);
 	ROS_DEBUG("SeatracSim: Processing arrived DatCmd (%d->%d). Current state is ID=%d.", msg->sender, msg->receiver, state);
 
 	if (state == IDLE)
@@ -352,7 +362,6 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		if (msg->receiver == node_id)
 		{
 			ROS_DEBUG("SeatracSim: Reply on DatCmd (%d->%d).", msg->sender, node_id);
-
 			if ((incoming.msg_type == AMsgType::MSG_REQU) || (incoming.msg_type == AMsgType::MSG_REQX))
 			{
 				underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
@@ -360,28 +369,21 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 				rep->receiver = msg->sender;
 				rep->duration = ping_duration;
 
+				//If nothing to reply, return only the pinging part of data
+				DatSendCmd::Ptr repcmd(new DatSendCmd());
 				boost::mutex::scoped_lock l(reply_queue_mux);
-				if (reply_queue.empty())
+				if (!reply_queue.empty())
 				{
-					//If nothing to reply, return only the pinging part of data
-					rep->message.push_back(DatSendCmd::CID);
-				}
-				else
-				{
-					SeatracMessage::DataBuffer buf;
-					DatQueueSetCmd::ConstPtr mr = reply_queue.front();
-					if (msg->sender == mr->dest)
+					DatSendCmd::Ptr mr = reply_queue.front();
+					if ((msg->sender == mr->dest) || (mr->dest == BEACON_ALL))
 					{
-						DatSendCmd ret;
-						ret.dest = mr->dest;
-						ret.data = mr->data;
-						//ret.pack(buf);
-						rep->message.assign(buf.begin(), buf.end());
-						rep->duration += 8*mr->data.size()/bps;
+						repcmd = mr;
 						reply_queue.pop();
+						rep->duration += 8*repcmd->data.size()/bps;
 					}
 				}
 				l.unlock();
+				SeatracFactory::encodePacket(repcmd, &rep->message);
 
 				this->sendToMedium(rep);
 			}

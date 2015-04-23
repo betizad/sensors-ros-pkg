@@ -50,12 +50,12 @@ NavListener::NavListener():
 	ahrs_delay(0),
 	vos(0.0)
 {
-	registrations[PingResp::CID] = Mediator<PingResp>::makeCallback(
-					boost::bind(&NavListener::onAcoFixMessage<PingResp>,this,_1));
-	registrations[DatReceive::CID] = Mediator<DatReceive>::makeCallback(
-					boost::bind(&NavListener::onAcoFixMessage<DatReceive>,this,_1));
-	registrations[StatusResp::CID] = Mediator<StatusResp>::makeCallback(
-					boost::bind(&NavListener::onStatus,this,_1));
+	registrations[PingResp::CID].push_back(Mediator<PingResp>::makeCallback(
+					boost::bind(&NavListener::onAcoFixMessage<PingResp>,this,_1)));
+	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
+					boost::bind(&NavListener::onAcoFixMessage<DatReceive>,this,_1)));
+	registrations[StatusResp::CID].push_back(Mediator<StatusResp>::makeCallback(
+					boost::bind(&NavListener::onStatus,this,_1)));
 }
 
 bool NavListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
