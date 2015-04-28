@@ -10,6 +10,8 @@ namespace labust
   namespace sensors 
   {
     /**
+     * Node for gyro bias calculation.
+     * Must be ran with DiverNet laying completely still on the ground.
     */
     class DiverNetGyroCalibrationNode {
 
