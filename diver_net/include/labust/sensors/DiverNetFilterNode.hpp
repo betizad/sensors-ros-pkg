@@ -35,9 +35,11 @@ namespace labust
         ros::Publisher raw_angles_publisher, filtered_angles_publisher;
         std_msgs::Float64MultiArrayPtr rpy_raw, rpy_filtered;
         std::vector<Eigen::MatrixXd> axes_permutation;
+        Eigen::MatrixXd gyro_bias;
         ImuComplementaryQuaternionFilter *filter;
+        std::string calibration_file_;
         const double dT, fs;
-        int node_count, data_per_node;
+        const int node_count;
     };
   }
 }

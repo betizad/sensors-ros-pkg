@@ -115,7 +115,7 @@ add_executable(diver_net_node src/DiverNetNode.cpp)
 add_executable(diver_net_read_node src/DiverNetReadNode.cpp)
 add_executable(diver_net_filter_node src/DiverNetFilterNode.cpp)
 add_executable(diver_net_transform_and_joint_publisher_node src/DiverNetTransformAndJointPublisher.cpp)
-add_executable(diver_net_bvh_publisher_node src/DiverNetBvhPublisherNode.cpp)
+add_executable(diver_net_gyro_calibration_node src/DiverNetGyroCalibrationNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -134,7 +134,7 @@ target_link_libraries(diver_net_filter_node
 target_link_libraries(diver_net_transform_and_joint_publisher_node
    ${catkin_LIBRARIES}
 )
-target_link_libraries(diver_net_bvh_publisher_node
+target_link_libraries(diver_net_gyro_calibration_node
    ${catkin_LIBRARIES}
 )
 

@@ -86,7 +86,9 @@ void DiverNetTransformAndJointPublisher::calibratePose(const std_msgs::Bool::Con
       offsetQ[i] = currentMeasQ[i].inverse() * zeroStateQ[i];
     }	
     isCalibrated = true;
-	}
+	} else {
+    isCalibrated = false;
+  }
 }
 
 void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &rpy) {

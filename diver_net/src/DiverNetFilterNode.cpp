@@ -4,21 +4,25 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Float64.h>
 
+#include <fstream>
+
 using namespace labust::sensors;
+
 
 DiverNetFilterNode::DiverNetFilterNode():
     fs(50.0),
     dT(1.0/50),
     node_count(20),
-    data_per_node(18),
+    gyro_bias(20,3),
+    calibration_file_(""),
     rpy_raw(new std_msgs::Float64MultiArray()),
     rpy_filtered(new std_msgs::Float64MultiArray()), 
-    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.2, 0.05)) {
+    filter(new ImuComplementaryQuaternionFilter(20, 1.0/50, 0.05, 0.1)) {
   this->onInit();
 }
 
 void DiverNetFilterNode::onInit() {
-  ros::NodeHandle nh;
+  ros::NodeHandle nh, ph("~");
   ros::Rate rate(1);
 
   raw_angles_publisher = nh.advertise<std_msgs::Float64MultiArray>("rpy_raw", 1);
@@ -58,6 +62,23 @@ void DiverNetFilterNode::onInit() {
   axes_permutation[18] = Eigen::MatrixXd::Identity(3,3);
   axes_permutation[19] = Eigen::MatrixXd::Identity(3,3);
 
+  // Gyro sensor bias
+  ph.getParam("gyro_calibration", calibration_file_);
+  if (calibration_file_ == "") {
+    gyro_bias = Eigen::MatrixXd::Zero(node_count, 3);
+  } else {
+    std::ifstream ifs;
+    ifs.open(calibration_file_.c_str());
+    double gb;
+    for (int i=0; i<node_count; ++i) {
+      for (int j=0; j<3; ++j) {
+        ifs >> gb;
+        gyro_bias(i, j) = gb;
+      }
+    }
+    ifs.close();
+    std::cout << gyro_bias;
+  }
   raw_data = nh.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
 }
 
@@ -73,9 +94,15 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
       raw(i,e) = raw_data->data[i*elem_count + e];
       raw(i,e) /= (1<<15);
     }
+    // Normalize gyro data to rad/s
     raw(i,6) *= 2000.0 * M_PI/180;
     raw(i,7) *= 2000.0 * M_PI/180;
     raw(i,8) *= 2000.0 * M_PI/180;
+
+    // Compensate gyro bias
+    raw(i,6) -= gyro_bias(i,0);
+    raw(i,7) -= gyro_bias(i,1);
+    raw(i,8) -= gyro_bias(i,2);
 
     // Perform axes permutation to match the diver model
     raw.block<1,3>(i,0) = raw.block<1,3>(i,0) * axes_permutation[i];
