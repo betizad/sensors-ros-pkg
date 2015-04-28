@@ -31,8 +31,8 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef GENERICCAMERADRIVER_HPP_
-#define GENERICCAMERADRIVER_HPP_
+#ifndef OPENCVCAMERADRIVER_HPP_
+#define OPENCVCAMERADRIVER_HPP_
 #include <ros/ros.h>
 #include <camera_info_manager/camera_info_manager.h>
 #include <image_transport/image_transport.h>
@@ -49,18 +49,17 @@ namespace labust {
       /**
        * ROS node for publishing videos from external cameras.
        */
-      class GenericCameraDriver {
+      class OpenCvCameraDriver {
 
       public:
-        GenericCameraDriver(); 
-        ~GenericCameraDriver();
+        OpenCvCameraDriver(ros::NodeHandle camera_nh, ros::NodeHandle ph); 
+        ~OpenCvCameraDriver();
         void setup();
-        void start();
+        void poll();
 
       private:
         // Node handles
-        ros::NodeHandle nh_, camera_nh_;
-        double ros_rate_;
+        ros::NodeHandle ph_, camera_nh_;
         
         // Image transport and publisher
         image_transport::ImageTransport it_;
@@ -69,9 +68,8 @@ namespace labust {
         // Camera info and calibration
         camera_info_manager::CameraInfoManager camera_info_manager_;
         std::string camera_address_, camera_info_url_;
-        bool calibration_matches_;
        
-        // 
+        //
         cv::VideoCapture video_capture_;
         int device_id_;
         bool is_video_, enable_video_display_;
@@ -81,5 +79,5 @@ namespace labust {
   }
 }
 
-/* GENERICCAMERADRIVER_HPP_ */
+/* OPENCVCAMERADRIVER_HPP_ */
 #endif

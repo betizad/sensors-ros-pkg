@@ -108,7 +108,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(generic_camera_driver_node src/GenericCameraDriver.cpp)
+add_executable(opencv_camera_driver_node src/OpenCvCameraDriver.cpp)
 add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
@@ -116,7 +116,7 @@ add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(generic_camera_driver_node
+target_link_libraries(opencv_camera_driver_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
