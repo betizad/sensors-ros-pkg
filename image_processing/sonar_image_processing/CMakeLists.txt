@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   image_processing_util
+  labust_navigation
   aris
 )
 
@@ -108,14 +109,14 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(object_tracker_node src/ObjectTrackerNode.cpp)
+add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(object_tracker_node
+target_link_libraries(sonar_object_tracker_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )

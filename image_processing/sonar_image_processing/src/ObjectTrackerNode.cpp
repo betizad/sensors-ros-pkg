@@ -41,20 +41,20 @@
 #include <sensor_msgs/image_encodings.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
+#include <labust/sensors/image/SonarDetector.hpp>
+#include <labust/sensors/image/ArisSonar.hpp>
 #include <labust/sensors/image/ObjectTrackerNode.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 
 #include <opencv2/opencv.hpp>
 
-
+int n;
 using namespace labust::sensors::image;
 
-/**
- * Creates a ROS node for object tracking from sonar image.
- */
 ObjectTrackerNode::ObjectTrackerNode() : 
     it(nh) {
   this->onInit();
+  n = 0;
 };
 
 ObjectTrackerNode::~ObjectTrackerNode() {};
@@ -67,6 +67,14 @@ void ObjectTrackerNode::onInit() {
 
 void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   aris.saveSonarInfo(*msg);
+  n++;
+  if (n == 5) {
+    aris.setSonarFocus(500);
+    aris.setSonarRange(3.0, 10.5); 
+    aris.setSonarFramePeriodSec(0.2);
+    aris.setSonarFrequencyHigh(false);
+    aris.uploadSonarConfig(); 
+  }
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
   if (frame->header.stamp == msg->header.stamp) {
@@ -87,14 +95,14 @@ void ObjectTrackerNode::processFrame() {
   cv::Point2f center;
   double area;
   aris.saveCartesianImageSize(cv_image_bgr->image.size());
-  sonar_detector.setContourClusteringParams(50,10,200);
+  sonar_detector.setContourClusteringParams(300,100,25000,1000000);
   sonar_detector.setSonarInfo(aris.getSonarInfo());
   sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
 }
 
 int main(int argc, char **argv) {
 
-  ros::init(argc, argv, "diver_tracker_node"); 
+  ros::init(argc, argv, "sonar_object_tracker_node"); 
   ObjectTrackerNode node; 
   ros::spin();
 
