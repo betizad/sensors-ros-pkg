@@ -67,7 +67,7 @@ namespace labust {
                 uchar curr = image.at<uchar>(sample, beam);
                 if (curr > max) {max = curr; ind = sample;}
               }
-              res[beam] = ind * sonar_info.window_length / image.rows;
+              res[beam] = ind * sonar_info.window_length / image.rows + sonar_info.window_start;
             }
             return res;
           }
