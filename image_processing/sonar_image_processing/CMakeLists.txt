@@ -110,6 +110,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
+add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -117,6 +118,10 @@ add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sonar_object_tracker_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+target_link_libraries(sonar_bathymetry_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
