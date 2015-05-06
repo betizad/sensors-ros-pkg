@@ -31,28 +31,28 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef OBJECTTRACKERNODE_HPP_
-#define OBJECTTRACKERNODE_HPP_
+#ifndef BATHYMETRYNODE_HPP_
+#define BATHYMETRYNODE_HPP_
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
-#include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
 #include <labust/sensors/image/SonarImageUtil.hpp>
+#include <labust/sensors/image/SonarAltitudeEstimator.hpp>
 
 namespace labust {
   namespace sensors {
     namespace image {
 
       /**
-       * ROS node for object tracking from sonar image.
+       * ROS node for bathymetry calculation from sonar image.
        */
-      class ObjectTrackerNode {
+      class BathymetryNode {
 
       public:
-        ObjectTrackerNode();
-        ~ObjectTrackerNode();
+        BathymetryNode();
+        ~BathymetryNode();
       private:
         void onInit();
         void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
@@ -61,14 +61,15 @@ namespace labust {
         ros::NodeHandle nh;
         image_transport::ImageTransport it;
         ros::Subscriber sonar_info_sub;
+        ros::Publisher sonar_altitude, sonar_bathymetry;
         image_transport::Subscriber image_sub;
         ArisSonar aris;
-        SonarDetector sonar_detector;
+        SonarAltitudeEstimator sonar_altitude_estimator;
       };
 
     }
   }
 }
 
-/* OBJECTTRACKERNODE_HPP_ */
+/* BATHYMETRYNODE_HPP_ */
 #endif

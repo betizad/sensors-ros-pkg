@@ -38,43 +38,37 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float64.h>
 #include <sensor_msgs/image_encodings.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
-#include <labust/sensors/image/SonarDetector.hpp>
 #include <labust/sensors/image/ArisSonar.hpp>
-#include <labust/sensors/image/ObjectTrackerNode.hpp>
+#include <labust/sensors/image/BathymetryNode.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 
 #include <opencv2/opencv.hpp>
 
-int n;
+
 using namespace labust::sensors::image;
 
-ObjectTrackerNode::ObjectTrackerNode() : 
+
+BathymetryNode::BathymetryNode() : 
     it(nh) {
   this->onInit();
-  n = 0;
 };
 
-ObjectTrackerNode::~ObjectTrackerNode() {};
+BathymetryNode::~BathymetryNode() {};
 
-void ObjectTrackerNode::onInit() {
+void BathymetryNode::onInit() {
   ros::Rate rate(1);
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
+  image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
+  sonar_bathymetry = nh.advertise<std_msgs::Float64MultiArray>("sonar_bathymetry", 1);
+  sonar_altitude = nh.advertise<std_msgs::Float64>("sonar_altitude", 1);
 }
 
-void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
+void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   aris.saveSonarInfo(*msg);
-  n++;
-  if (n == 5) {
-    aris.setSonarFocus(500);
-    aris.setSonarRange(3.0, 10.5); 
-    aris.setSonarFramePeriodSec(0.2);
-    aris.setSonarFrequencyHigh(false);
-    aris.uploadSonarConfig(); 
-  }
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
   if (frame->header.stamp == msg->header.stamp) {
@@ -82,7 +76,7 @@ void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   }
 }
 
-void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
+void BathymetryNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
   aris::SonarInfo si = aris.getSonarInfo();
   if (img->header.stamp == si.header.stamp) {
@@ -90,20 +84,26 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   }
 }
 
-void ObjectTrackerNode::processFrame() {
+void BathymetryNode::processFrame() {
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
-  cv::Point2f center;
-  double area;
-  aris.saveCartesianImageSize(cv_image_bgr->image.size());
-  sonar_detector.setContourClusteringParams(300,100,25000,1000000);
-  sonar_detector.setSonarInfo(aris.getSonarInfo());
-  sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
+  sonar_altitude_estimator.setSonarInfo(aris.getSonarInfo());
+  std::vector<double> bath = sonar_altitude_estimator.process(cv_image_bgr->image.clone());
+  double alt = *(std::min_element(bath.begin(), bath.end()));
+  std_msgs::Float64MultiArrayPtr bathymetry(new std_msgs::Float64MultiArray());
+  std_msgs::Float64Ptr altitude(new std_msgs::Float64);
+  bathymetry->data.resize(bath.size());
+  for (int i=0; i<bath.size(); ++i) {
+    bathymetry->data[i] = bath[i];
+  }
+  altitude->data = alt;
+  sonar_bathymetry.publish(bathymetry);
+  sonar_altitude.publish(altitude);
 }
 
 int main(int argc, char **argv) {
 
-  ros::init(argc, argv, "sonar_object_tracker_node"); 
-  ObjectTrackerNode node; 
+  ros::init(argc, argv, "sonar_bathymetry_node"); 
+  BathymetryNode node; 
   ros::spin();
 
   return 0;
