@@ -1,0 +1,17 @@
+<launch>
+    <!-- Surface acoustics -->
+    <group ns="surface">
+    	<node pkg="seatrac" type="seatrac_core" name="surface">
+    		<!-- Core parameters -->
+    		<param name="comms_plugin" value="labust::seatrac::SeatracSerial" />
+		<!-- Serial parameters -->
+		<param name="port_name" value="/dev/ttyUSB2" />
+		<param name="baud" value="115200" />
+    		<param name="controller_plugin" value="labust::seatrac::UROSUSBLController" />
+    		<rosparam param="listener_plugins">["labust::seatrac::StatusListener","labust::seatrac::NavListener"] </rosparam>
+		<!-- NavListener parameters -->
+		<rosparam param="transponders">[2]</rosparam>
+		<rosparam param="transponder_names">["lupis"]</rosparam>
+	</node>
+    </group>
+</launch>
