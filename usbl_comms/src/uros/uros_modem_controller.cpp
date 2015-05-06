@@ -70,13 +70,14 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 {
 	RhodamineData out;
 	out.adc = msg->adc;
-	out.adc_gain = msg->gain;
+	out.adc_gain = uint8_t(std::log10(msg->gain));
 	out.depth = position.position.depth * RhodamineData::DEPTH_SC;
 	labust::tools::LatLon2Bits conv;
 	conv.convert(position.global_position.latitude,
 			position.global_position.longitude, llbits);
 	out.lat = conv.lat;
 	out.lon = conv.lon;
+
 
 	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
