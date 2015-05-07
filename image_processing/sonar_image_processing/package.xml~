@@ -30,6 +30,6 @@
   <run_depend>opencv2</run_depend>
   <run_depend>image_processing_util</run_depend>
   <run_depend>labust_navigation</run_depend>
-  <run_depend>message_runtime</run_depend>
+<run_depend>message_runtime</run_depend>
 
 </package>

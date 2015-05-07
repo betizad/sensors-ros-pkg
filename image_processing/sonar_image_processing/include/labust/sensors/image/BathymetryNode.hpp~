@@ -65,7 +65,7 @@ namespace labust {
         image_transport::Subscriber image_sub;
         ArisSonar aris;
         SonarAltitudeEstimator sonar_altitude_estimator;
-        std::vector<double> bearing;
+        float64[] bearing;
       };
 
     }

@@ -75,7 +75,7 @@ namespace labust {
               res[beam] = ind * sonar_info.window_length / image.rows + sonar_info.window_start;
               std::cout << beam << " " << res[beam] << std::endl;
             }
-            //cv::imshow("test", temp); cv::waitKey(100);
+            cv::imshow("test", temp); cv::waitKey(100);
             return res;
           }
 
