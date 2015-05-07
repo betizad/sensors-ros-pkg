@@ -109,6 +109,7 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(opencv_camera_driver_node src/OpenCvCameraDriver.cpp)
+add_executable(curl_camera_driver_node src/CurlCameraDriver.cpp)
 add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
@@ -119,6 +120,11 @@ add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 target_link_libraries(opencv_camera_driver_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+)
+target_link_libraries(curl_camera_driver_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  curl
 )
 target_link_libraries(object_detector_node
   ${catkin_LIBRARIES}

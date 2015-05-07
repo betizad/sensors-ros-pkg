@@ -37,11 +37,11 @@
 #include <camera_info_manager/camera_info_manager.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/CompressedImage.h>
 
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
+#include <curl/curl.h>
 
 namespace labust {
   namespace sensors {
@@ -50,12 +50,11 @@ namespace labust {
       /**
        * ROS node for publishing videos from external cameras.
        */
-      class OpenCvCameraDriver {
+      class CurlCameraDriver {
 
       public:
-        OpenCvCameraDriver(ros::NodeHandle camera_nh, ros::NodeHandle ph); 
-        ~OpenCvCameraDriver();
-        void setup();
+        CurlCameraDriver(ros::NodeHandle camera_nh, ros::NodeHandle ph); 
+        ~CurlCameraDriver();
         void poll();
 
       private:
@@ -63,17 +62,14 @@ namespace labust {
         ros::NodeHandle ph_, camera_nh_;
         
         // Image transport and publisher
-        image_transport::ImageTransport it_;
-        image_transport::CameraPublisher image_pub_;
+        ros::Publisher compressed_image_pub_;
+        ros::Publisher compressed_camera_info_pub_;
 
         // Camera info and calibration
         camera_info_manager::CameraInfoManager camera_info_manager_;
         std::string camera_address_, camera_info_url_;
 
-        //
-        cv::VideoCapture video_capture_;
-        int device_id_;
-        bool is_video_;
+        CURL *curl;
       };
 
     }
