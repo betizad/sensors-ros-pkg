@@ -41,7 +41,7 @@
 #include <std_msgs/Float64.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sonar_image_processing/ArisBathymetry.h>
-#include <sonar_image_processing/Altitude.h>
+#include <sonar_image_processing/TimeStampedFloat64.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/ArisSonar.hpp>
@@ -69,7 +69,7 @@ void BathymetryNode::onInit() {
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
   sonar_bathymetry_pub = nh.advertise<sonar_image_processing::ArisBathymetry>("sonar_bathymetry", 1);
-  sonar_altitude_pub = nh.advertise<sonar_image_processing::Altitude>("sonar_altitude", 1);
+  sonar_altitude_pub = nh.advertise<sonar_image_processing::TimeStampedFloat64>("sonar_altitude", 1);
 }
 
 void BathymetryNode::recalculateBearings(int nbeams) {
@@ -110,7 +110,7 @@ void BathymetryNode::processFrame() {
   double alt = *(std::min_element(bath.begin(), bath.end()));
   
   sonar_image_processing::ArisBathymetry::Ptr sonar_bathymetry(new sonar_image_processing::ArisBathymetry);
-  sonar_image_processing::Altitude::Ptr sonar_altitude(new sonar_image_processing::Altitude);
+  sonar_image_processing::TimeStampedFloat64::Ptr sonar_altitude(new sonar_image_processing::TimeStampedFloat64);
   sonar_altitude->data = alt + altitude_offset;
   sonar_bathymetry->range.resize(bath.size());
   sonar_bathymetry->bearing = bearing;
