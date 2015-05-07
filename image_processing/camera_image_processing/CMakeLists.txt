@@ -119,6 +119,7 @@ add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 target_link_libraries(opencv_camera_driver_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  curl
 )
 target_link_libraries(object_detector_node
   ${catkin_LIBRARIES}
