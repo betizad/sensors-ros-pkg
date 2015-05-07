@@ -67,7 +67,7 @@ void BathymetryNode::onInit() {
   ros::Rate rate(1);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
-  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::ArisBathymetry>("sonar_bathymetry", 1);
+  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::ArisBathymetry>("bathymetry", 1);
   sonar_altitude_pub = nh.advertise<std_msgs::Float32>("altitude", 1);
 }
 
