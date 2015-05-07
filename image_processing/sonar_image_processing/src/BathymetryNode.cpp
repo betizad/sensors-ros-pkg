@@ -40,8 +40,8 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Float64.h>
 #include <sensor_msgs/image_encodings.h>
-#include <sonar_image_processing/Bathymetry.h>
-#include <sonar_image_processing/SonarAltitude.h>
+#include <sonar_image_processing/ArisBathymetry.h>
+#include <sonar_image_processing/Altitude.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/ArisSonar.hpp>
@@ -68,18 +68,24 @@ void BathymetryNode::onInit() {
   ros::Rate rate(1);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
-  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::Bathymetry>("sonar_bathymetry", 1);
-  sonar_altitude_pub = nh.advertise<sonar_image_processing::SonarAltitude>("sonar_altitude", 1);
-  
-  bearing.resize(128);
-  bearing[0]=-15.0+15.0/128;
-  double step=30.0/128;
-  for (int i=1; i<128; ++i) {
+  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::ArisBathymetry>("sonar_bathymetry", 1);
+  sonar_altitude_pub = nh.advertise<sonar_image_processing::Altitude>("sonar_altitude", 1);
+}
+
+void BathymetryNode::recalculateBearings(int nbeams) {
+  bearing.resize(nbeams);
+  bearing[0] = -15.0+15.0/nbeams;
+  double step = 30.0/nbeams;
+  for (int i=1; i<nbeams; ++i) {
     bearing[i] = bearing[i-1]+step;
   }
+
 }
 
 void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
+  if (msg->beams != aris.getSonarInfo().beams) {
+    recalculateBearings(msg->beams);    
+  }
   aris.saveSonarInfo(*msg);
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
@@ -103,9 +109,9 @@ void BathymetryNode::processFrame() {
   std::vector<double> bath = sonar_altitude_estimator.process(cv_image_bgr->image.clone());
   double alt = *(std::min_element(bath.begin(), bath.end()));
   
-  sonar_image_processing::Bathymetry::Ptr sonar_bathymetry(new sonar_image_processing::Bathymetry);
-  sonar_image_processing::SonarAltitude::Ptr sonar_altitude(new sonar_image_processing::SonarAltitude);
-  sonar_altitude->altitude = alt + altitude_offset;
+  sonar_image_processing::ArisBathymetry::Ptr sonar_bathymetry(new sonar_image_processing::ArisBathymetry);
+  sonar_image_processing::Altitude::Ptr sonar_altitude(new sonar_image_processing::Altitude);
+  sonar_altitude->data = alt + altitude_offset;
   sonar_bathymetry->range.resize(bath.size());
   sonar_bathymetry->bearing = bearing;
   for (int i=0; i<bath.size(); ++i) {

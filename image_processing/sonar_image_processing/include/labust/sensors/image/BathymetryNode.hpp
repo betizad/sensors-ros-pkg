@@ -58,6 +58,7 @@ namespace labust {
         void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
         void processFrame();
+        void recalculateBearings(int nbeams);
         ros::NodeHandle nh;
         image_transport::ImageTransport it;
         ros::Subscriber sonar_info_sub;
