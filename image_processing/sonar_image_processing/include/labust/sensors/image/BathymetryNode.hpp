@@ -61,11 +61,12 @@ namespace labust {
         ros::NodeHandle nh;
         image_transport::ImageTransport it;
         ros::Subscriber sonar_info_sub;
-        ros::Publisher sonar_altitude, sonar_bathymetry;
+        ros::Publisher sonar_altitude_pub, sonar_bathymetry_pub;
         image_transport::Subscriber image_sub;
         ArisSonar aris;
         SonarAltitudeEstimator sonar_altitude_estimator;
         std::vector<double> bearing;
+        double altitude_offset;
       };
 
     }

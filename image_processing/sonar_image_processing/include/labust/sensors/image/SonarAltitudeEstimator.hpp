@@ -57,10 +57,8 @@ namespace labust {
           }
 
           std::vector<double> process(cv::Mat image) {
-            cv::Mat temp;
             cvtColor(image, image, CV_BGR2GRAY);
-            cv::GaussianBlur(image, image, cv::Size(10*2+1, 10*2+1), 0, 0, cv::BORDER_DEFAULT);
-            image.copyTo(temp);
+            cv::GaussianBlur(image, image, cv::Size(3*2+1, 3*2+1), 0, 0, cv::BORDER_DEFAULT);
             std::vector<double> res(image.cols);
             for (int beam=0; beam<image.cols; ++beam) {
               uchar max = 0;
@@ -70,12 +68,11 @@ namespace labust {
                 if (curr > max) {max = curr; ind = sample;}
               }
 	      
-	      if (max<100) ind=image.rows+1;
-	      cv::circle(temp, cv::Point2f(beam, ind), 3, cv::Scalar(255), -1);
+	            if (max<100) {
+                ind = image.rows+1;
+              }
               res[beam] = ind * sonar_info.window_length / image.rows + sonar_info.window_start;
-              std::cout << beam << " " << res[beam] << std::endl;
             }
-            //cv::imshow("test", temp); cv::waitKey(100);
             return res;
           }
 

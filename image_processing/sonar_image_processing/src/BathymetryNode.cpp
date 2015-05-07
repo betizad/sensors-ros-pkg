@@ -53,38 +53,33 @@
 
 using namespace labust::sensors::image;
 
-int n;
 
 BathymetryNode::BathymetryNode() : 
-    it(nh) {
+    it(nh),
+    altitude_offset(0) {
+  ros::NodeHandle ph("~");
+  ph.getParam("altitude_offset", altitude_offset);
   this->onInit();
 };
 
-BathymetryNode::~BathymetryNode() {n=0;};
+BathymetryNode::~BathymetryNode() {};
 
 void BathymetryNode::onInit() {
   ros::Rate rate(1);
+  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
+  image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
+  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::Bathymetry>("sonar_bathymetry", 1);
+  sonar_altitude_pub = nh.advertise<sonar_image_processing::SonarAltitude>("sonar_altitude", 1);
+  
   bearing.resize(128);
   bearing[0]=-15.0+15.0/128;
   double step=30.0/128;
   for (int i=1; i<128; ++i) {
     bearing[i] = bearing[i-1]+step;
-    //std::cout<<"Bearing "<<i<<" = "<<bearing[i]<<std::endl;
   }
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
-  sonar_bathymetry = nh.advertise<sonar_image_processing::Bathymetry>("sonar_bathymetry", 1);
-  sonar_altitude = nh.advertise<sonar_image_processing::SonarAltitude>("sonar_altitude", 1);
 }
 
 void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
-  n++;
-  if (n == 5) {
-    aris.setSonarRange(0.7, 5.0);
-    aris.setSonarFramePeriodSec(0.2);
-    aris.setSonarFrequencyHigh(false);
-    aris.uploadSonarConfig();
-  }
   aris.saveSonarInfo(*msg);
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
@@ -108,20 +103,18 @@ void BathymetryNode::processFrame() {
   std::vector<double> bath = sonar_altitude_estimator.process(cv_image_bgr->image.clone());
   double alt = *(std::min_element(bath.begin(), bath.end()));
   
-  /**std_msgs::Float64MultiArrayPtr bathymetry(new std_msgs::Float64MultiArray());
-  std_msgs::Float64Ptr altitude(new std_msgs::Float64);**/
-  sonar_image_processing::Bathymetry::Ptr bathymetry(new sonar_image_processing::Bathymetry);
-  sonar_image_processing::SonarAltitude::Ptr altitude(new sonar_image_processing::SonarAltitude);
-  altitude->altitude=alt;
-  bathymetry->range.resize(bath.size());
-  bathymetry->bearing=bearing;
+  sonar_image_processing::Bathymetry::Ptr sonar_bathymetry(new sonar_image_processing::Bathymetry);
+  sonar_image_processing::SonarAltitude::Ptr sonar_altitude(new sonar_image_processing::SonarAltitude);
+  sonar_altitude->altitude = alt + altitude_offset;
+  sonar_bathymetry->range.resize(bath.size());
+  sonar_bathymetry->bearing = bearing;
   for (int i=0; i<bath.size(); ++i) {
-    bathymetry->range[i] = bath[i];
+    sonar_bathymetry->range[i] = bath[i] + altitude_offset;
   }
-  bathymetry->header.stamp = si.header.stamp;
-  altitude->header.stamp = si.header.stamp;
-  sonar_bathymetry.publish(bathymetry);
-  sonar_altitude.publish(altitude);
+  sonar_bathymetry->header.stamp = si.header.stamp;
+  sonar_altitude->header.stamp = si.header.stamp;
+  sonar_bathymetry_pub.publish(sonar_bathymetry);
+  sonar_altitude_pub.publish(sonar_altitude);
 }
 
 int main(int argc, char **argv) {
