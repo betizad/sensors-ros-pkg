@@ -55,6 +55,28 @@ namespace labust {
         return cv_image.toImageMsg();
       }
 
+      cv::Point2f rectCenter(const cv::Rect rect) {
+        return 0.5 * (rect.tl() + rect.br());
+      }
+
+      cv::Rect moveRect(const cv::Rect rect, const cv::Point2f new_center) {
+        cv::Point offset = new_center - rectCenter(rect);
+        return rect+offset;
+      }
+
+      cv::Rect scaleRect(const cv::Rect rect, double scale_factor) {
+        cv::Rect res = rect;
+        res.x -= (scale_factor-1)/2 * res.width;
+        res.y -= (scale_factor-1)/2 * res.height;
+        res.width *= scale_factor;
+        res.height *= scale_factor;
+      }
+
+      double distanceBetweenPoints(const cv::Point2f a, const cv::Point2f b) {
+        double dx = a.x - b.x;
+        double dy = a.y - b.y;
+        return std::sqrt(dx*dx + dy*dy);
+      }
     }
   }
 }
