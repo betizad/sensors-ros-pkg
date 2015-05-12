@@ -291,10 +291,14 @@ void SpatialNode::onData(const boost::system::error_code& e,
 void SpatialNode::statusUpdate(uint16_t systemStatus, uint16_t filterStatus)
 {
 	ROS_INFO("System status: %d, filter status: %d", systemStatus, filterStatus); 
-	stateOk = (systemStatus == 0);
-	orientationOk = filterStatus & 0x01;
+	//Ignore disconnected antenna
+	stateOk = ((systemStatus & ((1 << 13)-1)) == 0);
+	orientationOk = filterStatus & 0x04;
 	navigationOk = filterStatus & 0x02;
 	ROS_INFO("Fix type: %d", (filterStatus & 0x70)>>4);
+	ROS_INFO("State ok: %d", stateOk);
+	ROS_INFO("Orientation ok: %d", orientationOk);
+	ROS_INFO("Navigation ok: %d", navigationOk);
 }
 
 void SpatialNode::onSystemStatePacket(boost::archive::binary_iarchive& data)
