@@ -97,8 +97,9 @@ CurlCameraDriver::~CurlCameraDriver() {
 
 void CurlCameraDriver::poll() {
   sensor_msgs::CompressedImagePtr compressed_image(new sensor_msgs::CompressedImage());
-  compressed_image->format = "bgr8";
-  compressed_image->format += "; jpeg compressed";
+  //compressed_image->format = "bgr8";
+  //compressed_image->format += "; jpeg compressed";
+  compressed_image->format += "jpeg";
   
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &compressed_image->data);
   CURLcode res = curl_easy_perform(curl);

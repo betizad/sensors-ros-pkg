@@ -107,7 +107,7 @@ bool NovatelNode::testHeader(const std::string& match, const std::string& stream
 
 void NovatelNode::onBestPos(BestPos& pos)
 {
-	sensor_msgs::NavSatFix sat_fix;
+	    sensor_msgs::NavSatFix sat_fix;
 	    sat_fix.header.frame_id = "/gps_frame";
 	    enum {latitude=0, longitude=1, altitude=2};
 	    sat_fix.latitude = pos.position[latitude];
@@ -115,13 +115,18 @@ void NovatelNode::onBestPos(BestPos& pos)
 	    sat_fix.altitude = pos.position[altitude];
 
 	    if (pos.pos_type == "NONE")
+	    {
 	      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+	      return;
+	    }
 	    else if ((pos.pos_type == "WAAS") ||
 	             (pos.pos_type == "OMNISTAR") ||
 	             (pos.pos_type == "OMNISTAR_HP") ||
 	             (pos.pos_type == "OMNISTAR_XP") ||
 	             (pos.pos_type == "CDGPS"))
+	    {
 	      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_SBAS_FIX;
+	    }
 	    else if ((pos.pos_type == "PSRDIFF") ||
 	    				 (pos.pos_type == "L1_FLOAT") ||
 	             (pos.pos_type == "NARROW_FLOAT") ||
@@ -132,10 +137,13 @@ void NovatelNode::onBestPos(BestPos& pos)
 	             (pos.pos_type == "INS_PSRDIFF") ||
 	             (pos.pos_type == "INS_RTKFLOAT") ||
 	             (pos.pos_type == "INS_RTKFIXED"))
+	    {
 	      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
-			else
-			  sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
-
+	    }
+	    else
+            {
+	      sat_fix.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+	    }
 
 	    sat_fix.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 	    sat_fix.position_covariance[0] = std::pow(pos.position_stddev[latitude],2);
