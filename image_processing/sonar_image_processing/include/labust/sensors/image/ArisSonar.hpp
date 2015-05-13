@@ -53,7 +53,7 @@ namespace labust {
           ~ArisSonar() {}
          
           // Automatic range setting
-          void rangeOfInterest(double roi_start, double roi_end) {
+          void setRangeOfInterest(double roi_start, double roi_end) {
             double new_window_start = sonar_info.window_start;
             double new_window_end = sonar_info.window_start + sonar_info.window_length;
             double frequency_high = sonar_info.frequency_hi;

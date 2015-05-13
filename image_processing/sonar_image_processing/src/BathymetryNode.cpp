@@ -106,15 +106,21 @@ void BathymetryNode::processFrame() {
   aris::SonarInfo si = aris.getSonarInfo();
   sonar_altitude_estimator.setSonarInfo(si);
   std::vector<double> bath = sonar_altitude_estimator.process(cv_image_bgr->image.clone());
-  double alt = *(std::min_element(bath.begin(), bath.end()));
-  
+  double min_alt = *(std::min_element(bath.begin(), bath.end()));
+  double max_alt = 0;
   sonar_image_processing::ArisBathymetry::Ptr sonar_bathymetry(new sonar_image_processing::ArisBathymetry);
   std_msgs::Float32::Ptr sonar_altitude(new std_msgs::Float32);
-  sonar_altitude->data = alt + altitude_offset;
+  sonar_altitude->data = min_alt + altitude_offset;
   sonar_bathymetry->range.resize(bath.size());
   sonar_bathymetry->bearing = bearing;
   for (int i=0; i<bath.size(); ++i) {
+    if (bath[i] > max_alt && bath[i] < 20.0) {
+      max_alt = bath[i] + altitude_offset;
+    }
     sonar_bathymetry->range[i] = bath[i] + altitude_offset;
+  }
+  if (min_alt != 0 && max_alt != 0) {
+    aris.setRangeOfInterest(min_alt, max_alt);
   }
   sonar_bathymetry->header.stamp = si.header.stamp;
   sonar_bathymetry_pub.publish(sonar_bathymetry);
