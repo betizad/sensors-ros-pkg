@@ -52,6 +52,46 @@ namespace labust {
           ArisSonar() {}
           ~ArisSonar() {}
          
+          // Automatic range setting
+          void rangeOfInterest(double roi_start, double roi_end) {
+            double new_window_start = sonar_info.window_start;
+            double new_window_end = sonar_info.window_start + sonar_info.window_length;
+            double frequency_high = sonar_info.frequency_hi;
+            // Keep window_start between 50% and 10% of the roi_start
+            if (sonar_info.window_start < 0.5 * roi_start ||
+                sonar_info.window_start > 0.9 * roi_start) {
+              new_window_start = 0.75 * roi_start;
+            }
+            if (sonar_info.window_start + sonar_info.window_length < 1.1 * roi_end ||
+                sonar_info.window_start + sonar_info.window_length > 1.5 * roi_end) {
+              new_window_end = 1.25 * roi_end;
+            }
+            
+            if (frequency_high) {
+              if (new_window_start < MIN_HIGH_RANGE) {
+                new_window_start = MIN_HIGH_RANGE;
+              }
+              if (new_window_end > MAX_HIGH_RANGE) {
+                frequency_high = false;
+              }
+            }
+            if (!frequency_high) {
+              if (new_window_start < MIN_LOW_RANGE) {
+                new_window_start = MIN_LOW_RANGE;
+              }
+              if (new_window_end > MAX_LOW_RANGE) {
+                new_window_end = MAX_LOW_RANGE;
+                if (new_window_end < 0.75 * MAX_HIGH_RANGE) {
+                  frequency_high = true;
+                }
+              }
+            }
+
+            setSonarRange(new_window_start, new_window_end);
+            setSonarFrequencyHigh(frequency_high);
+            uploadSonarConfig();
+          }
+
           void setSonarRange(double start, double end) {
             sonar_cfg.request.window_start = start;
             sonar_cfg.request.window_length = end - start;
@@ -78,7 +118,12 @@ namespace labust {
           }
 
           void uploadSonarConfig() {
-            pending_sonar_cfg.push(std::make_pair(sonar_cfg, -1));
+            updateSonarConfigMessage();  
+            if (pending_sonar_cfg.size() < 2) {
+              pending_sonar_cfg.push(std::make_pair(sonar_cfg, -1));
+            } else {
+              pending_sonar_cfg.back().first = sonar_cfg;
+            }
           } 
 
           void saveSonarInfo(aris::SonarInfo si) {
@@ -115,7 +160,7 @@ namespace labust {
           aris::ARISConfig getArisServiceMsg() {
             aris::ARISConfig cfg;
             if (!pending_sonar_cfg.empty()) {
-              cfg = pending_sonar_cfg.front().first;
+              cfg = pending_sonar_cfg.back().first;
             } else {
               cfg.request.frame_period_sec = 1.0 / sonar_info.frame_rate;
               cfg.request.gain = sonar_info.receiver_gain;
@@ -141,24 +186,50 @@ namespace labust {
                 sonar_info.frame_rate == new_sonar_info.frame_rate);
           }
 
+          bool checkSonarConfigMessageIsValid() {
+            return (sonar_cfg.request.frame_period_sec != 0 &&
+                sonar_cfg.request.gain != 0 &&
+                sonar_cfg.request.focus != 0 &&
+                sonar_cfg.request.pulse_width != 0 &&
+                sonar_cfg.request.window_start != 0 &&
+                sonar_cfg.request.window_length != 0 &&
+                sonar_cfg.request.samples_per_beam != 0);
+          }
+
+          void updateSonarConfigMessage() {
+              if (sonar_cfg.request.gain == 0) sonar_cfg.request.gain = sonar_info.receiver_gain;
+              if (sonar_cfg.request.focus == 0) sonar_cfg.request.focus = sonar_info.focus;
+              if (sonar_cfg.request.pulse_width == 0) sonar_cfg.request.pulse_width = sonar_info.pulse_width;
+              if (sonar_cfg.request.window_start == 0) sonar_cfg.request.window_start = sonar_info.window_start;
+              if (sonar_cfg.request.window_length == 0) sonar_cfg.request.window_length = sonar_info.window_length;
+              if (sonar_cfg.request.samples_per_beam == 0) sonar_cfg.request.samples_per_beam = sonar_info.samples_per_beam;
+          }
+
           void processConfigQueue(aris::SonarInfo new_sonar_info) {
             if (pending_sonar_cfg.empty()) return;
             // If top of the queue is not processed, send it to sonar.
-            if (pending_sonar_cfg.front().second == -1) {
+            if (pending_sonar_cfg.front().second < 0) {
               ros::NodeHandle nh;
               ros::ServiceClient client = nh.serviceClient<aris::ARISConfig>("/aris_configuration");
+              updateSonarConfigMessage();
+              if (!checkSonarConfigMessageIsValid()) {
+                ROS_ERROR("Invalid sonar configuration data, possibly waiting for sonar info.");
+                return;
+              }
               if (client.call(pending_sonar_cfg.front().first)) {
                 pending_sonar_cfg.front().second = 0;
-                std::cout << "PENDING " << pending_sonar_cfg.front().first.request.window_start << " " << pending_sonar_cfg.front().first.request.window_length << std::endl;
                 ROS_INFO("ARIS configuration sent successfully."); 
               } else {
                 ROS_ERROR("Failed to set ARIS configuration parameters.");
+                if (pending_sonar_cfg.front().second-- < -3) {
+                  pending_sonar_cfg.pop();
+                  ROS_ERROR("Maximum retry count reached, discarding configuration data.");
+                };
               }
             // Else if sonar info has changed (meaning new parameters set) 
             // remove top from the queue as it has been processed and applied to the sonar.
             } else if (hasSonarInfoChanged(new_sonar_info)) {
               ROS_INFO("ARIS configuration applied.");
-              std::cout << "RESULT  " << new_sonar_info.window_start << " " << new_sonar_info.window_length << std::endl;
               pending_sonar_cfg.pop();
             } else if (pending_sonar_cfg.front().second > 10) {
               ROS_WARN("ARIS configuration maybe applied, but no change in parameters detected.");
@@ -179,6 +250,8 @@ namespace labust {
           cv::Size cartesian_img_size;
           bool polar;
           double pix_mm;
+          static const double MAX_HIGH_RANGE = 7.0, MIN_HIGH_RANGE = 0.7;
+          static const double MAX_LOW_RANGE = 20.0, MIN_LOW_RANGE = 0.7;
       };
 
     }
