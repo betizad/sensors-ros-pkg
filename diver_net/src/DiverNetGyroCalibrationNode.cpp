@@ -14,7 +14,7 @@ DiverNetGyroCalibrationNode::DiverNetGyroCalibrationNode():
     max_frames(500),
     elem_count(9),
     node_count(20),
-    calibration_file_("diver_net_gyro_bias.dnc") {
+    calibration_file_("diver_net_gyro_bias") {
   ros::NodeHandle nh;
   gyro_bias = Eigen::MatrixXd::Zero(20,3); 
   raw_data = nh.subscribe("net_data", 1, &DiverNetGyroCalibrationNode::processData, this);
@@ -42,8 +42,15 @@ void DiverNetGyroCalibrationNode::processData(const std_msgs::Int16MultiArrayPtr
 
   n++;
   if (n == max_frames) {
+    time_t rawtime;
+    struct tm * timeinfo;
+    char buffer[80];
+    time (&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buffer,80,"_%Y-%m-%d-%H-%M-%S.dnc",timeinfo);
+    std::string str(buffer);
     std::ofstream ofs;
-    ofs.open(calibration_file_.c_str(), std::ofstream::out);
+    ofs.open((calibration_file_+str).c_str(), std::ofstream::out);
     ofs << gyro_bias / max_frames; 
     ofs.close();
     ros::shutdown(); 
