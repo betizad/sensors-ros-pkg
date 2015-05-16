@@ -72,15 +72,13 @@ include_directories(
 )
 
 ## Declare a cpp library
-file(GLOB SRC src/*.cpp src/*.c)
+file(GLOB SRC src/ImuComplementaryQuaterionFilter.cpp src/*.c)
 file(GLOB HPP include/labust/sensors/image/*.hpp)
-add_library(sensors_util ${SRC} ${HPP})
-# add_library(snippets
-#   src/${PROJECT_NAME}/snippets.cpp
-# )
+add_library(sensors_util src/ImuComplementaryQuaternionFilter.cpp  ${HPP})
 
 ## Declare a cpp executable
 add_executable(serial_sink src/serial_sink.cpp)
+add_executable(curl_down src/curl_down.cpp)
 target_link_libraries(serial_sink ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable/library
@@ -90,6 +88,11 @@ target_link_libraries(serial_sink ${catkin_LIBRARIES})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sensors_util
    ${catkin_LIBRARIES}
+ )
+ 
+target_link_libraries(curl_down
+   ${catkin_LIBRARIES}
+   curl
  )
 
 #############
