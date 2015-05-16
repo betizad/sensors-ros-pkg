@@ -62,16 +62,14 @@ namespace labust {
             std::vector<double> res(image.cols);
             for (int beam=0; beam<image.cols; ++beam) {
               uchar max = 0;
-              int ind = 0;
+              double ind = 0;
               for (int sample=0; sample<image.rows; ++sample) {
                 uchar curr = image.at<uchar>(sample, beam);
                 if (curr > max) {max = curr; ind = sample;}
               }
 	      
-	            if (max<100) {
-                ind = image.rows+1;
-              }
-              res[beam] = ind * sonar_info.window_length / image.rows + sonar_info.window_start;
+	            if (max<100) ind = HUGE_VAL;
+              res[beam] = ind / image.rows * sonar_info.window_length + sonar_info.window_start;
             }
             return res;
           }

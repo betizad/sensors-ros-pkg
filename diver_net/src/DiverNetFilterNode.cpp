@@ -63,21 +63,27 @@ void DiverNetFilterNode::onInit() {
   axes_permutation[19] = Eigen::MatrixXd::Identity(3,3);
 
   // Gyro sensor bias
-  ph.getParam("gyro_calibration", calibration_file_);
+  ph.getParam("gyro_calibration_file", calibration_file_);
   if (calibration_file_ == "") {
+    ROS_INFO("No gyro calibration file provided, zero mean offset assumed.");
     gyro_bias = Eigen::MatrixXd::Zero(node_count, 3);
   } else {
+    ROS_INFO("Opening gyro calibration file %s", calibration_file_.c_str());
     std::ifstream ifs;
     ifs.open(calibration_file_.c_str());
-    double gb;
-    for (int i=0; i<node_count; ++i) {
-      for (int j=0; j<3; ++j) {
-        ifs >> gb;
-        gyro_bias(i, j) = gb;
+    if (!ifs.good()) {
+      ROS_ERROR("File %s does not exist or cannot be opened.", calibration_file_.c_str());
+    } else {
+      double gb;
+      for (int i=0; i<node_count; ++i) {
+        for (int j=0; j<3; ++j) {
+          ifs >> gb;
+          gyro_bias(i, j) = gb;
+        }
       }
+      ifs.close();
+      ROS_INFO("File opened successfully.");
     }
-    ifs.close();
-    std::cout << gyro_bias;
   }
   raw_data = nh.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
 }
