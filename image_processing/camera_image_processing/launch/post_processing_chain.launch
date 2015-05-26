@@ -1,0 +1,17 @@
+<launch>
+ <arg name="bag_file" />
+ <!-- Start image extractor -->
+ <node pkg="image_view" type="extract_images" name="extract_images" >
+    <remap from="image" to="/camera/image_rect_color" />
+    <param name="sec_per_frame" value="0.001" />
+ </node>
+ 
+ <group ns="camera">
+   <!-- Decompressor -->
+   <node pkg="image_transport" type="republish" name="decompressor" args="compressed in:=image_raw raw out:=image_raw" />
+   <!-- Image processor -->
+   <node pkg="image_proc" type="image_proc" name="processor" />
+ </group>
+  
+ <node pkg="rosbag" type="play" args="-r 0.2 -d 20 $(arg bag_file)" name="replay" />
+</launch>

@@ -100,12 +100,16 @@ void CurlCameraDriver::poll() {
   //compressed_image->format = "bgr8";
   //compressed_image->format += "; jpeg compressed";
   compressed_image->format += "jpeg";
+  ros::Time current_time = ros::Time::now();
+  compressed_image->header.stamp = current_time;
   
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &compressed_image->data);
   CURLcode res = curl_easy_perform(curl);
 
   compressed_image_pub_.publish(compressed_image);
-  compressed_camera_info_pub_.publish(camera_info_manager_.getCameraInfo());
+  sensor_msgs::CameraInfo info = camera_info_manager_.getCameraInfo();
+  info.header.stamp = current_time;
+  compressed_camera_info_pub_.publish(info);
 }
 
 int main(int argc, char **argv) {
