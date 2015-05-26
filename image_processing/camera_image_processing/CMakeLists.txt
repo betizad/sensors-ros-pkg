@@ -6,12 +6,14 @@ project(camera_image_processing)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rosbag
   sensor_msgs
   std_msgs
   cv_bridge
   image_transport
   camera_info_manager
   image_processing_util
+  snippets
 )
 
 ## System dependencies are found with CMake's conventions
@@ -87,6 +89,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES image_processing_util
   CATKIN_DEPENDS image_processing_util
+  CATKIN_DEPENDS snippets 
 #  DEPENDS system_lib
 )
 
@@ -111,6 +114,7 @@ include_directories(
 add_executable(opencv_camera_driver_node src/OpenCvCameraDriver.cpp)
 add_executable(curl_camera_driver_node src/CurlCameraDriver.cpp)
 add_executable(object_detector_node src/ObjectDetectorNode.cpp)
+add_executable(image_extractor src/ImageExtractor.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -127,6 +131,10 @@ target_link_libraries(curl_camera_driver_node
   curl
 )
 target_link_libraries(object_detector_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+target_link_libraries(image_extractor
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
