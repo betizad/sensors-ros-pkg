@@ -1,0 +1,8 @@
+<launch>
+  <arg name="bag_file" />
+  <node pkg="camera_image_processing" type="image_extractor" name="image_extractor" >
+    <param name="image_bag" value="$(arg bag_file)" />
+    <param name="image_topic" value="/camera/image_raw/compressed" />
+    <param name="compressed" value="true" />
+  </node>
+</launch>
