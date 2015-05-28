@@ -1,0 +1,2 @@
+SUBSYSTEM=="usb", SYSFS{idProduct}=="0100", SYSFS{idVendor}=="09d7",
+PROGRAM="/sbin/modprobe usbserial vendor=0x09d7 product=0x0100"
