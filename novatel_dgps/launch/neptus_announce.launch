@@ -6,14 +6,16 @@
     <!-- Announce information -->
     <param name="announce" value="true" />
     <param name="name" value="base-station" />
-    <param name="sys_type" value="3" />
-    <param name="service" value="imc+info://0.0.0.0/version/5.4.0;imc+udp://127.0.0.1:6002/" />
+    <!-- CCU=0,Portable sensor=1,UUV=2,USV=3,UAV=4,UGV=5-->
+    <!-- Static sensor=6,Mobile sensor=7,Wireless Sensor Network=8 -->
+    <param name="sys_type" value="6" />
+    <param name="service" value="imc+info://0.0.0.0/version/5.4.0;imc+udp://topside-gateway:6002/" />
    </node>
    
    <!-- Neptus UDP additions -->
    <arg name="multicast_ip" value="224.0.75.69" />
    <arg name="use_multicast" value="true" />
-   <arg name="local_ip" value="10.0.10.30" />
+   <arg name="local_ip" value="topside-gateway" />
    <arg name="local_port" value="6002" />
    <arg name="remote_ip" value="127.0.0.1" />
    <arg name="remote_port" value="6001" />
