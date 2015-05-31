@@ -60,7 +60,7 @@ namespace labust {
       private:
         void onInit();
         labust::tools::RosbagReader bag_reader;
-        std::string image_bag, image_topic;
+        std::string image_bag, image_topic, filename_format;
         bool is_compressed;
       };
 
