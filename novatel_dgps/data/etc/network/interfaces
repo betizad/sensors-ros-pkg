@@ -1,0 +1,37 @@
+# interfaces(5) file used by ifup(8) and ifdown(8)
+auto lo
+iface lo inet loopback
+
+allow-hotplug eth0
+#iface eth0 inet static
+#address 161.53.68.236
+#netmask 255.255.255.0
+#gateway 161.53.68.1
+#dns-nameservers 8.8.8.8
+
+allow-hotplug eth1
+#iface eth1 inet static
+# address 10.0.10.1
+# netmask 255.255.0.0
+# gateway 10.0.10.1
+# dns-nameservers 8.8.8.8
+
+#iface eth1 inet static
+ #address 10.0.10.8
+ #netmask 255.255.0.0
+
+auto br0
+iface br0 inet static
+ bridge_ports eth0 eth1
+ address 10.0.10.1
+ netmask 255.255.0.0
+ gateway 10.0.10.1
+ dns-nameservers 8.8.8.8
+
+allow-hotplug wlan0
+#iface wlan0 inet static
+# hostapd /etc/hostapd/hostapd.conf
+# address 192.168.0.1
+# gateway 192.168.0.1
+# netmask 255.255.255.0
+

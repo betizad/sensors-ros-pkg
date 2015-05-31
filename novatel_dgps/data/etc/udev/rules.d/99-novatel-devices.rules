@@ -1,0 +1,5 @@
+## Novatel USB1 port
+SUBSYSTEM=="tty", ATTRS{idVendor}=="09d7", ATTRS{idProduct}=="0100", ATTRS{serial}=="DCH11460017", SYMLINK+="novatel%n"
+## Novatel USB2 port
+#SUBSYSTEM=="tty", ATTRS{idVendor}=="09d7", ATTRS{idProduct}=="0100", ATTRS{serial}=="DCH11460017", ATTRS{port_number}=="1" SYMLINK+="novatel-usb2"
+#SUBSYSTEM=="tty", ATTRS{idVendor}=="09d7", ATTRS{idProduct}=="0100", ATTRS{serial}=="DCH11460017", ATTRS{port_number}=="2" SYMLINK+="novatel-usb3"
