@@ -49,11 +49,13 @@ using namespace labust::sensors::image;
 
 ImageExtractor::ImageExtractor() : 
     is_compressed(false),
-    image_topic("/camera/image_raw") {
+    image_topic("/camera/image_raw"),
+    filename_format("") {
   ros::NodeHandle ph("~"), nh("");
   ph.getParam("image_bag", image_bag);
   ph.getParam("image_topic", image_topic);
   ph.getParam("compressed", is_compressed);
+  ph.getParam("filename_format", filename_format);
   this->onInit();
 }
 
@@ -71,18 +73,31 @@ void ImageExtractor::start() {
   ROS_INFO("Starting image extraction.");
   while (!bag_reader.done()) {
     rosbag::MessageInstance m = bag_reader.nextMessageInstance();
-    sprintf(filename_buff, "frame%05d.jpg", frame++);
-    std::string filename(filename_buff);
+    std::string filename;
+    if (!filename_format.empty()) {
+      sprintf(filename_buff, filename_format.c_str(), frame++);
+      filename = filename_buff;
+    }
     if (is_compressed) {
       std::ofstream wfile;
-      wfile.open(filename.c_str(), std::ios::out | std::ios::binary);
       sensor_msgs::CompressedImage::ConstPtr image_ptr = m.instantiate<sensor_msgs::CompressedImage>();
+      if (filename.empty()) {
+        std::stringstream ss;
+        ss << m.getTime() << ".jpg";
+        filename = ss.str();
+      }
+      wfile.open(filename.c_str(), std::ios::out | std::ios::binary);
       wfile.write((char*)&(image_ptr->data[0]), image_ptr->data.size() * sizeof(uint8_t));
       wfile.close();
     } else {
       sensor_msgs::Image::ConstPtr image_ptr = m.instantiate<sensor_msgs::Image>();
       cv_bridge::CvImagePtr cv_image = sensorImage2CvImage(image_ptr, "bgr8");
-      cv::imwrite(filename, cv_image->image.clone());
+      if (filename.empty()) {
+        std::stringstream ss;
+        ss << m.getTime() << ".jpg";
+        filename = ss.str();
+      }
+      cv::imwrite(filename.c_str(), cv_image->image.clone());
     }
   }
   ROS_INFO("Image extraction completed.");
