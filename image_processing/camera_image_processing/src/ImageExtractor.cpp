@@ -69,7 +69,7 @@ ImageExtractor::~ImageExtractor() {}
 
 void ImageExtractor::start() {
   int frame = 0;
-  char filename_buff[14];
+  char filename_buff[100];
   ROS_INFO("Starting image extraction.");
   while (!bag_reader.done()) {
     rosbag::MessageInstance m = bag_reader.nextMessageInstance();
