@@ -68,22 +68,34 @@ bool UROSModemController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 {
-	RhodamineData out;
-	out.adc = msg->adc;
-	out.adc_gain = uint8_t(std::log10(msg->gain));
-	out.depth = position.position.depth * RhodamineData::DEPTH_SC;
-	labust::tools::LatLon2Bits conv;
-	conv.convert(position.global_position.latitude,
-			position.global_position.longitude, llbits);
-	out.lat = conv.lat;
-	out.lon = conv.lon;
+//	RhodamineData out;
+	if(max_rhodamine.adc < msg->adc) /*** Comparison for fixed gain ***/
+	{
+		max_rhodamine.adc = msg->adc;
+		max_rhodamine.adc_gain = uint8_t(std::log10(msg->gain));
+		max_rhodamine.depth = position.position.depth * RhodamineData::DEPTH_SC;
+		labust::tools::LatLon2Bits conv;
+		conv.convert(position.global_position.latitude,
+				position.global_position.longitude, llbits);
+		max_rhodamine.lat = conv.lat;
+		max_rhodamine.lon = conv.lon;
+	}
+//	out.adc = msg->adc;
+//	out.adc_gain = uint8_t(std::log10(msg->gain));
+//	out.depth = position.position.depth * RhodamineData::DEPTH_SC;
+//	labust::tools::LatLon2Bits conv;
+//	conv.convert(position.global_position.latitude,
+//			position.global_position.longitude, llbits);
+//	out.lat = conv.lat;
+//	out.lon = conv.lon;
 
 
 	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
 	std::vector<char> binary;
-	labust::tools::encodePackable(out, &binary);
+//	labust::tools::encodePackable(out, &binary);
+	labust::tools::encodePackable(max_rhodamine, &binary);
 	cmd->data.assign(binary.begin(),binary.end());
 
 	if (!sender.empty())
@@ -95,6 +107,10 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 
 void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
 {
+
+	/*** Reset max rhodamine value in every communication cycle ***/
+	max_rhodamine.adc = -1;
+
 	LupisUpdate dat;
 	if (!labust::tools::decodePackable(msg.data, &dat))
 	{
