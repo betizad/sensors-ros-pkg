@@ -96,7 +96,7 @@ namespace labust
 			///Helper method for message assembly
 			SeatracMessage::Ptr makePingCmd(const underwater_msgs::ModemTransmission::ConstPtr& msg);
 			///Set the reply
-			SeatracMessage::Ptr makeReply(const underwater_msgs::ModemTransmission::ConstPtr& msg);
+			void makeReply(const underwater_msgs::ModemTransmission::ConstPtr& msg);
 
 			///Helper method for handling returned errors
 			bool onPingErrors(const SeatracMessage::ConstPtr& msg);

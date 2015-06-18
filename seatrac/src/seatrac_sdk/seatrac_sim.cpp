@@ -198,7 +198,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 		data->data = dat->data;
 		data->msg_type = AMsgType::MSG_OWAY;
 		reply_queue.push(data);
-		ROS_ERROR("Queue size: %d",reply_queue.size());
+		ROS_INFO("Queue size: %d",reply_queue.size());
 		return true;
 	}
 	else if (msg->getCid() == DatQueueClearCmd::CID)
@@ -392,7 +392,8 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		//Create DAT_RECEIVE message and send to callback
 		//TODO Add for USBL the azimuth measurement on listening
 		DatReceive::Ptr req(new DatReceive());
-		req->acofix.dest = msg->sender;
+		req->acofix.src = msg->sender;
+		req->acofix.dest = msg->receiver;
 		req->acofix.flags.POSITION_VALID = 0;
 		req->acofix.flags.RANGE_VALID = 0;
 		req->acofix.flags.USBL_VALID = 0;
@@ -417,12 +418,26 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 			//Create the PING_RESP and send navigation data
 			DatReceive::Ptr resp(new DatReceive());
 			//\todo Set only range for modems
-			resp->acofix.dest = expected_id;
-			resp->acofix.range.dist = msg->range*AcoFix::RANGE_SC;
-			resp->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
-			resp->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
+			resp->acofix.src = expected_id;
+			resp->acofix.dest = node_id;
 			resp->data = incoming.data;
+			resp->acofix.flags.RANGE_VALID = 1;
+			resp->acofix.flags.USBL_VALID = 0;
+			resp->acofix.flags.POSITION_VALID = 0;
+			resp->acofix.range.dist = msg->range*AcoFix::RANGE_SC;
 			this->fillAcoFix(resp->acofix);
+
+			if (!is_modem)
+			{
+				resp->acofix.flags.USBL_VALID = 1;
+				resp->acofix.flags.POSITION_VALID = 1;
+				resp->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
+				resp->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
+				boost::mutex::scoped_lock l(position_mux);
+				resp->acofix.position[AcoFix::x] = (msg->position.position.north - navstate.position.north)*AcoFix::RANGE_SC;
+				resp->acofix.position[AcoFix::y] = (msg->position.position.east - navstate.position.east)*AcoFix::RANGE_SC;
+				resp->acofix.position[AcoFix::z] = (msg->position.position.depth - navstate.position.depth)*AcoFix::RANGE_SC;
+			}
 			out = resp;
 		}
 		else

@@ -5,7 +5,7 @@ listener_plugins: ["labust::seatrac::StatusListener",
                    "labust::seatrac::NavListener"]
 
 # USBLController configuration
-auto_mode: true
+auto_mode: false
 transponders: [2]
 
 # NavListener setup
