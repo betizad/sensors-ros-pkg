@@ -58,7 +58,10 @@ NovatelNode::NovatelNode()
 	this->onInit();
 }
 
-NovatelNode::~NovatelNode(){}
+NovatelNode::~NovatelNode()
+{
+
+}
 
 void NovatelNode::onInit()
 {

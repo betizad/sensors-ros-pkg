@@ -130,12 +130,16 @@ SeatracMessage::Ptr USBLController::makePingCmd(const underwater_msgs::ModemTran
 	cmd->msg_type = (enhanced_usbl)?AMsgType::MSG_REQX : AMsgType::MSG_REQU;
 	return boost::dynamic_pointer_cast<SeatracMessage>(cmd);
 }
-SeatracMessage::Ptr USBLController::makeReply(const underwater_msgs::ModemTransmission::ConstPtr& msg)
+
+void USBLController::makeReply(const underwater_msgs::ModemTransmission::ConstPtr& msg)
 {
+	if (is_busy) return;
+	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = msg->receiver;
 	cmd->data.assign(msg->payload.begin(), msg->payload.end());
-	return boost::dynamic_pointer_cast<SeatracMessage>(cmd);
+	this->sender(clr);
+	this->sender(cmd);
 }
 
 void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstPtr& msg)
@@ -168,8 +172,7 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 				(enhanced_data)?AMsgType::MSG_OWAYU:AMsgType::MSG_OWAY);
 		break;
 	case underwater_msgs::ModemTransmission::SET_REPLY:
-		///This USBL controller does not implement this action
-		message = makeReply(msg);
+		makeReply(msg);
 		break;
 	default:
 		break;
@@ -180,7 +183,16 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 	l.unlock();
 
 	//Only master can send data
-	if (!auto_mode && !is_busy) sendPkg();
+	if (!auto_mode && !is_busy)
+	{
+		//Spin-off a worker thread to send one packet
+		//The thread is used to avoid blocking the callback queue
+		worker = boost::thread(boost::bind(&USBLController::sendPkg,this));
+	}
+	else
+	{
+		ROS_WARN("Failed sending message. The device is busy.");
+	}
 }
 
 void USBLController::sendPkg()
@@ -324,7 +336,7 @@ bool USBLController::onPingReplies(const SeatracMessage::ConstPtr& msg)
 	{
 		const DatReceive::ConstPtr resp(boost::dynamic_pointer_cast<DatReceive const>(msg));
 		ROS_DEBUG("USBLController: Data reply received from %d.", resp->acofix.src);
-		ROS_INFO("Data size: %d, Data byte 1: %d", resp->data.size(), resp->data[0]);
+		//ROS_INFO("Data size: %d, Data byte 1: %d", resp->data.size(), resp->data[0]);
 	}
 	else
 	{

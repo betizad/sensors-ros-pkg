@@ -184,7 +184,10 @@ bool SeatracCore::outgoingMsg(const SeatracMessage::ConstPtr& msg)
 int main(int argc, char* argv[])
 {
 	ros::init(argc,argv,"seatrac_core");
+	//Added multi-thread spinner to avoid lock-ups during interrogation
+	//ros::MultiThreadedSpinner spinner(2);
 	SeatracCore core;
+	//spinner.spin();
 	ros::spin();
 
 	return 0;

@@ -48,13 +48,11 @@
 
 #include <opencv2/opencv.hpp>
 
-int n;
 using namespace labust::sensors::image;
 
 ObjectTrackerNode::ObjectTrackerNode() : 
     it(nh) {
   this->onInit();
-  n = 0;
 };
 
 ObjectTrackerNode::~ObjectTrackerNode() {};
@@ -67,14 +65,6 @@ void ObjectTrackerNode::onInit() {
 
 void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   aris.saveSonarInfo(*msg);
-  n++;
-  if (n == 5) {
-    aris.setSonarFocus(500);
-    aris.setSonarRange(3.0, 10.5); 
-    aris.setSonarFramePeriodSec(0.2);
-    aris.setSonarFrequencyHigh(false);
-    aris.uploadSonarConfig(); 
-  }
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
   if (frame->header.stamp == msg->header.stamp) {
@@ -95,7 +85,7 @@ void ObjectTrackerNode::processFrame() {
   cv::Point2f center;
   double area;
   aris.saveCartesianImageSize(cv_image_bgr->image.size());
-  sonar_detector.setContourClusteringParams(300,100,25000,1000000);
+  sonar_detector.setContourClusteringParams(500,100,2000000);
   sonar_detector.setSonarInfo(aris.getSonarInfo());
   sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
 }
