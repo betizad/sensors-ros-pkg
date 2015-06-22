@@ -9,9 +9,9 @@ auto_mode: true
 transponders: [2]
 
 # NavListener setup
-transponder_names: ["diver"]
+transponder_names: ["videoray"]
 
 # Serial connection parameters
-port_name: "/dev/ttyUSB1"
+port_name: "/dev/usbl"
 baud: 115200
 
