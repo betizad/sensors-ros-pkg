@@ -31,42 +31,46 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef IMAGEEXTRACTOR_HPP_
-#define IMAGEEXTRACTOR_HPP_
+#ifndef SEATRAC_DATALISTENER_H
+#define SEATRAC_DATALISTENER_H
+#include <labust/seatrac/message_listener.h>
+#include <labust/seatrac/seatrac_messages.h>
+
 #include <ros/ros.h>
-#include <camera_info_manager/camera_info_manager.h>
-#include <image_transport/image_transport.h>
-#include <sensor_msgs/CameraInfo.h>
 
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/opencv.hpp>
+#include <vector>
+#include <string>
+#include <map>
 
-#include <labust/tools/RosbagUtilities.hpp>
+namespace labust
+{
+	namespace seatrac
+	{
+		/**
+		 * The class implements the status publisher and decoder.
+		 */
+		class DataListener : virtual public MessageListener
+		{
+			typedef std::map<int, ros::Publisher> PublisherMap;
+		public:
+			///Main constructor
+			DataListener();
 
-namespace labust {
-  namespace sensors {
-    namespace image {
+			///Listener configuration.
+			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-      /**
-       * ROS node for publishing videos from external cameras.
-       */
-      class ImageExtractor {
+		private:
+			///Data processor
+			void onData(const DatReceive& resp);
 
-      public:
-        ImageExtractor(); 
-        ~ImageExtractor();
-        void start();
+			///Transponder data publishers
+			PublisherMap data_pub;
 
-      private:
-        void onInit();
-        labust::tools::RosbagReader bag_reader;
-        std::string image_bag, image_topic, filename_format;
-        bool is_compressed;
-      };
-
-    }
-  }
+			///Transponder map
+			std::map<int, std::string> ids;
+		};
+	}
 }
 
-/* IMAGEEXTRACTOR_HPP_ */
+/* SEATRAC_NAVLISTENER_H */
 #endif

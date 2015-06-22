@@ -121,6 +121,7 @@ add_library(seatrac_sdk
    src/seatrac_sdk/serialization.cpp
    src/seatrac_sdk/seatrac_sim.cpp
    src/seatrac_node/nav_listener.cpp
+   src/seatrac_node/data_listener.cpp
    src/seatrac_node/pinger.cpp
 )
 

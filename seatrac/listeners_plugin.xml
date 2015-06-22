@@ -11,4 +11,10 @@
 			The AcoFix message parser for USBL/modem navigation data.
 		</description>
 	</class>
+	<class type="labust::seatrac::DataListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			A simple payload data parser.
+		</description>
+	</class>
 </library>

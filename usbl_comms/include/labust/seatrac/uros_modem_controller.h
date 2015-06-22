@@ -36,6 +36,8 @@
 #include <labust/seatrac/device_controller.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/tools/latlon_encoder.h>
+#include <labust/comms/uros/uros_messages.h>
+
 
 #include <misc_msgs/RhodamineAdc.h>
 #include <auv_msgs/NavSts.h>
@@ -95,6 +97,8 @@ namespace labust
 			boost::mutex position_mux;
 			///The lat-lon encoder and tracker.
 			labust::tools::Bits2LatLon latlon;
+
+			labust::comms::uros::RhodamineData max_rhodamine;
 		};
 	}
 }
