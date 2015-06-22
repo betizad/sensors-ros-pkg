@@ -41,6 +41,7 @@
 
 #include <misc_msgs/RhodamineAdc.h>
 #include <auv_msgs/NavSts.h>
+#include <std_msgs/Bool.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
@@ -54,7 +55,7 @@ namespace labust
 		 */
 		class UROSModemController : virtual public DeviceController
 		{
-			enum {llbits=14};
+			enum {LLBITS_OUT=18, LLBITS_IN=18};
 		public:
 			///Main constructor
 			UROSModemController();
@@ -76,11 +77,25 @@ namespace labust
 			{
 				boost::mutex::scoped_lock l(position_mux);
 				position = *msg;
+				latlon.setInitLatLon(position.origin.latitude,
+							position.origin.longitude);
+			}
+
+			///Handle the average flag report
+			void onAvg(const std_msgs::Bool::ConstPtr& msg)
+			{
+				this->avg = msg->data;
 			}
 			/**
 			 * Handles incoming acoustic data.
 			 */
 			void onData(const labust::seatrac::DatReceive& data);
+
+			///Handle ping requests.
+			void onPing(const labust::seatrac::PingReq& data);
+
+			///Stop the vehicle on timeout
+			void onTimeout(const ros::TimerEvent& e);
 
 			///The command flag publisher.
 			ros::Publisher cmd_pub;
@@ -90,6 +105,8 @@ namespace labust
 			ros::Subscriber adc_sub;
 			///The navigation state subscription.
 			ros::Subscriber state_sub;
+			///Rhodamine average flag
+			ros::Subscriber rhodamine_avg;
 
 			///The last known position
 			auv_msgs::NavSts position;
@@ -97,6 +114,15 @@ namespace labust
 			boost::mutex position_mux;
 			///The lat-lon encoder and tracker.
 			labust::tools::Bits2LatLon latlon;
+
+			///Add some comms timer
+			ros::Timer nocomms;
+			///The communication safety timeout
+			double comms_timeout;
+			///Safety mutex for the timer
+			boost::mutex timer_mux;
+			///Average detected
+			bool avg;
 
 			labust::comms::uros::RhodamineData max_rhodamine;
 		};

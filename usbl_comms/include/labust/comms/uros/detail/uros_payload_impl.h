@@ -2,13 +2,13 @@
 {
     uint64_t storage = 0;
   storage |= (uint64_t(status_flag) & ((1<<8)-1)) << 0;
-  storage |= (uint64_t(lat) & ((1<<14)-1)) << 8;
-  storage |= (uint64_t(lon) & ((1<<14)-1)) << 22;
-  storage |= (uint64_t(depth) & ((1<<8)-1)) << 36;
-  storage |= (uint64_t(adc_gain) & ((1<<2)-1)) << 44;
-  storage |= (uint64_t(adc) & ((1<<10)-1)) << 46;
+  storage |= (uint64_t(lat) & ((1<<18)-1)) << 8;
+  storage |= (uint64_t(lon) & ((1<<18)-1)) << 26;
+  storage |= (uint64_t(depth) & ((1<<8)-1)) << 44;
+  storage |= (uint64_t(adc_gain) & ((1<<2)-1)) << 52;
+  storage |= (uint64_t(adc) & ((1<<10)-1)) << 54;
   uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<7; ++i,++pt) out << *pt;
+  for(int i=0; i<8; ++i,++pt) out << *pt;
 
 };
 
@@ -16,13 +16,13 @@
 {
     uint64_t storage(0);
   uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<7; ++i,++pt) in >> *pt;
+  for(int i=0; i<8; ++i,++pt) in >> *pt;
   status_flag = static_cast<uint8_t>(storage & ((1<<8)-1));
   storage >>= 8;
-  lat = static_cast<int32_t>(storage & ((1<<14)-1));
-  storage >>= 14;
-  lon = static_cast<int32_t>(storage & ((1<<14)-1));
-  storage >>= 14;
+  lat = static_cast<int32_t>(storage & ((1<<18)-1));
+  storage >>= 18;
+  lon = static_cast<int32_t>(storage & ((1<<18)-1));
+  storage >>= 18;
   depth = static_cast<uint8_t>(storage & ((1<<8)-1));
   storage >>= 8;
   adc_gain = static_cast<uint8_t>(storage & ((1<<2)-1));
