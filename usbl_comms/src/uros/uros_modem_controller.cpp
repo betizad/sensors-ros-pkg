@@ -48,20 +48,35 @@
 using namespace labust::seatrac;
 using namespace labust::comms::uros;
 
-UROSModemController::UROSModemController()
+UROSModemController::UROSModemController():
+		comms_timeout(300),
+		avg(false)
 {
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
 			boost::bind(&UROSModemController::onData,this,_1)));
+	registrations[PingReq::CID].push_back(Mediator<PingReq>::makeCallback(
+			boost::bind(&UROSModemController::onPing,this,_1)));
 }
 
-UROSModemController::~UROSModemController(){}
+UROSModemController::~UROSModemController()
+{
+	nocomms.stop();
+}
 
 bool UROSModemController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	adc_sub = nh.subscribe("rhodamine", 1, &UROSModemController::onAdc,this);
 	state_sub = nh.subscribe("position",	1, &UROSModemController::onNavSts,this);
+	rhodamine_avg = nh.subscribe<std_msgs::Bool>("autosStartFlag", 1, &UROSModemController::onAvg, this);
 	cmd_pub = nh.advertise<std_msgs::UInt8>("cmd",1);
 	nav_pub = nh.advertise<sensor_msgs::NavSatFix>("acoustic_fix",1);
+
+	ph.param("comms_timeout", comms_timeout, comms_timeout);
+
+	//Create timer
+	nocomms = nh.createTimer(ros::Duration(comms_timeout),
+			&UROSModemController::onTimeout, this,
+			true, false);
 
 	return true;
 }
@@ -69,14 +84,14 @@ bool UROSModemController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 {
 //	RhodamineData out;
-	if(max_rhodamine.adc < msg->adc) /*** Comparison for fixed gain ***/
+	if(max_rhodamine.adc <= msg->adc) /*** Comparison for fixed gain ***/
 	{
 		max_rhodamine.adc = msg->adc;
 		max_rhodamine.adc_gain = uint8_t(std::log10(msg->gain));
 		max_rhodamine.depth = position.position.depth * RhodamineData::DEPTH_SC;
 		labust::tools::LatLon2Bits conv;
 		conv.convert(position.global_position.latitude,
-				position.global_position.longitude, llbits);
+				position.global_position.longitude, LLBITS_OUT);
 		max_rhodamine.lat = conv.lat;
 		max_rhodamine.lon = conv.lon;
 	}
@@ -89,7 +104,7 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 //	out.lat = conv.lat;
 //	out.lon = conv.lon;
 
-
+	max_rhodamine.status_flag = avg;
 	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
@@ -107,24 +122,24 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 
 void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
 {
+	///Reset timer
+	boost::mutex::scoped_lock l(timer_mux);
+	nocomms.stop();
+	nocomms.setPeriod(ros::Duration(comms_timeout));
+	nocomms.start();
 
-	/*** Reset max rhodamine value in every communication cycle ***/
-	max_rhodamine.adc = -1;
+	/// Reset max rhodamine value in every communication cycle
+	max_rhodamine.adc = 0;
 
 	LupisUpdate dat;
-	if (!labust::tools::decodePackable(msg.data, &dat))
+	if ((msg.data.size() == 0) || !labust::tools::decodePackable(msg.data, &dat))
 	{
 		ROS_WARN("UROSUSBLController: Empty message received from modem.");
 		return;
 	}
 
 	//Update the position
-	{
-		boost::mutex::scoped_lock l(position_mux);
-		latlon.setInitLatLon(position.origin.latitude,
-				position.origin.longitude);
-	}
-	latlon.convert(dat.lat, dat.lon, llbits);
+	latlon.convert(dat.lat, dat.lon, LLBITS_IN);
 
 	//Process LUPIS update
 	//Get lat-lon and publish NavSatFix ?
@@ -137,6 +152,31 @@ void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
 	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
 	cmd->data = dat.cmd_flag;
 	cmd_pub.publish(cmd);
+}
+
+void UROSModemController::onTimeout(const ros::TimerEvent& e)
+{
+	//Publish command flag
+	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
+	//Request abort
+	enum {it_cnt=10};
+	ros::Rate r(2);
+	for(int i=0; i<it_cnt; ++i)
+	{
+		ROS_ERROR("Timeout on acoustic comms.");
+		cmd->data = 0x01;
+		cmd_pub.publish(cmd);
+		r.sleep();
+	}
+}
+
+void UROSModemController::onPing(const labust::seatrac::PingReq& data)
+{
+	boost::mutex::scoped_lock l(timer_mux);
+	ROS_ERROR("On Ping request.");
+	nocomms.stop();
+	nocomms.setPeriod(ros::Duration(comms_timeout));
+	nocomms.start();
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::UROSModemController, labust::seatrac::DeviceController)

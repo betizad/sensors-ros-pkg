@@ -1,11 +1,25 @@
 #include <iostream>
-#include <labust/comms/uros/uros_messages.h>
-#include <bitset>
-
-using namespace labust::comms::uros;
+#include <labust/tools/latlon_encoder.h>
 
 int main(int argc, char* argv[])
 {
+	using namespace labust::tools;
+	int sz = 14;
+	double lat = 37.999999;
+	double lon = -1.000000;
+	LatLon2Bits llbits;
+	llbits.convert(lat, lon, sz);
+
+	double latI = 37.9934666;
+	double lonI = -1.0045222;
+
+	Bits2LatLon bitsll;
+	bitsll.setInitLatLon(latI, lonI);
+	bitsll.convert(llbits.lat, llbits.lon, sz);
+
+	std::cout<<"Latitude:"<<llbits.lat<<", longidute:"<<llbits.lon<<std::endl;
+	std::cout.precision(8);
+	std::cout<<"Latitude:"<<bitsll.latitude<<", longidute:"<<bitsll.longitude<<std::endl;
 	/*RhodamineData a;
 	a.adc = 800;
 	a.adc_gain = 1;

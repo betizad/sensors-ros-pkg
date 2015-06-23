@@ -54,7 +54,7 @@ namespace labust
 		 */
 		class UROSUSBLController : virtual public DeviceController
 		{
-			enum {LLBITS=14, TIMEOUT=4};
+			enum {LLBITS_OUT=18, LLBITS_IN=18, TIMEOUT=4};
 		public:
 			///Main constructor
 			UROSUSBLController();
@@ -85,13 +85,13 @@ namespace labust
 			{
 				boost::mutex::scoped_lock l(message_mux);
 				labust::tools::LatLon2Bits ll;
-				ll.convert(msg->global_position.latitude,
-						msg->global_position.longitude, LLBITS);
-				message.lat = ll.lat;
-				message.lon = ll.lon;
 				latlon.setInitLatLon(msg->origin.latitude,
 						msg->origin.longitude);
-				msg_updated = true;
+				ll.convert(msg->global_position.latitude,
+						msg->global_position.longitude, LLBITS_OUT);
+				message.lat = ll.lat;
+				message.lon = ll.lon;
+				//msg_updated = true;
 			}
 			/**
 			 * Handles incoming acoustic data.
@@ -122,6 +122,8 @@ namespace labust
 			int id;
 			///The message flag for indicating an update.
 			bool msg_updated;
+			///The ping rate
+			double ping_rate;
 
 			///The worker thread
 			boost::thread worker;

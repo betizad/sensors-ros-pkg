@@ -50,7 +50,8 @@ using namespace labust::comms::uros;
 UROSUSBLController::UROSUSBLController():
 		pinger(sender, registrations),
 		id(2),
-		msg_updated(false)
+		msg_updated(false),
+		ping_rate(0)
 {
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
 			boost::bind(&UROSUSBLController::onData,this,_1)));
@@ -64,14 +65,19 @@ UROSUSBLController::~UROSUSBLController()
 
 bool UROSUSBLController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+	//Init the command just in case
+	message.cmd_flag = 0;
+
+	//Lupis pinger id
 	ph.param("lupis_id", id, id);
+	ph.param("ping_rate", ping_rate, ping_rate);
 
 	cmd_sub = nh.subscribe("cmd", 1,&UROSUSBLController::onCommand, this);
-	nav_sub = nh.subscribe("lupis_pos_local", 1, &UROSUSBLController::onEstimatedPos, this);
+	nav_sub = nh.subscribe("navsts", 1, &UROSUSBLController::onEstimatedPos, this);
 
 	adc_pub = nh.advertise<misc_msgs::RhodamineData>("rhodamine", 1);
-	state_pub = nh.advertise<auv_msgs::NavSts>("lupis_pos_remote",	1);
-	status_pub = nh.advertise<std_msgs::UInt8>("lupis_status",	1);
+	state_pub = nh.advertise<auv_msgs::NavSts>("rhodamine_navsts",	1);
+	status_pub = nh.advertise<std_msgs::UInt8>("status",	1);
 
 	run_flag = true;
 	worker = boost::thread(boost::bind(&UROSUSBLController::run, this));
@@ -81,6 +87,8 @@ bool UROSUSBLController::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 void UROSUSBLController::run()
 {
+	ros::Rate rate((ping_rate==0)?1:ping_rate);
+
 	while(ros::ok() && run_flag)
 	{
 		DatSendCmd::Ptr data(new DatSendCmd());
@@ -102,6 +110,8 @@ void UROSUSBLController::run()
 		{
 			ROS_ERROR("URSOUSBLController: Message sending failed.");
 		}
+
+		if (ping_rate) rate.sleep();
 	}
 }
 
@@ -115,12 +125,13 @@ void UROSUSBLController::onData(const labust::seatrac::DatReceive& msg)
 	}
 
 	//Update the position
-	latlon.convert(dat.lat, dat.lon, LLBITS);
+	latlon.convert(dat.lat, dat.lon, LLBITS_IN);
 
 	//Publish Rhodamine data
 	misc_msgs::RhodamineData::Ptr rh(new misc_msgs::RhodamineData());
 	rh->position.latitude = latlon.latitude;
 	rh->position.longitude = latlon.longitude;
+	rh->position.altitude = -float(dat.depth) / RhodamineData::DEPTH_SC;
 	rh->adc.adc = dat.adc;
 	rh->adc.gain = dat.adc_gain;
 	rh->header.stamp = ros::Time::now();
@@ -129,8 +140,9 @@ void UROSUSBLController::onData(const labust::seatrac::DatReceive& msg)
 	//Publish remote position
 	auv_msgs::NavSts::Ptr fix(new auv_msgs::NavSts());
 	fix->header.stamp = ros::Time::now();
-	fix->global_position.latitude = latlon.latitude;
-	fix->global_position.longitude = latlon.longitude;
+	fix->global_position.latitude = fix->origin.latitude = latlon.latitude;
+	fix->global_position.longitude = fix->origin.longitude = latlon.longitude;
+	fix->position.depth = float(dat.depth) / RhodamineData::DEPTH_SC;
 	state_pub.publish(fix);
 
 	//Publish status flag

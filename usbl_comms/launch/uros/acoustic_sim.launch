@@ -10,34 +10,78 @@
     		<!-- Core parameters -->
     		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
     		<param name="controller_plugin" value="labust::seatrac::UROSUSBLController" />
-    		<!-- <param name="listener_plugins" value="labust::seatrac::StatusListener" /> -->
+    		<rosparam param="listener_plugins">["labust::seatrac::StatusListener","labust::seatrac::NavListener","labust::seatrac::DataListener"] </rosparam>
+		<!-- Pinger parameters -->
+		<rosparam param="transponders">[2]</rosparam>
+		<rosparam param="transponder_names">["lupis"]</rosparam>
+		<param name="auto_mode" value="true" />
     		<!-- Simulation parameters -->
     		<param name="sim_node_id" value="1" />
     		<param name="sim_is_modem" value="false" />
     		<!-- Remappings -->
-    		<remap from="navsts" to="position" />
     		<remap from="register_mode" to="reas" />
+    		<remap from="navsts" to="/lupis/position" />
 		</node>
     </group>
     
     <!-- Lupis acoustics -->
     <group ns="lupis">
+		<node pkg="ros_imc" type="udp_relay" name="lauv_udp">
+	    		<param name="local_ip" value="10.0.10.133" />
+    			<param name="remote_ip" value="10.0.10.130" />
+		        <param name="local_port" value="31400" />
+		        <param name="remote_port" value="31400" />
+		</node>
+
+		<node pkg="ros_imc" type="send_mission" name="lauv_imc">
+			<param name="entity" value="47" />
+			<param name="id" value="261" />
+			<param name="remote_entity" value="44" />
+			<param name="remote_id" value="258" />
+
+			<!-- Second mission params -->	
+			<param name="timeout" value="60" />
+			<param name="speed" value="1" />
+			<param name="useRows" value="true" />
+			<param name="rowsWidth" value="10" />
+			<param name="rowsLength" value="10" />
+			<param name="rowsHstep" value="10" />
+			<param name="loiterRadius" value="10" />
+			<param name="loiterLength" value="120" />
+			<param name="loiterDuration" value="60" />
+		</node>
+
+		<node pkg="lupis" type="uros_mission_node" name="uros_mission">
+				<param name="rhodamine_threshold" value="10.0" /> <!-- Threshold for auto trigger -->
+				<param name="auto_start" value="false" />
+				<param name="auto_mission_type" value="loiter" /> <!-- Options: lawn_left, lawn_right, loiter -->
+				<param name="mission_timeout" value="30" />
+				<remap from="adc" to="rhodamine" />
+		</node>
+
 		<node pkg="seatrac" type="seatrac_core" name="lupis_sim">
     		<!-- Core parameters -->
     		<param name="comms_plugin" value="labust::seatrac::SeatracSim" />
     		<param name="controller_plugin" value="labust::seatrac::UROSModemController" />
-    		<!-- <param name="listener_plugins" value="labust::seatrac::StatusListener" /> -->
+    		<rosparam param="listener_plugins">["labust::seatrac::StatusListener","labust::seatrac::NavListener","labust::seatrac::DataListener"] </rosparam>
     		<!-- Simulation parameters -->
     		<param name="sim_node_id" value="2" />
     		<param name="sim_is_modem" value="true" />
     		<!-- Remappings -->
     		<remap from="navsts" to="position" />
+		
+		<!-- Safety params -->
+		<param name="comms_timeout" value="60" />
 		</node>
     </group>
 
  	<!-- Acoustic medium simulation -->
 	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
 		
- 	<node pkg="rqt_gui" type="rqt_gui" name="debuger" 
- 		args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" />
+	<group ns="surface">
+ 		<node pkg="rqt_gui" type="rqt_gui" name="debuger" 
+ 			args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" >
+ 		</node>
+       </group>
 </launch>
+
