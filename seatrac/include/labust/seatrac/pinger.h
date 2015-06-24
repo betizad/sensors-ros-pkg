@@ -61,6 +61,9 @@ namespace labust
 			 */
 			bool send(const SeatracMessage::ConstPtr& msg, double timeout = 2.0, bool wait_for_ack = true);
 
+			///Returns true if a ping error occured.
+			bool isError(){return is_error;}
+
 		private:
 			///Sender callback
 			SeatracComms::CallbackType& sender;
@@ -78,6 +81,8 @@ namespace labust
 			boost::condition_variable ping_condition;
 			///Busy flag for in-operation indicator (default: false)
 			bool is_busy;
+			///The pingger error flag
+			bool is_error;
 		};
 	}
 }

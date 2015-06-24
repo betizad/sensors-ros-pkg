@@ -111,6 +111,13 @@ void UROSUSBLController::run()
 			ROS_ERROR("URSOUSBLController: Message sending failed.");
 		}
 
+		//Reset the update if no reply was received
+		if (pinger.isError())
+		{
+			boost::mutex::scoped_lock lock(message_mux);
+			msg_updated = true;
+		}
+
 		if (ping_rate) rate.sleep();
 	}
 }

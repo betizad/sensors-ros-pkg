@@ -54,7 +54,7 @@ namespace labust
 		 */
 		class UROSUSBLController : virtual public DeviceController
 		{
-			enum {LLBITS_OUT=18, LLBITS_IN=18, TIMEOUT=4};
+			enum {LLBITS_OUT=10, LLBITS_IN=10, TIMEOUT=4};
 		public:
 			///Main constructor
 			UROSUSBLController();

@@ -4,14 +4,14 @@
 int main(int argc, char* argv[])
 {
 	using namespace labust::tools;
-	int sz = 14;
-	double lat = 37.999999;
-	double lon = -1.000000;
+	int sz = 10;
+	double lat = 37.1234567;
+	double lon = -1.2345678;
 	LatLon2Bits llbits;
 	llbits.convert(lat, lon, sz);
 
-	double latI = 37.9934666;
-	double lonI = -1.0045222;
+	double latI = 37.1234666;
+	double lonI = -1.2345222;
 
 	Bits2LatLon bitsll;
 	bitsll.setInitLatLon(latI, lonI);

@@ -50,7 +50,8 @@ using namespace labust::comms::uros;
 
 UROSModemController::UROSModemController():
 		comms_timeout(300),
-		avg(false)
+		avg(false),
+		empty_reply(false)
 {
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
 			boost::bind(&UROSModemController::onData,this,_1)));
@@ -105,6 +106,10 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 //	out.lon = conv.lon;
 
 	max_rhodamine.status_flag = avg;
+
+	//Do not pack the message if no reply is required
+	if (empty_reply) return;
+
 	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
@@ -116,7 +121,7 @@ void UROSModemController::onAdc(const misc_msgs::RhodamineAdc::ConstPtr& msg)
 	if (!sender.empty())
 	{
 		sender(clr);
-		sender(cmd);
+		if (!empty_reply) sender(cmd);
 	}
 }
 
@@ -148,6 +153,9 @@ void UROSModemController::onData(const labust::seatrac::DatReceive& msg)
 	fix->latitude = latlon.latitude;
 	fix->longitude = latlon.longitude;
 	nav_pub.publish(fix);
+	//Preprocess command flag
+	if (dat.cmd_flag == 15) empty_reply = true;
+	if (dat.cmd_flag == 14) empty_reply = false;
 	//Publish command flag
 	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
 	cmd->data = dat.cmd_flag;
@@ -159,7 +167,7 @@ void UROSModemController::onTimeout(const ros::TimerEvent& e)
 	//Publish command flag
 	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
 	//Request abort
-	enum {it_cnt=10};
+	enum {it_cnt=3};
 	ros::Rate r(2);
 	for(int i=0; i<it_cnt; ++i)
 	{

@@ -1,6 +1,6 @@
 struct RhodamineData {
 public:
-  enum { DEPTH_SC = 2};
+  enum { DEPTH_SC = 1};
 
   void pack(boost::archive::binary_oarchive& out) const;
 
