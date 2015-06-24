@@ -167,7 +167,7 @@ void UROSModemController::onTimeout(const ros::TimerEvent& e)
 	//Publish command flag
 	std_msgs::UInt8::Ptr cmd(new std_msgs::UInt8());
 	//Request abort
-	enum {it_cnt=10};
+	enum {it_cnt=3};
 	ros::Rate r(2);
 	for(int i=0; i<it_cnt; ++i)
 	{
