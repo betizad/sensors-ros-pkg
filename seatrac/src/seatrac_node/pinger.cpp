@@ -99,6 +99,8 @@ bool Pinger::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	bool unlock(false);
 	uint8_t cid = msg->getCid();
 
+	is_error = true;
+
 	if (cid == PingError::CID)
 	{
 		const PingError::ConstPtr err(
@@ -145,6 +147,8 @@ bool Pinger::onPingReplies(const SeatracMessage::ConstPtr& msg)
 {
 	bool unlock(false);
 	uint8_t cid = msg->getCid();
+
+	is_error = false;
 
 	if (cid == PingResp::CID)
 	{

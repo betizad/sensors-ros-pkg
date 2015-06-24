@@ -55,7 +55,7 @@ namespace labust
 		 */
 		class UROSModemController : virtual public DeviceController
 		{
-			enum {LLBITS_OUT=18, LLBITS_IN=18};
+			enum {LLBITS_OUT=10, LLBITS_IN=10};
 		public:
 			///Main constructor
 			UROSModemController();
@@ -123,6 +123,8 @@ namespace labust
 			boost::mutex timer_mux;
 			///Average detected
 			bool avg;
+			///Ping only flag
+			bool empty_reply;
 
 			labust::comms::uros::RhodamineData max_rhodamine;
 		};
