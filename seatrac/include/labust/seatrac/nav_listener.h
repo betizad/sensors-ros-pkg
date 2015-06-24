@@ -82,6 +82,8 @@ namespace labust
 
 			///Transponder fix publishers
 			PublisherMap fix_pub;
+			///Transponder fix publishers
+			PublisherMap navsts_pub;
 			///Transponder relative position publishers
 			PublisherMap point_pub;
 
