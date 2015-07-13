@@ -136,7 +136,7 @@ void NavHandler::operator()(int type, std::vector<uint8_t>& payload)
 			navmsg->position.east = transformDeg.transform.translation.y + fixpos(e);
 			navmsg->position.depth = transformDeg.transform.translation.z + fixpos(d);
 
-			double range = fix.range_data.range_dist/1000.;
+			double range = fix.range_data.range_dist/10.;
 			//double azimuth = M_PI*(fix.signal_azimuth + fix.attitude1[0])/1800.;
 			double azimuth = atan2(fix.position[east], fix.position[north]);
 			double crange = sqrt(range*range - exDepth*exDepth);
