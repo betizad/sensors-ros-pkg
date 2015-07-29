@@ -128,7 +128,7 @@ void SpatialNode::configureSpatial()
 {
 	using namespace labust::spatial;
 
-	enum {fs = 10};
+	enum {fs = 24};
 
 	//uint32_t rebootSeq = 0x21057A7E;
 	//dataSer << rebootSeq;
