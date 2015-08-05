@@ -1,0 +1,23 @@
+<launch>
+    <!-- Surface acoustics -->
+    <group ns="surface">
+    	<node pkg="seatrac" type="seatrac_core" name="surface">
+    		<!-- Core parameters -->
+    		<param name="comms_plugin" value="labust::seatrac::SeatracSerial" />
+		<!-- Serial parameters -->
+		<param name="port_name" value="/dev/usbl" />
+		<param name="baud" value="115200" />
+    		<param name="controller_plugin" value="labust::seatrac::UROSUSBLController" />
+    		<rosparam param="listener_plugins">["labust::seatrac::StatusListener","labust::seatrac::NavListener","labust::seatrac::DataListener"] </rosparam>
+		<!-- NavListener parameters -->
+		<rosparam param="transponders">[2]</rosparam>
+		<rosparam param="transponder_names">["lupis"]</rosparam>
+		<param name="use_ahrs" value="true" />
+		<!-- <param name="ping_rate" value="0.1" /> -->
+		<remap from="navsts" to="lupis/usbl_navsts" />
+	</node>
+  	<node pkg="pladypos" type="uros_logger_pladypos_node" name="uros_logger_pladypos_node">
+     		<remap from="temp" to="temperature" />
+  	</node>
+    </group>
+</launch>

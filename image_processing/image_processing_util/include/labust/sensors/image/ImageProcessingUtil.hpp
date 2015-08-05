@@ -51,9 +51,24 @@ namespace labust {
         cv_bridge::CvImage cv_image;
         cv_image.image = image;
         cv_image.encoding = encoding;
+        cv_image.header.stamp = ros::Time::now();
         return cv_image.toImageMsg();
       }
 
+      cv::Point2f rectCenter(const cv::Rect rect) {
+        return 0.5 * (rect.tl() + rect.br());
+      }
+
+      cv::Rect moveRect(const cv::Rect rect, const cv::Point2f new_center) {
+        cv::Point offset = new_center - rectCenter(rect);
+        return rect+offset;
+      }
+
+      double distanceBetweenPoints(const cv::Point2f a, const cv::Point2f b) {
+        double dx = a.x - b.x;
+        double dy = a.y - b.y;
+        return std::sqrt(dx*dx + dy*dy);
+      }
     }
   }
 }

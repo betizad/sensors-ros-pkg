@@ -4,11 +4,21 @@ project(sonar_image_processing)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  sensor_msgs
+  std_msgs
+  cv_bridge
+  image_transport
+  image_processing_util
+  labust_navigation
+  aris
+  message_generation
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -40,11 +50,10 @@ find_package(catkin REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+   FILES
+   ArisBathymetry.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -61,10 +70,10 @@ find_package(catkin REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -76,9 +85,9 @@ find_package(catkin REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES sonar_image_processing
-#  CATKIN_DEPENDS other_catkin_pkg
+  INCLUDE_DIRS include
+#  LIBRARIES image_processing_util
+  CATKIN_DEPENDS image_processing_util message_runtime
 #  DEPENDS system_lib
 )
 
@@ -88,24 +97,34 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+)
 
 ## Declare a cpp library
-# add_library(sonar_image_processing
-#   src/${PROJECT_NAME}/sonar_image_processing.cpp
+# add_library(image_processing_util
+#   src/${PROJECT_NAME}/image_processing_util.cpp
 # )
 
 ## Declare a cpp executable
-# add_executable(sonar_image_processing_node src/sonar_image_processing_node.cpp)
+add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
+add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(sonar_image_processing_node sonar_image_processing_generate_messages_cpp)
+# add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(sonar_image_processing_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(sonar_object_tracker_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+target_link_libraries(sonar_bathymetry_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
 #############
 ## Install ##
@@ -122,7 +141,7 @@ catkin_package(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS sonar_image_processing sonar_image_processing_node
+# install(TARGETS image_processing_util image_processing_util_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -147,7 +166,7 @@ catkin_package(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_sonar_image_processing.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_image_processing_util.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

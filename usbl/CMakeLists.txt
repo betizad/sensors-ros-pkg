@@ -8,7 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs 
     roscpp 
     rospy
-    labust_base 
+    labust_navigation
     tf2_ros 
     nodelet 
     auv_msgs 
@@ -84,7 +84,7 @@ add_library(usbl-plugs
 ## Declare a cpp executable
 add_executable(modem_node src/test/modem_node.cpp)
 add_executable(msg_encoder src/test/MsgEncoder.cpp)
-add_executable(usbl_sim src/test/usbl_sim.cpp)
+#add_executable(usbl_sim src/test/usbl_sim.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -94,7 +94,6 @@ add_executable(usbl_sim src/test/usbl_sim.cpp)
 target_link_libraries(usbl-plugs
    ${Boost_SERIALIZATION_LIBRARY}
    ${Boost_THREAD_LIBRARY}
-   labust_navcon
    ${catkin_LIBRARIES}
 )
 
@@ -102,9 +101,9 @@ target_link_libraries(modem_node
    ${catkin_LIBRARIES}
 )
 
-target_link_libraries(usbl_sim
-   ${catkin_LIBRARIES}
-)
+#target_link_libraries(usbl_sim
+#   ${catkin_LIBRARIES}
+#)
 
 target_link_libraries(msg_encoder
    ${catkin_LIBRARIES}

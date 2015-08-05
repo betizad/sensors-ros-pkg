@@ -1,0 +1,12 @@
+<launch>
+    <!-- Lupis acoustics -->
+    <group ns="lupis">
+		<node pkg="seatrac" type="seatrac_core" name="lupis_sim">
+    		<!-- Core parameters -->
+    		<param name="comms_plugin" value="labust::seatrac::SeatracSerial" />
+    		<param name="port_name" value="/dev/ttyUSB0" />
+    		<param name="controller_plugin" value="labust::seatrac::UROSModemController" />
+    		<param name="listener_plugins" value="labust::seatrac::StatusListener" />
+		</node>
+    </group>
+</launch>

@@ -36,7 +36,7 @@
  *********************************************************************/
 #include <labust/tritech/USBLFilter.hpp>
 #include <labust/tools/GeoUtilities.hpp>
-#include <labust/math/uBlasOperations.hpp>
+#include <labust/navigation/KFModelLoader.hpp>
 #include <pluginlib/class_list_macros.h>
 #include <labust/math/NumberManipulation.hpp>
 
@@ -54,7 +54,8 @@ USBLFilter::USBLFilter():
 			iteration(0),
 			maxSpeed(0.5),
 			isPassThrough(false),
-			hasUSBL(false){};
+			hasUSBL(false),
+			depth(0){};
 
 USBLFilter::~USBLFilter(){};
 
@@ -62,54 +63,52 @@ void USBLFilter::onInit()
 {
 	ros::NodeHandle nh = this->getNodeHandle();
 	ros::NodeHandle ph = this->getMTPrivateNodeHandle();
-	usblSub = nh.subscribe<geometry_msgs::PointStamped>("usbl_nav", 1, boost::bind(&USBLFilter::onUsbl,this,_1));
+	usblSub = nh.subscribe("usbl_nav", 1, &USBLFilter::onUsbl,this);
+	usblNavStsSub = nh.subscribe("usbl_navsts", 1, &USBLFilter::onUsblNavSts,this);
 	navPub = nh.advertise<auv_msgs::NavSts>("usblFiltered",1);
 
 	ph.param("pass_through", isPassThrough, isPassThrough);
+	ph.param("max_speed",maxSpeed, maxSpeed);
 	if (!isPassThrough)
 	{
 		filter.initModel();
 		configureModel(nh);
+		xd = filter.getState();
+		Pd = filter.getStateCovariance();
 		worker = boost::thread(boost::bind(&USBLFilter::run,this));
 	}
 }
 
 void USBLFilter::configureModel(ros::NodeHandle& nh)
 {
-	std::string sQ,sW,sV,sR,sP,sx0;
-	nh.getParam("usbl_filter/Q", sQ);
-	nh.getParam("usbl_filter/W", sW);
-	nh.getParam("usbl_filter/V", sV);
-	nh.getParam("usbl_filter/R", sR);
-	nh.getParam("usbl_filter/P", sP);
-	nh.getParam("usbl_filter/x0", sx0);
 	try
 	{
-		KFilter::matrix Q,W,V,R,P;
-		KFilter::vector x0;
-
-		boost::numeric::ublas::matrixFromString(sQ,Q);
-		boost::numeric::ublas::matrixFromString(sR,R);
-		boost::numeric::ublas::matrixFromString(sW,W);
-		boost::numeric::ublas::matrixFromString(sV,V);
-		boost::numeric::ublas::matrixFromString(sR,R);
-		boost::numeric::ublas::matrixFromString(sP,P);
-		std::stringstream ss(sx0);
-		boost::numeric::ublas::operator >>(ss,x0);
+		labust::navigation::kfModelLoader(filter, nh, "usbl_filter");
 
 		double dT(0.1);
 		nh.param("sampling_time",dT,dT);
 		filter.setTs(dT);
-		filter.setStateParameters(W,Q);
-		filter.setMeasurementParameters(V,R);
-		filter.setStateCovariance(P);
-		filter.setState(x0);
 	}
 	catch (std::exception& e)
 	{
 		NODELET_ERROR("USBLFilter:: Model configuration failed, %s",
 				e.what());
 	}
+}
+
+void USBLFilter::onUsblNavSts(const auv_msgs::NavSts::ConstPtr& msg)
+{
+	NODELET_DEBUG("New update: %f %f %f\n",msg->position.north, msg->position.east, msg->position.depth);
+
+	boost::mutex::scoped_lock lock(dataMux);
+	hasUSBL = true;
+
+	KFilter::input_type vec(2);
+	vec(0) = msg->position.north;
+	vec(1) = msg->position.east;
+	depth = msg->position.depth;
+
+	this->step(vec);
 }
 
 void USBLFilter::onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg)
@@ -135,6 +134,11 @@ void USBLFilter::onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg)
 	vec(1) = transform.transform.translation.y + msg->point.y;
 	depth = transform.transform.translation.z + (-msg->point.z);
 
+	this->step(vec);
+}
+
+void USBLFilter::step(KFilter::input_type& vec)
+{
 	if (isPassThrough)
 	{
 		try
@@ -147,6 +151,7 @@ void USBLFilter::onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg)
 					vec(1),
 					//The latitude angle
 					transformDeg.transform.translation.y);
+			odom->header.stamp = ros::Time::now();
 			odom->global_position.latitude = transformDeg.transform.translation.y + diffAngle.first;
 			odom->global_position.longitude = transformDeg.transform.translation.x + diffAngle.second;
 			odom->position.north = vec(0);
@@ -170,6 +175,9 @@ void USBLFilter::onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg)
 
 		if (!outlier)
 		{
+			//Recover past measurements
+			//filter.setStateCovariance(Pd);
+			//filter.setState(xd);
 			filter.correct(vec);
 
 			//Limit diver speed
@@ -177,6 +185,13 @@ void USBLFilter::onUsbl(const geometry_msgs::PointStamped::ConstPtr& msg)
 			newState(KFilter::Vv) = labust::math::coerce(
 					newState(KFilter::Vv), -maxSpeed, maxSpeed);
 			filter.setState(newState);
+
+			//Propagate to current (for 20 iterations)
+			//for(int i=0; i<20; ++i) filter.predict();
+			//Save current state
+			xd = filter.getState();
+			Pd = filter.getStateCovariance();
+
 			iteration = 0;
 		}
 		else

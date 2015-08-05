@@ -1,0 +1,22 @@
+<launch>
+	<!-- The surface USBL -->
+	<remap from="medium_out" to="/medium_out" />
+	<remap from="medium_in" to="/medium_in" />
+	<remap from="register_modem" to="/register_modem" />
+
+	<!-- The diver modem -->
+	<group ns="diver">
+		<node pkg="seatrac" type="seatrac_core" name="diver_sim">
+			<param name="comms_plugin" value="labust::seatrac::SeatracSerial" />
+			<param name="port_name" value="/dev/ttyUSB0" />
+			<param name="baud" value="115200" />
+			<param name="controller_plugin" value="labust::seatrac::BridgeController" />
+			<param name="sim_node_id" value="2" />
+			<param name="sim_is_modem" value="true" />
+			<remap from="navsts" to="position" />
+		</node>
+	</group>
+
+	<node pkg="rqt_gui" type="rqt_gui" name="debuger"
+		args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" />
+</launch>

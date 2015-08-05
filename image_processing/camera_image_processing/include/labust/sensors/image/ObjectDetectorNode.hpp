@@ -38,6 +38,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <labust/sensors/image/ObjectDetector.hpp>
+#include <string>
 
 namespace labust {
   namespace sensors {
@@ -48,13 +49,15 @@ namespace labust {
        * TODO(irendulic): Add support for camera not publishing a ROS
        * topic (e.g. IP camera).
        */
+      template<class ObjDetect>
       class ObjectDetectorNode {
 
       public:
         ObjectDetectorNode();
         ~ObjectDetectorNode();
-        void setObjectDetector(ObjectDetector *object_detector);
-        void setEnableVideoDisplay(bool enable_video_display);
+        void setObjectDetector(ObjDetect *object_detector);
+        ObjDetect& getObjectDetector();
+        void setEnableVideoDisplay(bool enable_video_display, std::string window_name);
 
       private:
         void processFrame(const sensor_msgs::ImageConstPtr &sensor_image);
@@ -64,7 +67,7 @@ namespace labust {
         image_transport::Subscriber image_sub_;
         image_transport::Publisher image_pub_;
         std_msgs::Float64MultiArrayPtr detected_object_;
-        ObjectDetector *object_detector_;
+        ObjDetect *object_detector_;
         std::string camera_topic_, opencv_window_;
         bool is_compressed_, enable_video_display_;
       };

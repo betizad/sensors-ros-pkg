@@ -1,0 +1,72 @@
+<launch>
+   <node pkg="ros_imc" type="simple_bridge" name="playpos_imc">
+    <remap from="state_in" to="state" />
+    <param name="entity" value="54" />
+    <param name="id" value="1025" />
+    <!-- Announce information -->
+    <param name="announce" value="true" />
+    <param name="name" value="base-station" />
+    <!-- CCU=0,Portable sensor=1,UUV=2,USV=3,UAV=4,UGV=5-->
+    <!-- Static sensor=6,Mobile sensor=7,Wireless Sensor Network=8 -->
+    <param name="sys_type" value="6" />
+    <param name="service" value="imc+info://0.0.0.0/version/5.4.0;imc+udp://topside-gateway:6002/" />
+   </node>
+   
+   <!-- Neptus UDP additions -->
+   <arg name="multicast_ip" value="224.0.75.69" />
+   <arg name="use_multicast" value="true" />
+   <arg name="local_ip" value="topside-gateway" />
+   <arg name="local_port" value="6002" />
+   <arg name="remote_ip" value="127.0.0.1" />
+   <arg name="remote_port" value="6001" />
+
+   <!-- For Neptus we need to announce on ports 30100, 30101, 30102, 30103, and 30104 -->
+   <node pkg="ros_imc" type="udp_relay" name="announce0">
+    <param name="local_ip" value="$(arg local_ip)" />
+    <param name="remote_ip" value="$(arg multicast_ip)" />
+    <param name="use_multicast" value="$(arg use_multicast)" />
+    <param name="remote_port" value="30100" />
+     
+    <remap from="udp_in" to="announce_in" />
+    <remap from="udp_out" to="announce_out" />
+   </node>
+
+   <node pkg="ros_imc" type="udp_relay" name="announce1">
+    <param name="local_ip" value="$(arg local_ip)" />
+    <param name="remote_ip" value="$(arg multicast_ip)" />
+    <param name="use_multicast" value="$(arg use_multicast)" />
+    <param name="remote_port" value="30101" />
+     
+    <remap from="udp_in" to="announce_in" />
+    <remap from="udp_out" to="announce_out" />
+   </node>
+   <node pkg="ros_imc" type="udp_relay" name="announce2">
+    <param name="local_ip" value="$(arg local_ip)" />
+    <param name="remote_ip" value="$(arg multicast_ip)" />
+    <param name="use_multicast" value="$(arg use_multicast)" />
+    <param name="remote_port" value="30102" />
+     
+    <remap from="udp_in" to="announce_in" />
+    <remap from="udp_out" to="announce_out" />
+   </node>
+
+   <node pkg="ros_imc" type="udp_relay" name="announce3">
+    <param name="local_ip" value="$(arg local_ip)" />
+    <param name="remote_ip" value="$(arg multicast_ip)" />
+    <param name="use_multicast" value="$(arg use_multicast)" />
+    <param name="remote_port" value="30103" />
+     
+    <remap from="udp_in" to="announce_in" />
+    <remap from="udp_out" to="announce_out" />
+   </node>
+   
+   <node pkg="ros_imc" type="udp_relay" name="announce4">
+    <param name="local_ip" value="$(arg local_ip)" />
+    <param name="remote_ip" value="$(arg multicast_ip)" />
+    <param name="use_multicast" value="$(arg use_multicast)" />
+    <param name="remote_port" value="30104" />
+     
+    <remap from="udp_in" to="announce_in" />
+    <remap from="udp_out" to="announce_out" />
+   </node>
+</launch>

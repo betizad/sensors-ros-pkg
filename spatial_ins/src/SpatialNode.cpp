@@ -90,6 +90,7 @@ void SpatialNode::onInit()
 
 	//Setup publisher
 	imu = nh.advertise<sensor_msgs::Imu>("imu",1);
+	quat = nh.advertise<sensor_msgs::Imu>("quat",1);
 	gps = nh.advertise<sensor_msgs::NavSatFix>("fix",1);
 	vel = nh.advertise<geometry_msgs::TwistStamped>("ned_vel",1);
 
@@ -112,6 +113,8 @@ void SpatialNode::onInit()
 				this, boost::ref(eulerCov),_1);
 		handler[ID::VelocityStdDev] = boost::bind(&SpatialNode::onVec3fPacket,
 				this, boost::ref(velCov),_1);
+		handler[ID::QuaternionOrientation] = boost::bind(&SpatialNode::onQuaternion,
+						this, _1);
 
 		//Configure the device
 		this->configureSpatial();
@@ -146,11 +149,12 @@ void SpatialNode::configureSpatial()
 	//1000000/(p.packetTimerPeriod * fs)
 	period.period = 1000000/(p.packetTimerPeriod * fs);
 	dataSer << period;
-	//Append the euler and velocity stddev packet (num_appended = 2)
+	//Append the euler and velocity stddev packet (num_appended = 3)
 	uint8_t id = ID::EulerStdDev;	dataSer << id << period.period;
 	id = ID::VelocityStdDev; dataSer << id << period.period;
+	id = ID::QuaternionOrientation; dataSer << id << period.period;
 	//len = LEN::PacketsPeriod + 5*num_appended
-	this->sendToDevice(ID::PacketsPeriod, LEN::PacketsPeriod + 5*2, out.str());
+	this->sendToDevice(ID::PacketsPeriod, LEN::PacketsPeriod + 5*3, out.str());
 
 	//Set the sensor range
 	SensorRanges range;
@@ -198,9 +202,13 @@ bool SpatialNode::setup_port()
 
 	using namespace boost::asio;
 	port.open(portName);
-	port.set_option(serial_port::baud_rate(baud));
-	port.set_option(serial_port::flow_control(
-			serial_port::flow_control::none));
+  termios cfg;
+  tcgetattr(port.native(), &cfg);
+	cfsetspeed(&cfg, B115200);
+	tcsetattr(port.native(), TCSANOW, &cfg);
+	//port.set_option(serial_port::baud_rate(baud));
+	//port.set_option(serial_port::flow_control(
+	//		serial_port::flow_control::none));
 
 	return port.is_open();
 }
@@ -283,9 +291,14 @@ void SpatialNode::onData(const boost::system::error_code& e,
 void SpatialNode::statusUpdate(uint16_t systemStatus, uint16_t filterStatus)
 {
 	ROS_INFO("System status: %d, filter status: %d", systemStatus, filterStatus); 
-	stateOk = (systemStatus == 0);
-	orientationOk = filterStatus & 0x01;
+	//Ignore disconnected antenna
+	stateOk = ((systemStatus & ((1 << 13)-1)) == 0);
+	orientationOk = filterStatus & 0x04;
 	navigationOk = filterStatus & 0x02;
+	ROS_INFO("Fix type: %d", (filterStatus & 0x70)>>4);
+	ROS_INFO("State ok: %d", stateOk);
+	ROS_INFO("Orientation ok: %d", orientationOk);
+	ROS_INFO("Navigation ok: %d", navigationOk);
 }
 
 void SpatialNode::onSystemStatePacket(boost::archive::binary_iarchive& data)
@@ -350,6 +363,23 @@ void SpatialNode::onVec3fPacket(vec3f& vec, boost::archive::binary_iarchive& dat
 	data >> vec;
 }
 
+void SpatialNode::onQuaternion(boost::archive::binary_iarchive& data)
+{
+	labust::spatial::QuaternionOrientation q;
+	data >> q;
+	sensor_msgs::Imu::Ptr imuOut(new sensor_msgs::Imu());
+
+	imuOut->orientation.w = q.quat[0];
+	imuOut->orientation.x = q.quat[1];
+	imuOut->orientation.y = q.quat[2];
+	imuOut->orientation.z = q.quat[3];
+
+	imuOut->header.frame_id = "imu_frame";
+	imuOut->header.stamp = ros::Time::now();
+	quat.publish(imuOut);
+
+}
+
 void SpatialNode::onAckPacket(boost::archive::binary_iarchive& data)
 {
 	labust::spatial::AckPacket ack;
@@ -397,6 +427,7 @@ void SpatialNode::onExternalGps(const sensor_msgs::NavSatFix::ConstPtr& gps)
 
 void SpatialNode::onRTCM(const std_msgs::UInt8MultiArray::ConstPtr& rtcm)
 {
+	ROS_INFO("Forwarding RTCM: %d", rtcm->data.size());
 	std::ostringstream out;
 	boost::archive::binary_oarchive dataSer(out, boost::archive::no_header);
 	for(int i=0; i<rtcm->data.size(); ++i) out<<rtcm->data[i];

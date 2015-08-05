@@ -35,6 +35,7 @@
 #define COLOROBJECTDETECTOR_HPP_
 #include <labust/sensors/image/ObjectDetector.hpp>
 #include <opencv2/opencv.hpp>
+#include <string>
 
 namespace labust {
   namespace sensors {
@@ -45,8 +46,9 @@ namespace labust {
       public:
         ColorObjectDetector();
         ~ColorObjectDetector();
-        virtual void detect(cv::Mat &image_bgr, cv::Point2f &center, double &size);
-        virtual void setEnableVideoDisplay(bool enable_video_display);
+        virtual void detect(cv::Mat image_bgr, cv::Point2f &center, double &size);
+        virtual void setEnableVideoDisplay(bool enable_video_display, std::string window_name = "Color Object Detector");
+        void setHSVColorRange(int lowH, int highH, int lowS, int highS, int lowV, int highV);
 
       private:
         virtual void createOpenCvWindow();

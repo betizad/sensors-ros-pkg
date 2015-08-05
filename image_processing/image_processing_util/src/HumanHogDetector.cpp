@@ -63,7 +63,7 @@ HumanHogDetector::~HumanHogDetector() {
   cv::destroyWindow(WINDOW_);
 }
 
-void HumanHogDetector::detect(cv::Mat &image, cv::Point2f &center, double &area) {
+void HumanHogDetector::detect(cv::Mat image, cv::Point2f &center, double &area) {
   cv::vector<cv::Rect> found, found_filtered;
 
   hog_descriptor_.detectMultiScale(image, found, 0, cv::Size(8,8), cv::Size(32,32), 1.05, 2);

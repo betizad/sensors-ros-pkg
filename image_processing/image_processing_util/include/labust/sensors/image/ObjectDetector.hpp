@@ -34,6 +34,7 @@
 #ifndef OBJECTDETECTOR_HPP_
 #define OBJECTDETECTOR_HPP_
 #include <opencv2/opencv.hpp>
+#include <string>
 
 namespace labust {
   namespace sensors {
@@ -48,17 +49,18 @@ namespace labust {
 
       public:
         virtual ~ObjectDetector() {};
-        virtual void detect(cv::Mat &image, cv::Point2f &center, double &size) = 0;
-        virtual void setEnableVideoDisplay(bool enable_video_display) {
+        virtual void detect(cv::Mat image, cv::Point2f &center, double &area) = 0;
+        virtual void setEnableVideoDisplay(bool enable_video_display, std::string window_name) {
           enable_video_display_ = enable_video_display;
+          WINDOW_ = window_name;
           createOpenCvWindow();
         }
 
       protected:
         virtual void createOpenCvWindow() {
-          cv::namedWindow(WINDOW_);
+          cv::namedWindow(WINDOW_.c_str());
         };
-        const char *WINDOW_;
+        std::string WINDOW_;
         bool enable_video_display_;
       };
 

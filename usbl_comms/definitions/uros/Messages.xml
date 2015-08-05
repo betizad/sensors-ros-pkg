@@ -1,0 +1,21 @@
+<uros_acoustic_messages>       	
+	<struct name="RhodamineData" assert_size="4" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <enum name="DEPTH_SC" value="1" />
+	    <var type="uint8_t" name="status_flag" bits="1" />
+	    <!-- <var type="int32_t" name="lat" bits="18" />
+	    <var type="int32_t" name="lon" bits="18" /> -->
+	    <var type="int32_t" name="lat" bits="10" />
+	    <var type="int32_t" name="lon" bits="10" />
+	    <var type="uint8_t" name="depth" bits="4" />
+	    <var type="uint8_t" name="adc_gain" bits="0" />
+	    <var type="uint16_t" name="adc" bits="7" />
+	</struct>
+	
+	<struct name="LupisUpdate" assert_size="3" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="cmd_flag" bits="4" />
+	    <var type="int32_t" name="lat" bits="10" />
+	    <var type="int32_t" name="lon" bits="10" />
+	</struct>
+</uros_acoustic_messages>

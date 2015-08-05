@@ -1,0 +1,12 @@
+  {StatusResp::CID, createInstance<StatusResp>},
+  {XcvrFix::CID, createInstance<XcvrFix>},
+  {PingSendResp::CID, createInstance<PingSendResp>},
+  {PingReq::CID, createInstance<PingReq>},
+  {PingResp::CID, createInstance<PingResp>},
+  {PingError::CID, createInstance<PingError>},
+  {DatSendResp::CID, createInstance<DatSendResp>},
+  {DatReceive::CID, createInstance<DatReceive>},
+  {DatError::CID, createInstance<DatError>},
+  {DatQueueSetResp::CID, createInstance<DatQueueSetResp>},
+  {DatQueueClearResp::CID, createInstance<DatQueueClearResp>},
+  {DatQueueStatusResp::CID, createInstance<DatQueueStatusResp>}

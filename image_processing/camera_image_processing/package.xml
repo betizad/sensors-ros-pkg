@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>camera_image_processing</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>
       Image processing nodes for mono and stereo cameras. 
   </description>
@@ -17,14 +17,18 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>image_transport</build_depend>
+  <build_depend>camera_info_manager</build_depend>
   <build_depend>opencv2</build_depend>
   <build_depend>image_processing_util</build_depend>
+  <build_depend>snippets</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>cv_bridge</run_depend>
   <run_depend>image_transport</run_depend>
+  <run_depend>camera_info_manager</run_depend>
   <run_depend>opencv2</run_depend>
   <run_depend>image_processing_util</run_depend>
+  <run_depend>snippets</run_depend>
 
 </package>

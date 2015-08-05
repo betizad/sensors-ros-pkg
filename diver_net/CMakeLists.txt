@@ -9,11 +9,14 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   snippets
   tf2_ros
+  cmake_modules
+  sensors_util
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(Eigen REQUIRED)
+find_package(xacro)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -84,7 +87,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES diver_net
-#  CATKIN_DEPENDS roscpp tf2_ros
+  CATKIN_DEPENDS sensors_util
 #  DEPENDS system_lib
 )
 
@@ -109,6 +112,10 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(diver_net_node src/DiverNetNode.cpp)
+add_executable(diver_net_read_node src/DiverNetReadNode.cpp)
+add_executable(diver_net_filter_node src/DiverNetFilterNode.cpp)
+add_executable(diver_net_transform_and_joint_publisher_node src/DiverNetTransformAndJointPublisher.cpp)
+add_executable(diver_net_gyro_calibration_node src/DiverNetGyroCalibrationNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -118,6 +125,34 @@ add_executable(diver_net_node src/DiverNetNode.cpp)
 target_link_libraries(diver_net_node
    ${catkin_LIBRARIES}
 )
+target_link_libraries(diver_net_read_node
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(diver_net_filter_node
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(diver_net_transform_and_joint_publisher_node
+   ${catkin_LIBRARIES}
+)
+target_link_libraries(diver_net_gyro_calibration_node
+   ${catkin_LIBRARIES}
+)
+
+## Convert xacro models to urdf
+if (xacro_FOUND)
+ set(model_files "")
+ file(GLOB model_xacro ${CMAKE_CURRENT_SOURCE_DIR}/data/models/xacro/*.urdf.xacro)
+ set(expanded_directory ${CMAKE_CURRENT_SOURCE_DIR}/data/models/urdf/)
+ execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${expanded_directory})
+ foreach(it ${model_xacro})
+   get_filename_component(basepath ${it} PATH)
+   get_filename_component(basename ${it} NAME_WE) 
+   set(expanded_file "${basepath}/../urdf/${basename}.urdf")  
+   xacro_add_xacro_file(${it} ${expanded_file})
+   set(model_files ${model_files} ${expanded_file})
+ endforeach(it)
+ add_custom_target(${PROJECT_NAME}_models ALL DEPENDS ${model_files})
+endif()
 
 #############
 ## Install ##

@@ -1,0 +1,118 @@
+<seatrac_messages>
+	<struct name="StatusBits" assert_size="1" serialization="primitive_type" 
+	    bitfield="TRUE">
+	    <var type="bool" name="ENVIRONMENT" bits="1"/>
+	    <var type="bool" name="ATTITUDE" bits="1" />
+	    <var type="bool" name="MAG_CAL" bits="1" />
+	    <var type="bool" name="ACC_CAL" bits="1" />
+	    <var type="bool" name="AHRS_RAW_DATA" bits="1" />
+	    <var type="bool" name="AHRS_COMP_DATA" bits="1" />
+	</struct>
+	
+	<struct name="AcoFixBits" assert_size="1" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="bool" name="RANGE_VALID" bits="1" />
+	    <var type="bool" name="USBL_VALID" bits="1" />
+	    <var type="bool" name="POSITION_VALID" bits="1" />
+	    <var type="bool" name="POSITION_ENHANCED" bits="1" />
+	    <var type="bool" name="POSITION_FLT_ERROR" bits="1" />
+	</struct>
+	
+	<struct name="BitMessageTest" assert_size="6" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="type" bits="4" />
+	    <var type="int32_t" name="lat" bits="22" />
+	    <var type="int32_t" name="lon" bits="22" />
+	</struct>
+	
+	<struct name="MagCalibration" serialization="object_serializable" > 
+	    <var type="uint8_t" name="buffer" />
+	    <var type="uint8_t" name="valid" />
+	    <var type="uint32_t" name="age" />
+	    <var type="uint8_t" name="fit" />
+	</struct>
+	
+	<struct name="EnvStatus" serialization="object_serializable" > 
+        <var type="uint16_t" name="supply" />
+	    <var type="int16_t" name="temp" />
+	    <var type="int32_t" name="pressure" />
+	    <var type="int32_t" name="depth" />
+	    <var type="uint16_t" name="vos" />
+	</struct>
+	
+	<struct name="AccCalibration" serialization="object_serializable" > 
+	    <var type="int16_t[3]" name="lim_min" />
+	    <var type="int16_t[3]" name="lim_max" />
+	</struct>
+	
+	<struct name="AHRSData" serialization="object_serializable" > 
+	    <var type="int16_t[3]" name="acc" />
+	    <var type="int16_t[3]" name="mag" />
+	    <var type="int16_t[3]" name="gyro" />
+	</struct>
+	
+	<struct name="RangeData" serialization="object_serializable" > 
+		<var type="uint32_t" name="count" />
+		<var type="int32_t" name="time" />
+		<var type="uint16_t" name="dist" />
+	</struct>
+	
+	<struct name="USBLData" serialization="object_serializable" > 
+		<var type="int16_t[]" name="rssi" />
+		<var type="int16_t" name="azimuth" />
+		<var type="int16_t" name="elevation" />
+		<var type="int16_t" name="fit_error" />
+	</struct>
+	
+	<struct name="AcoFix" serialization="object_serializable" >
+	    <enum name="RANGE_SC" value="10" />
+	    <enum name="ANGLE_SC" value="10" />
+	    <enum name="x" value="1" />
+	    <enum name="y" value="0" />
+	    <enum name="z" value="2" />
+		<var type="uint8_t" name="dest" />
+		<var type="uint8_t" name="src" />
+		<var type="AcoFixBits" name="flags" />
+		<var type="uint8_t" name="msg_type" />
+		<var type="int16_t[3]" name="attitude" />
+		<var type="uint16_t" name="depth_local" />
+		<var type="uint16_t" name="vos" />
+		<var type="int16_t" name="rssi" />
+		
+		<var type="RangeData" name="range" if="flags.RANGE_VALID" />		
+		<var type="USBLData" name="usbl" if="flags.USBL_VALID" />
+	    <var type="int16_t[3]" name="position" if="flags.POSITION_VALID" />		
+	</struct>
+	
+	<struct name="Status" serialization="object_serializable">
+		<enum name="YAW" value="0" />
+		<enum name="PITCH" value="1" />
+		<enum name="ROLL" value="2" />
+		<enum name="ATT_SC" value="10" />
+		<enum name="TEMP_SC" value="10" />
+		<enum name="DEPTH_SC" value="10" />
+		<enum name="VOS_SC" value="10" />
+		<enum name="PRESSURE_SC" value="1000" />
+		<enum name="VOLTAGE_SC" value="1000" />
+		
+	    <var type="StatusBits" name="status_output" />
+	    <var type="uint64_t" name="timestamp" />
+	    
+	    <var type="EnvStatus" name="env" if="status_output.ENVIRONMENT" />    
+	    <var type="int16_t[3]" name="attitude" if="status_output.ATTITUDE" />
+	    <var type="MagCalibration" name="mag_cal" if="status_output.MAG_CAL" />
+	    <var type="AccCalibration" name="acc" if="status_output.ACC_CAL" />
+	    <var type="AHRSData" name="ahrs_raw" if="status_output.AHRS_RAW_DATA" />
+	    <var type="AHRSData" name="ahrs_comp" if="status_output.AHRS_COMP_DATA" />	 	    
+	</struct>
+	
+	<struct name="AcoMsg">
+		<var type="uint8_t" name="dest" />
+		<var type="uint8_t" name="src" />
+		<var type="uint8_t" name="msg_type" />
+		<var type="uint16_t" name="depth" />
+		<var type="uint8_t" name="payload_id" />
+		<var type="uint8_t[]" name="payload" />
+	</struct>
+	
+</seatrac_messages>

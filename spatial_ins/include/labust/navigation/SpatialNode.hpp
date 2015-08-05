@@ -116,6 +116,11 @@ namespace labust
 			 * Handle the velocity covariance message.
 			 */
 			void onAckPacket(boost::archive::binary_iarchive& data);
+			/**
+			 * Quaternion data.
+			 * @param data
+			 */
+			void onQuaternion(boost::archive::binary_iarchive& data);
 
 
 			/**
@@ -130,7 +135,7 @@ namespace labust
 			/**
 			 * The ROS publisher.
 			 */
-			ros::Publisher imu, gps, vel;
+			ros::Publisher imu, gps, vel, quat;
 			/**
 			 * External inputs
 			 */

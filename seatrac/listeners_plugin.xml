@@ -1,0 +1,20 @@
+<library path="lib/libseatrac_sdk">
+	<class type="labust::seatrac::StatusListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			The USBL diagnostics listener.
+		</description>
+	</class>
+	<class type="labust::seatrac::NavListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			The AcoFix message parser for USBL/modem navigation data.
+		</description>
+	</class>
+	<class type="labust::seatrac::DataListener" 
+	    base_class_type="labust::seatrac::MessageListener">
+		<description>
+			A simple payload data parser.
+		</description>
+	</class>
+</library>
