@@ -120,7 +120,8 @@ void BathymetryNode::processFrame() {
     sonar_bathymetry->range[i] = bath[i] + altitude_offset;
   }
   if (min_alt != 0 && max_alt != 0) {
-    aris.setRangeOfInterest(min_alt-altitude_offset, max_alt-altitude_offset);
+    //aris.setRangeOfInterest(min_alt-altitude_offset, max_alt-altitude_offset);
+    //aris.setRangeOfInterest(0.3, max_alt-altitude_offset);
   }
   sonar_bathymetry->header.stamp = si.header.stamp;
   sonar_bathymetry_pub.publish(sonar_bathymetry);

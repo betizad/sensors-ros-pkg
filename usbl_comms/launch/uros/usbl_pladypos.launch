@@ -12,7 +12,7 @@
 		<!-- NavListener parameters -->
 		<rosparam param="transponders">[2]</rosparam>
 		<rosparam param="transponder_names">["lupis"]</rosparam>
-		<param name="use_ahrs" value="true" />
+		<param name="use_ahrs" value="false" />
 		<!-- <param name="ping_rate" value="0.1" /> -->
 		<remap from="navsts" to="lupis/usbl_navsts" />
 	</node>
