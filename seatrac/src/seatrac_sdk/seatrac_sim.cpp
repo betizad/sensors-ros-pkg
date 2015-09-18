@@ -291,8 +291,8 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 		//TODO Add for USBL the azimuth measurement on listening
 		PingReq::Ptr req(new PingReq());
 		fillPosReply(req, msg, true);
-		req->acofix.src = node_id;
-		req->acofix.dest = msg->sender;
+		req->acofix.src = msg->sender;
+		req->acofix.dest = msg->receiver;
 		/*req->acofix.flags.POSITION_VALID = 0;
 		req->acofix.flags.RANGE_VALID = 0;
 		req->acofix.flags.USBL_VALID = 0;
