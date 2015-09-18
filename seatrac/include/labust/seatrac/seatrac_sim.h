@@ -59,6 +59,7 @@ namespace labust
 				WAIT_PING_REPLY,
 				WAIT_DATA_REPLY
 			};
+
 		public:
 			/**
 			 * Main constructor
@@ -104,6 +105,11 @@ namespace labust
 			void onUSBLTimeout(const ros::TimerEvent& e);
 			///Helper method for registration
 			void registerModem();
+			///Helper method
+			template <class MsgType>
+			void fillPosReply(MsgType& resp, const underwater_msgs::MediumTransmission::ConstPtr& msg, bool passive=false);
+			///Helper method for absolute azimuth and bearing
+			std::pair<double, double> getAzimuthElevation(const underwater_msgs::MediumTransmission::ConstPtr& msg);
 
 			///Helper function for medium message sending
 			inline void sendToMedium(underwater_msgs::MediumTransmission::Ptr& msg)

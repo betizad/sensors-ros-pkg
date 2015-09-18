@@ -290,8 +290,10 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 		//Create PING_REQ message and send to callback
 		//TODO Add for USBL the azimuth measurement on listening
 		PingReq::Ptr req(new PingReq());
+		fillPosReply(req, msg, true);
+		req->acofix.src = node_id;
 		req->acofix.dest = msg->sender;
-		req->acofix.flags.POSITION_VALID = 0;
+		/*req->acofix.flags.POSITION_VALID = 0;
 		req->acofix.flags.RANGE_VALID = 0;
 		req->acofix.flags.USBL_VALID = 0;
 		if (!is_modem)
@@ -300,7 +302,7 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 			req->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
 			req->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
 		}
-		this->fillAcoFix(req->acofix);
+		this->fillAcoFix(req->acofix);*/
 		out = req;
 	}
 	else if (state == WAIT_PING_REPLY)
@@ -314,9 +316,10 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 			//Create the PING_RESP and send navigation data
 			PingResp::Ptr resp(new PingResp());
 			//\todo Set only range for modems
-			this->fillAcoFix(resp->acofix);
+			fillPosReply(resp, msg);
 			resp->acofix.dest = node_id;
 			resp->acofix.src = expected_id;
+			/*this->fillAcoFix(resp->acofix);
 		    resp->acofix.flags.RANGE_VALID = 1;
 			resp->acofix.flags.USBL_VALID = 0;
 			resp->acofix.flags.POSITION_VALID = 0;
@@ -332,7 +335,7 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 				resp->acofix.position[AcoFix::x] = (msg->position.position.north - navstate.position.north)*AcoFix::RANGE_SC;
 				resp->acofix.position[AcoFix::y] = (msg->position.position.east - navstate.position.east)*AcoFix::RANGE_SC;
 				resp->acofix.position[AcoFix::z] = (msg->position.position.depth - navstate.position.depth)*AcoFix::RANGE_SC;
-			}
+			}*/
 
 			out = resp;
 		}
@@ -348,6 +351,47 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 	}
 	this->setState(IDLE);
 	this->sendMessage(out);
+}
+
+template <class MsgType>
+void SeatracSim::fillPosReply(MsgType& resp, const underwater_msgs::MediumTransmission::ConstPtr& msg, bool passive)
+{
+  //\todo Set only range for modems
+  this->fillAcoFix(resp->acofix);
+  boost::mutex::scoped_lock l(position_mux);
+  double dn = msg->position.position.north - navstate.position.north;
+  double de = msg->position.position.east - navstate.position.east;
+  double dd = msg->position.position.depth - navstate.position.depth;
+  l.unlock();
+
+  //resp->acofix.dest = node_id;
+  //resp->acofix.src = expected_id;
+  resp->acofix.flags.RANGE_VALID = !passive;
+  resp->acofix.flags.USBL_VALID = 0;
+  resp->acofix.flags.POSITION_VALID = 0;
+  resp->acofix.range.dist = sqrt(dn*dn+de*de+dd*dd)*AcoFix::RANGE_SC;
+
+  if (!is_modem)
+  {
+      resp->acofix.flags.USBL_VALID = 1;
+      resp->acofix.flags.POSITION_VALID = !passive;
+
+      double rh = sqrt(dn*dn+de*de);
+      double el(0);
+      if (rh == 0) el = 90 * (dd >= 0?1:-1); else  el = 180*atan(dd/rh)/M_PI;
+      double az = 180*atan2(de,dn)/M_PI;
+      if (az < 0) az += 360;
+      resp->acofix.usbl.azimuth = az*AcoFix::ANGLE_SC;
+      resp->acofix.usbl.elevation = el*AcoFix::ANGLE_SC;
+      if (!passive)
+      {
+        resp->acofix.position[AcoFix::x] = dn*AcoFix::RANGE_SC;
+        resp->acofix.position[AcoFix::y] = de*AcoFix::RANGE_SC;
+        resp->acofix.position[AcoFix::z] = dd*AcoFix::RANGE_SC;
+      }
+  }
+
+  resp->acofix.vos = vos;
 }
 
 void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg, const DatSendCmd& incoming)
@@ -392,19 +436,21 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		//Create DAT_RECEIVE message and send to callback
 		//TODO Add for USBL the azimuth measurement on listening
 		DatReceive::Ptr req(new DatReceive());
-		req->acofix.src = msg->sender;
-		req->acofix.dest = msg->receiver;
-		req->acofix.flags.POSITION_VALID = 0;
+		req->data = incoming.data;
+		fillPosReply(req, msg, true);
+        req->acofix.src = msg->sender;
+        req->acofix.dest = msg->receiver;
+		/*req->acofix.flags.POSITION_VALID = 0;
 		req->acofix.flags.RANGE_VALID = 0;
 		req->acofix.flags.USBL_VALID = 0;
-		req->data = incoming.data;
+
 		if (!is_modem)
 		{
 			req->acofix.flags.USBL_VALID = 1;
 			req->acofix.usbl.azimuth = msg->azimuth*AcoFix::ANGLE_SC;
 			req->acofix.usbl.elevation = msg->elevation*AcoFix::ANGLE_SC;
 		}
-		this->fillAcoFix(req->acofix);
+		this->fillAcoFix(req->acofix);*/
 		out = req;
 	}
 	else if (state == WAIT_DATA_REPLY)
@@ -418,9 +464,11 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 			//Create the PING_RESP and send navigation data
 			DatReceive::Ptr resp(new DatReceive());
 			//\todo Set only range for modems
+			resp->data = incoming.data;
+			fillPosReply(resp, msg);
 			resp->acofix.src = expected_id;
 			resp->acofix.dest = node_id;
-			resp->data = incoming.data;
+			/*
 			resp->acofix.flags.RANGE_VALID = 1;
 			resp->acofix.flags.USBL_VALID = 0;
 			resp->acofix.flags.POSITION_VALID = 0;
@@ -437,7 +485,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 				resp->acofix.position[AcoFix::x] = (msg->position.position.north - navstate.position.north)*AcoFix::RANGE_SC;
 				resp->acofix.position[AcoFix::y] = (msg->position.position.east - navstate.position.east)*AcoFix::RANGE_SC;
 				resp->acofix.position[AcoFix::z] = (msg->position.position.depth - navstate.position.depth)*AcoFix::RANGE_SC;
-			}
+			}*/
 			out = resp;
 		}
 		else
