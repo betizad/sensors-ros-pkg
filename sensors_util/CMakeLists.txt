@@ -12,8 +12,10 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-#find_package(Boost REQUIRED)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+find_package(Boost REQUIRED)
 find_package(Eigen REQUIRED)
+find_package(CURL)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -78,7 +80,13 @@ add_library(sensors_util src/ImuComplementaryQuaternionFilter.cpp  ${HPP})
 
 ## Declare a cpp executable
 add_executable(serial_sink src/serial_sink.cpp)
-add_executable(curl_down src/curl_down.cpp)
+if (${CURL_FOUND})
+   add_executable(curl_down src/curl_down.cpp)
+   target_link_libraries(curl_down
+     ${catkin_LIBRARIES}
+     curl)
+endif()
+
 target_link_libraries(serial_sink ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable/library
@@ -88,11 +96,6 @@ target_link_libraries(serial_sink ${catkin_LIBRARIES})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sensors_util
    ${catkin_LIBRARIES}
- )
- 
-target_link_libraries(curl_down
-   ${catkin_LIBRARIES}
-   curl
  )
 
 #############
