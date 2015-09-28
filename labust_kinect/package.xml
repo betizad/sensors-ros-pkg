@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>labust_kinect</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>
       The package contains the software used for processing Kinect data.
   </description>

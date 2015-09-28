@@ -2,7 +2,8 @@
 comms_plugin: "labust::seatrac::SeatracSim"
 controller_plugin: "labust::seatrac::USBLController"
 listener_plugins: ["labust::seatrac::StatusListener",
-                   "labust::seatrac::DataListener"]
+                   "labust::seatrac::DataListener",
+                   "labust::seatrac::NavListener"]
 
 # USBLController configuration
 auto_mode: false

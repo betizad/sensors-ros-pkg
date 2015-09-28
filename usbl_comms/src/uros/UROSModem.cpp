@@ -54,9 +54,9 @@ struct SharedData
 
 	SharedData():
 		initCnt(0),
-		waitForInit(true),
+		waitForInit(false),
 		useExtLatLon(false),
-		inited(false),
+		inited(true),
 		gain(0),
 		sendPeriod(1.0)
 	{

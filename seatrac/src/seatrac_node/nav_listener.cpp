@@ -51,6 +51,8 @@ NavListener::NavListener():
 	ahrs_delay(0),
 	vos(0.0)
 {
+    registrations[PingReq::CID].push_back(Mediator<PingReq>::makeCallback(
+                    boost::bind(&NavListener::onAcoFixMessage<PingReq>,this,_1)));
 	registrations[PingResp::CID].push_back(Mediator<PingResp>::makeCallback(
 					boost::bind(&NavListener::onAcoFixMessage<PingResp>,this,_1)));
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
@@ -177,7 +179,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	{
 		fix_out->header.stamp = cur_time;
 		fix_out->position.header.stamp = cur_time;
-		fix_out->sound_speed = vos;
+		fix_out->sound_speed = fix.vos;
 		fix_pub[fix.src].publish(fix_out);
 		navsts_pub[fix.src].publish(fix_out->position);
 	}
