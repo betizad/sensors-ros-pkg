@@ -37,6 +37,7 @@
 #include <labust/seatrac/SeatracHandler.hpp>
 #include <boost/bind.hpp>
 #include <boost/crc.hpp>
+#include <iostream>
 
 using namespace labust::seatrac;
 
