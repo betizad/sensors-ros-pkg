@@ -36,6 +36,7 @@
 #include <labust/seatrac/seatrac_comms.h>
 
 #include <auv_msgs/NavSts.h>
+#include <std_msgs/Bool.h>
 #include <underwater_msgs/MediumTransmission.h>
 #include <ros/ros.h>
 
@@ -105,11 +106,21 @@ namespace labust
 			void onUSBLTimeout(const ros::TimerEvent& e);
 			///Helper method for registration
 			void registerModem();
+			///Helper method for unregistration
+			void unregisterModem();
 			///Helper method
 			template <class MsgType>
 			void fillPosReply(MsgType& resp, const underwater_msgs::MediumTransmission::ConstPtr& msg, bool passive=false);
 			///Helper method for absolute azimuth and bearing
 			std::pair<double, double> getAzimuthElevation(const underwater_msgs::MediumTransmission::ConstPtr& msg);
+
+			///Unregister modem
+			void onUnregisterModem(const std_msgs::Bool::ConstPtr& msg)
+			{
+				this->registered = !msg->data;
+				//Try to register again
+				this->registerModem();
+			}
 
 			///Helper function for medium message sending
 			inline void sendToMedium(underwater_msgs::MediumTransmission::Ptr& msg)
@@ -170,6 +181,8 @@ namespace labust
 			ros::Subscriber navsts;
 			///Incoming data from medium subscriber
 			ros::Subscriber medium_in;
+			///Unregister topic request
+			ros::Subscriber unregister_sub;
 			///Outgoing data to medium
 			ros::Publisher medium_out;
 			///Muxer for the publisher

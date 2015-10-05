@@ -2,7 +2,9 @@
     <!-- The surface USBL -->
     <remap from="medium_out" to="/medium_out" />
     <remap from="medium_in" to="/medium_in" />
+    <remap from="unregister_modems" to="/unregister_modems" />
     <remap from="register_modem" to="/register_modem" />
+    <remap from="unregister_modem" to="/unregister_modem" />
     
     <group ns="surface">
     	<node pkg="seatrac" type="seatrac_core" name="surface_sim">

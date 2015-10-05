@@ -35,6 +35,7 @@
  *  Created: 23.01.2013.
  *********************************************************************/
 #include <labust/simulation/ac_medium_sim.h>
+#include <std_msgs/Bool.h>
 #include <ros/ros.h>
 
 using namespace labust::seatrac;
@@ -52,11 +53,16 @@ void AcMediumSim::onInit()
 {
 	ros::NodeHandle nh, ph("~");
 
-	medium_in = nh.subscribe("medium_out", 3, &AcMediumSim::onMediumTransmission, this);
+	medium_in = nh.subscribe("medium_out", 16, &AcMediumSim::onMediumTransmission, this);
 
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_in",16);
+	unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
+	std_msgs::Bool out;
+	out.data = true;
+	unsubscribe_event.publish(out);
 
 	registration = nh.advertiseService("register_modem",&AcMediumSim::onRegistration, this);
+	unregistration = nh.advertiseService("unregister_modem",&AcMediumSim::onUnRegistration, this);
 }
 
 void AcMediumSim::onNavSts(int id, const auv_msgs::NavSts::ConstPtr& msg)
@@ -89,8 +95,39 @@ bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& reques
 	else
 	{
 		ROS_WARN("Node with ID=%d is already registered.", request.node_id);
-		return false;
+		return true;
 	}
+
+	return true;
+}
+
+bool AcMediumSim::onUnRegistration(underwater_msgs::AcSimRegister::Request& request,
+		underwater_msgs::AcSimRegister::Response& response)
+{
+	boost::mutex::scoped_lock l(state_mux);
+	ROS_INFO("Unregister subscriber %d.",request.node_id);
+	//Clear transport timers in progress
+	TimerVectorMap::iterator it = transport_timers.find(request.node_id);
+	if (it != transport_timers.end())
+	{
+		//Stop timers if available
+		for(std::list<ros::Timer>::iterator tit = it->second.begin();
+				tit != it->second.end(); ++tit)	tit->stop();
+		//Clear from map
+		transport_timers.erase(it);
+	}
+
+	//Unregister navsts topic
+	SubscriberMap::iterator sit = subs.find(request.node_id);
+	if (sit != subs.end())
+	{
+		sit->second.shutdown();
+		subs.erase(sit);
+	}
+
+	//Remove navsts topic
+	NavStsMap::iterator nit = nodes.find(request.node_id);
+	if (nit != nodes.end()) nodes.erase(nit);
 
 	return true;
 }

@@ -78,6 +78,9 @@ namespace labust
 			///Service call handler
 			bool onRegistration(underwater_msgs::AcSimRegister::Request& request,
 					underwater_msgs::AcSimRegister::Response& response);
+			///Service call handler
+			bool onUnRegistration(underwater_msgs::AcSimRegister::Request& request,
+					underwater_msgs::AcSimRegister::Response& response);
 			///Helper method for distance calculations
 			void getDistances(int node_id, const auv_msgs::NavSts& npos, DistanceMap& map);
 			///Helper function to start medium delay
@@ -110,8 +113,12 @@ namespace labust
 			ros::Subscriber medium_in;
 			///Medium output publisher
 			ros::Publisher medium_out;
+			///General unsubscribe event publisher
+			ros::Publisher unsubscribe_event;
 			///Service for node registration
 			ros::ServiceServer registration;
+			///Service for node unregistration
+			ros::ServiceServer unregistration;
 			///Registration map
 			NavStsMap nodes;
 			///Map of NavSts subscribers for each node.

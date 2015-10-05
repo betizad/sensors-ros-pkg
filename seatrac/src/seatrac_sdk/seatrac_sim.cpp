@@ -76,7 +76,8 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			&SeatracSim::onNavSts, this);
 	medium_in = nh.subscribe<underwater_msgs::MediumTransmission>("medium_in", 16,
 			&SeatracSim::onMediumTransmission, this);
-
+	unregister_sub = nh.subscribe<std_msgs::Bool>("unregister_modems", 1,
+			&SeatracSim::onUnregisterModem, this);
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_out",1);
 
 	//Create timer
@@ -85,6 +86,7 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			true, false);
 
 	//Register to medium with node id, navsts topic name, etc.
+	unregisterModem();
 	registerModem();
 
 	return true;
@@ -110,6 +112,29 @@ void SeatracSim::registerModem()
 	if (!registered)
 	{
 		ROS_WARN("SeatracSim: modem is not registered with the acoustic medium.");
+	}
+}
+
+void SeatracSim::unregisterModem()
+{
+	if (!registered) return;
+
+	ROS_INFO("SeatracSim: deregistering modem from medium.");
+
+	ros::NodeHandle nh;
+	ros::ServiceClient reg = nh.serviceClient<underwater_msgs::AcSimRegister>("unregister_modem");
+
+	if (reg.waitForExistence(ros::Duration(1.0)))
+	{
+		underwater_msgs::AcSimRegister srv;
+		srv.request.node_id = node_id;
+		srv.request.navsts_topic = navsts.getTopic();
+		registered = !reg.call(srv);
+	}
+
+	if (!registered)
+	{
+		ROS_INFO("SeatracSim: unregistered modem from acoustic medium.");
 	}
 }
 
