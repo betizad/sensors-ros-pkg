@@ -35,6 +35,8 @@
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/mediator.h>
 #include <labust/tools/GeoUtilities.hpp>
+#include <labust/tools/conversions.hpp>
+#include <labust/math/NumberManipulation.hpp>
 #include <pluginlib/class_list_macros.h>
 
 #include <underwater_msgs/USBLFix.h>
@@ -126,11 +128,29 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	//Add angle information
 	if (fix.flags.USBL_VALID)
 	{
-		fix_out->bearing = float(fix.usbl.azimuth)/AcoFix::ANGLE_SC;
-		fix_out->elevation = float(fix.usbl.elevation)/AcoFix::ANGLE_SC;
+		fix_out->bearing = fix_out->bearing_raw = float(fix.usbl.azimuth)/AcoFix::ANGLE_SC;
+		fix_out->elevation = fix_out->elevation_raw = float(fix.usbl.elevation)/AcoFix::ANGLE_SC;
 		//If range is already valid the position will be valid as well
 		//otherwise the azimuth is only valid
 		fix_out->type = underwater_msgs::USBLFix::AZIMUTH_ONLY;
+		try
+		{
+			geometry_msgs::TransformStamped transformDeg;
+			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(ahrs_delay));
+			//Correct the relative measurement with the local AHRS if needed
+			if (use_ahrs)
+			{
+				double r(0),p(0),y(0);
+				labust::tools::eulerZYXFromQuaternion(transformDeg.transform.rotation, r,p,y);
+				fix_out->bearing += 180*y/M_PI;
+				fix_out->bearing = labust::math::wrapDeg(fix_out->bearing);
+				if (fix_out->bearing < 0) fix_out->bearing = 360 + fix_out->bearing;
+			}
+		}
+		catch(tf2::TransformException& ex)
+		{
+			ROS_WARN("%s",ex.what());
+		}
 	}
 	//Add position information
 	if (fix.flags.POSITION_VALID)
