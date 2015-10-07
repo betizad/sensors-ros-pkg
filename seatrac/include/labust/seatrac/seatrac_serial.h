@@ -39,6 +39,8 @@
 #include <boost/thread.hpp>
 #include <boost/function.hpp>
 
+#include <ros/ros.h>
+
 #include <string>
 
 namespace labust
@@ -116,6 +118,9 @@ namespace labust
 
 			///Receive startup helper function.
 			void startReceive();
+
+			///Debug publisher of raw messages
+			ros::Publisher raw_out;
 
 			///Hardware i/o service.
 			boost::asio::io_service io;

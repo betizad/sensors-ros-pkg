@@ -38,6 +38,8 @@
 #include <labust/seatrac/seatrac_factory.h>
 #include <pluginlib/class_list_macros.h>
 
+#include <std_msgs/String.h>
+
 #include <boost/bind.hpp>
 #include <boost/crc.hpp>
 
@@ -60,6 +62,8 @@ bool SeatracSerial::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 	ph.param("port_name",port_name, port_name);
 	ph.param("baud", baud, baud);
+
+	raw_out = nh.advertise<std_msgs::String>("usbl_raw_msg",1);
 
 	return this->connect(port_name, baud);
 }
@@ -134,6 +138,11 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		std::istream is(&buffer);
 		std::string data(size,'\0');
 		is.read(&data[0],size);
+
+		//ROS debug output
+		std_msgs::String::Ptr outraw(new std_msgs::String());
+		outraw->data = data;
+		raw_out.publish(outraw);
 
 		SeatracMessage::Ptr msg;
 		try
