@@ -56,13 +56,14 @@ void AcMediumSim::onInit()
 	medium_in = nh.subscribe("medium_out", 16, &AcMediumSim::onMediumTransmission, this);
 
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_in",16);
-	unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
-	std_msgs::Bool out;
-	out.data = true;
-	unsubscribe_event.publish(out);
 
 	registration = nh.advertiseService("register_modem",&AcMediumSim::onRegistration, this);
 	unregistration = nh.advertiseService("unregister_modem",&AcMediumSim::onUnRegistration, this);
+	
+  unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
+	std_msgs::Bool out;
+	out.data = true;
+	unsubscribe_event.publish(out);
 }
 
 void AcMediumSim::onNavSts(int id, const auv_msgs::NavSts::ConstPtr& msg)
