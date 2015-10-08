@@ -284,7 +284,7 @@ bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	{
 		const PingError::ConstPtr err(
 				boost::dynamic_pointer_cast<PingError const>(msg));
-		ROS_ERROR("USBLController: PingError: 0x%x", err->status);
+		ROS_WARN("USBLController: PingError: 0x%x", err->status);
 		unlock = true;
 	}
 	else if (cid == PingSendResp::CID)
@@ -292,20 +292,20 @@ bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
 		const PingSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<PingSendResp const>(msg));
 		if ((unlock = (resp->status != CST::OK)))
-				ROS_ERROR("USBLController: PingSendResp: 0x%x", resp->status);
+				ROS_WARN("USBLController: PingSendResp: 0x%x", resp->status);
 	}
 	else if (cid == DatSendResp::CID)
 	{
 		const DatSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<DatSendResp const>(msg));
 		if ((unlock = (resp->status != CST::OK)))
-				ROS_ERROR("USBLController: DatSendResp: 0x%x", resp->status);
+				ROS_WARN("USBLController: DatSendResp: 0x%x", resp->status);
 	}
 	else if (cid == DatError::CID)
 	{
 		const DatError::ConstPtr err(
 				boost::dynamic_pointer_cast<DatError const>(msg));
-		ROS_ERROR("USBLController: DatError: 0x%x", err->status);
+		ROS_WARN("USBLController: DatError: 0x%x", err->status);
 		unlock = true;
 	}
 	else

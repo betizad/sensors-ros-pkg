@@ -105,7 +105,7 @@ bool Pinger::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	{
 		const PingError::ConstPtr err(
 				boost::dynamic_pointer_cast<PingError const>(msg));
-		ROS_ERROR("Pinger: PingError: 0x%x", err->status);
+		ROS_WARN("Pinger: PingError: 0x%x", err->status);
 		unlock = true;
 	}
 	else if (cid == PingSendResp::CID)
@@ -113,20 +113,20 @@ bool Pinger::onPingErrors(const SeatracMessage::ConstPtr& msg)
 		const PingSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<PingSendResp const>(msg));
 		if ((unlock = (resp->status != CST::OK)))
-			ROS_ERROR("Pinger: PingSendResp: 0x%x", resp->status);
+			ROS_WARN("Pinger: PingSendResp: 0x%x", resp->status);
 	}
 	else if (cid == DatSendResp::CID)
 	{
 		const DatSendResp::ConstPtr resp(
 				boost::dynamic_pointer_cast<DatSendResp const>(msg));
 		if ((unlock = (resp->status != CST::OK)))
-			ROS_ERROR("Pinger: DatSendResp: 0x%x", resp->status);
+			ROS_WARN("Pinger: DatSendResp: 0x%x", resp->status);
 	}
 	else if (cid == DatError::CID)
 	{
 		const DatError::ConstPtr err(
 				boost::dynamic_pointer_cast<DatError const>(msg));
-		ROS_ERROR("Pinger: DatError: 0x%x", err->status);
+		ROS_WARN("Pinger: DatError: 0x%x", err->status);
 		unlock = true;
 	}
 	else
