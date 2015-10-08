@@ -199,7 +199,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	{
 		fix_out->header.stamp = cur_time;
 		fix_out->position.header.stamp = cur_time;
-		fix_out->sound_speed = fix.vos/AcoFix::RANGE_SC;
+		fix_out->sound_speed = float(fix.vos)/AcoFix::RANGE_SC;
 		fix_pub[fix.src].publish(fix_out);
 		navsts_pub[fix.src].publish(fix_out->position);
 	}
