@@ -68,10 +68,10 @@ namespace labust {
               is_kf_initialized(false),
               is_detector_initialized(false),
               frames_without_measurement(0) {
-            cv::namedWindow("Tracking");
-            cv::createTrackbar("Blur size", "Tracking", &blur_size, 10);
-            cv::createTrackbar("Thresh size", "Tracking", &thresh_size, 100);
-            cv::createTrackbar("Thresh offset", "Tracking", &thresh_offset, 100);
+            //cv::namedWindow("Tracking");
+            //cv::createTrackbar("Blur size", "Tracking", &blur_size, 10);
+            //cv::createTrackbar("Thresh size", "Tracking", &thresh_size, 100);
+            //cv::createTrackbar("Thresh offset", "Tracking", &thresh_offset, 100);
            
             KFNav::vector q(5);
             q << std::pow(0.5,2), //x
