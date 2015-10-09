@@ -55,15 +55,18 @@ namespace labust {
         ~ObjectTrackerNode();
       private:
         void onInit();
+        void adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix);
         void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
         void processFrame();
         ros::NodeHandle nh;
         image_transport::ImageTransport it;
-        ros::Subscriber sonar_info_sub;
+        ros::Subscriber sonar_info_sub, usbl_fix_sub;
         image_transport::Subscriber image_sub;
+        ros::Publisher fix_pub;
         ArisSonar aris;
         SonarDetector sonar_detector;
+        int target_size;
       };
 
     }

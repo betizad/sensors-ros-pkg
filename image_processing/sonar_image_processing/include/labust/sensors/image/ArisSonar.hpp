@@ -52,16 +52,17 @@ namespace labust {
           ArisSonar() {}
           ~ArisSonar() {}
          
-          // Automatic range setting
+          // Automatic range and frequency setting.
           void setRangeOfInterest(double roi_start, double roi_end) {
             double new_window_start = sonar_info.window_start;
             double new_window_end = sonar_info.window_start + sonar_info.window_length;
             double frequency_high = sonar_info.frequency_hi;
-            // Keep window_start between 50% and 10% of the roi_start
+            // Window start has to be between 50% and 90% of the distance to target.
             if (sonar_info.window_start < 0.5 * roi_start ||
                 sonar_info.window_start > 0.9 * roi_start) {
               new_window_start = 0.75 * roi_start;
             }
+            // Window end has to be between 110% and 150% of distance to the target.
             if (sonar_info.window_start + sonar_info.window_length < 1.1 * roi_end ||
                 sonar_info.window_start + sonar_info.window_length > 1.5 * roi_end) {
               new_window_end = 1.25 * roi_end;
@@ -81,9 +82,9 @@ namespace labust {
               }
               if (new_window_end > MAX_LOW_RANGE) {
                 new_window_end = MAX_LOW_RANGE;
-                if (new_window_end < 0.75 * MAX_HIGH_RANGE) {
-                  frequency_high = true;
-                }
+              }
+              if (new_window_end < 0.75 * MAX_HIGH_RANGE) {
+                frequency_high = true;
               }
             }
 

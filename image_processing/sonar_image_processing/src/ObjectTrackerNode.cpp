@@ -39,6 +39,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/image_encodings.h>
+#include <underwater_msgs/USBLFix.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/SonarDetector.hpp>
@@ -52,6 +53,8 @@ using namespace labust::sensors::image;
 
 ObjectTrackerNode::ObjectTrackerNode() : 
     it(nh) {
+  ros::NodeHandle ph("~");
+  ph.getParam("target_size", target_size);
   this->onInit();
 };
 
@@ -59,8 +62,16 @@ ObjectTrackerNode::~ObjectTrackerNode() {};
 
 void ObjectTrackerNode::onInit() {
   ros::Rate rate(1);
+  // TODO: test and enable rangle setting from USBL fix.
+  //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  fix_pub = nh.advertise<underwater_msgs::USBLFix>("sonar_fix", 1); 
+  
+  sonar_detector.setContourClusteringParams(
+      500 /* max connected_distance in mm */, 
+      100 /* min_contour_size in mm^2 */, 
+      target_size /* target_size (area) in mm^2 */);
 }
 
 void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
@@ -80,14 +91,26 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   }
 }
 
+void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix) {
+  aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.25 * usbl_fix.range);
+}
+
 void ObjectTrackerNode::processFrame() {
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   cv::Point2f center;
   double area;
   aris.saveCartesianImageSize(cv_image_bgr->image.size());
-  sonar_detector.setContourClusteringParams(500,100,2000000);
   sonar_detector.setSonarInfo(aris.getSonarInfo());
   sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
+  double range, bearing;
+  sonar_detector.getMeasuredRangeAndBearing(&range, &bearing);
+  underwater_msgs::USBLFix sonar_fix;
+  sonar_fix.range = range;
+  sonar_fix.bearing = bearing;
+  if (range > 0) {
+    aris.setRangeOfInterest(0.5 * range, 2 * range);
+    fix_pub.publish(sonar_fix);
+  }
 }
 
 int main(int argc, char **argv) {

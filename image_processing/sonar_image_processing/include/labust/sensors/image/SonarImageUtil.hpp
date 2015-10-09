@@ -94,7 +94,7 @@ namespace labust {
           int cnt;
       };
       
-      class Contours {
+      class ContourProcessor {
         public:
           
           class Contour {
@@ -123,8 +123,8 @@ namespace labust {
               }
           };
           
-          Contours() {}
-          Contours(cv::vector<cv::vector<cv::Point> > cntrs) {
+          ContourProcessor() {}
+          ContourProcessor(cv::vector<cv::vector<cv::Point> > cntrs) {
             this->setContours(cntrs);
           }
 
@@ -154,8 +154,8 @@ namespace labust {
               for (int j=i+1; j<end; ++j) {
                 double dist = sqrt( 
                     (contours[i].center.x - contours[j].center.x)*(contours[i].center.x - contours[j].center.x) +
-                    (contours[i].center.y - contours[j].center.y)*(contours[i].center.y - contours[j].center.y) 
-                  ) - (sqrt(contours[i].size/M_PI) + sqrt(contours[j].size/M_PI));
+                    (contours[i].center.y - contours[j].center.y)*(contours[i].center.y - contours[j].center.y)) 
+                    - (sqrt(contours[i].size/M_PI) + sqrt(contours[j].size/M_PI));
                 if (dist < max_pix_dist) 
                   mutual_distances.push_back(Triplet<double, int, int>(dist, i, j));
               }
