@@ -74,7 +74,7 @@ void BridgeController::onIncoming(const std_msgs::String::ConstPtr& msg)
 	}
 	else
 	{
-		ROS_ERROR("BridgeController: packet decoding failed.");
+		ROS_WARN("BridgeController: packet decoding failed.");
 	}
 }
 

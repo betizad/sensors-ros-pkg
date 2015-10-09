@@ -235,7 +235,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 	}
 	else
 	{
-		ROS_ERROR("SeatracSim: No send handler implemented for CID=0x%x [%s].", msg->getCid(),
+		ROS_WARN("SeatracSim: No send handler implemented for CID=0x%x [%s].", msg->getCid(),
 						SeatracFactory::getResponseName(msg->getCid()).c_str());
 		return false;
 	}
@@ -251,7 +251,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 
 bool SeatracSim::resend()
 {
-	ROS_ERROR("SeatracSim: Resend not implemented.");
+	ROS_WARN("SeatracSim: Resend not implemented.");
 	return true;
 }
 
@@ -285,7 +285,7 @@ void SeatracSim::onMediumTransmission(const
 		}
 		else
 		{
-			ROS_ERROR("No receive handler for CID=0x%x [%s]", message->getCid(),
+			ROS_WARN("No receive handler for CID=0x%x [%s]", message->getCid(),
 						SeatracFactory::getResponseName(message->getCid()).c_str());
 		}
 	}
@@ -530,7 +530,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 
 void SeatracSim::onUSBLTimeout(const ros::TimerEvent& e)
 {
-	ROS_ERROR("SeatracSim: USBL timeout.");
+	ROS_WARN("SeatracSim: USBL timeout.");
 
 	int state = getState();
 

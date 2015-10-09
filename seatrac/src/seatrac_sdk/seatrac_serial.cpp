@@ -113,7 +113,7 @@ try
 }
 catch (std::exception& e)
 {
-	ROS_ERROR("%s", e.what());
+	ROS_WARN("%s", e.what());
 	return false;
 }
 
@@ -159,7 +159,7 @@ void SeatracSerial::onData(const boost::system::error_code& e,
 		}
 		catch (std::exception& e)
 		{
-			ROS_ERROR("SeatracSerial: %s",e.what());
+			ROS_WARN("SeatracSerial: %s",e.what());
 		}
 	}
 	else
