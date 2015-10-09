@@ -66,7 +66,7 @@ void SeatracCore::onInit()
 	}
 	catch (std::exception& e)
 	{
-		ROS_ERROR("SeatracCore: Exception caught during initialization: %s", e.what());
+		ROS_WARN("SeatracCore: Exception caught during initialization: %s", e.what());
 	}
 }
 
@@ -115,7 +115,7 @@ void SeatracCore::setupPlugins(ros::NodeHandle& nh, ros::NodeHandle& ph)
 		}
 		catch (std::exception& e)
 		{
-			ROS_ERROR("SeatracCore: Failed loading listener plugin:%s",e.what());
+			ROS_WARN("SeatracCore: Failed loading listener plugin:%s",e.what());
 		}
 	}
 

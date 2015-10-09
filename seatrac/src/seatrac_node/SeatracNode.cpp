@@ -100,7 +100,7 @@ void SeaTracNode::onInit()
 	bool setupOk(false);
 	while (!(setupOk = comms.connect(portName, baud)) && ros::ok())
 	{
-		ROS_ERROR("SeaTracNode::Failed to open port.");
+		ROS_WARN("SeaTracNode::Failed to open port.");
 		r.sleep();
 	}
 
@@ -149,7 +149,7 @@ bool SeaTracNode::masterProcessor(int cid, std::vector<uint8_t>& data)
 
 	if (cid == CID_PING::error)
 	{
-  	  ROS_ERROR("Error code:%d", data[0]);
+  	  ROS_WARN("Error code:%d", data[0]);
 	}
 	if (onlyAck)
 	{
@@ -201,7 +201,7 @@ void SeaTracNode::incomingMsg(int cid, std::vector<uint8_t>& data)
 			comms.resend();
 			break;
 		default:
-			ROS_ERROR("Message sending failed with error: %d", data[0]);
+			ROS_WARN("Message sending failed with error: %d", data[0]);
 			unlock = true;
 		}
 	}
