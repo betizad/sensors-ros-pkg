@@ -5,12 +5,11 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
 	<param name="use_gui" value="$(arg gui)"/>
   <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node> -->
-  <node name="diver_net_read" pkg="diver_net" type="diver_net_read_node">
+  <node name="diver_net_read" pkg="diver_net" type="diver_net_read_node" output="screen">
     <param name="PortName" value="/dev/ttyUSB0" />
-    <param name="Baud" value="460800" />
+    <param name="Baud" value="230400" />
   </node>
-  <node name="diver_net_filter" pkg="diver_net" type="diver_net_filter_node" >
-    <param name="gyro_calibration_file" value="'$(find diver_net)/diver_net_gyro_bias_2015-05-15-10-57-10.dnc'" />
+  <node name="diver_net_filter" pkg="diver_net" type="diver_net_filter_node" output="screen">
   </node>
   <node name="diver_net_transform_and_joint_publisher" pkg="diver_net" type="diver_net_transform_and_joint_publisher_node" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />

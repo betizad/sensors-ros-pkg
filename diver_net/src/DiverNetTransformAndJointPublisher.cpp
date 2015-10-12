@@ -18,7 +18,6 @@
 using namespace labust::sensors; 
 
 DiverNetTransformAndJointPublisher::DiverNetTransformAndJointPublisher():
-    _rpy_topic("/rpy_filtered"),
     nodeCount(20),
     isCalibrated(false),
     listener(tfbuffer),
@@ -37,8 +36,8 @@ void DiverNetTransformAndJointPublisher::onInit() {
 
   //Setup publisher
   jointsPub = nh.advertise<sensor_msgs::JointState>("joint_states",1);
-  rpy = nh.subscribe(_rpy_topic, 1, &DiverNetTransformAndJointPublisher::publishTransformAndJoints, this);
-  calibrate = nh.subscribe<std_msgs::Bool>("/calibrate", 1, &DiverNetTransformAndJointPublisher::calibratePose, this);
+  quaternion_sub = nh.subscribe("quaternion_filtered", 1, 
+      &DiverNetTransformAndJointPublisher::publishTransformAndJoints, this);
 
   configureNet();
 }
@@ -66,32 +65,9 @@ void DiverNetTransformAndJointPublisher::configureNet() {
   names.push_back("right_calf");
   names.push_back("right_foot");
   names.push_back("placeholder_3");
-  
-  // Setup zero state - Should be a configuration option
-  // Null-pose, arms in front. This initialization assumes axes permutation is done.
-  zeroState = Eigen::MatrixXd::Zero(nodeCount, 3);
 }
 
-
-void DiverNetTransformAndJointPublisher::calibratePose(const std_msgs::Bool::ConstPtr& calibrate) {
-	if (calibrate->data) {
-    boost::mutex::scoped_lock l(dataMux);
-    Eigen::Quaternion<double> q;
-    double r, p, y;
-    labust::tools::eulerZYXFromQuaternion<Eigen::Quaternion<double> > (currentMeasQ[3], r, p, y);
-    labust::tools::quaternionFromEulerZYX(0, 0, y, q);
-    for (int i=0; i<nodeCount; ++i) {
-      labust::tools::quaternionFromEulerZYX(zeroState(i,0), zeroState(i,1), zeroState(i,2), zeroStateQ[i]);
-      zeroStateQ[i] = q * zeroStateQ[i];
-      offsetQ[i] = currentMeasQ[i].inverse() * zeroStateQ[i];
-    }	
-    isCalibrated = true;
-	} else {
-    isCalibrated = false;
-  }
-}
-
-void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &rpy) {
+void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &quaternion) {
 	enum {ax,ay,az,mx,my,mz,gx,gy,gz};
  
   sensor_msgs::JointStatePtr joints(new sensor_msgs::JointState());
@@ -107,20 +83,10 @@ void DiverNetTransformAndJointPublisher::publishTransformAndJoints(const std_msg
     transforms[i].transform.translation.y = 0;
     transforms[i].transform.translation.z = 0;
 
-    Eigen::Quaternion<double> q;
-
-    labust::tools::quaternionFromEulerZYX(
-        rpy->data[3*i], 
-        rpy->data[3*i+1],
-        rpy->data[3*i+2],
-        q);
-    currentMeasQ[i] = q;
-    if (isCalibrated) q = q * offsetQ[i];
-    
-    transforms[i].transform.rotation.w = q.w();
-    transforms[i].transform.rotation.x = q.x();
-    transforms[i].transform.rotation.y = q.y();
-    transforms[i].transform.rotation.z = q.z();
+    transforms[i].transform.rotation.w = quaternion->data[4*i];
+    transforms[i].transform.rotation.x = quaternion->data[4*i+1];
+    transforms[i].transform.rotation.y = quaternion->data[4*i+2];
+    transforms[i].transform.rotation.z = quaternion->data[4*i+3];
     
     transforms[i].child_frame_id = "abs_" + names[i];
     transforms[i].header.frame_id = "local";

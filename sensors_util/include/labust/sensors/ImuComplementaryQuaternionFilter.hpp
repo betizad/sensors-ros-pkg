@@ -31,7 +31,7 @@ namespace labust
          * Generic destructor.
          */
         ~ImuComplementaryQuaternionFilter();
-        
+        void reset();
         void processFrame(const Eigen::MatrixXd data);
         std::vector<Eigen::Quaternion<double> > getQuaternionOrientation();
 

@@ -18,6 +18,10 @@ ImuComplementaryQuaternionFilter::ImuComplementaryQuaternionFilter(const int nod
 
 ImuComplementaryQuaternionFilter::~ImuComplementaryQuaternionFilter() {}
 
+void ImuComplementaryQuaternionFilter::reset() {
+  is_initialized = false;
+}
+
 void ImuComplementaryQuaternionFilter::processFrame(const Eigen::MatrixXd data) {
   if (!is_initialized) {
     this->initialOrientation(data);

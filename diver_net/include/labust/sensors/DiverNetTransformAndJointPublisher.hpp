@@ -87,15 +87,10 @@ namespace labust
 			 */
 			void publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &rpy);
 			/**
-			 * Handle net init.
-			 */
-			void calibratePose(const std_msgs::Bool::ConstPtr& calibrate);
-
-			/**
 			 * The ROS publisher.
 			 */
-			ros::Publisher rawData, jointsPub, rpyData, breathingBelt;
-      ros::Subscriber rpy, calibrate;
+			ros::Publisher jointsPub;
+      ros::Subscriber quaternion_sub;
 			/**
 			 * The transform broadcaster.
 			 */
@@ -127,7 +122,6 @@ namespace labust
 			 * Data mutex.
 			 */
 			boost::mutex dataMux;
-      std::string _rpy_topic;
 		};
 	}
 }
