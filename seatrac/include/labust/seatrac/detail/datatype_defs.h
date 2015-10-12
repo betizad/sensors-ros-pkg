@@ -136,6 +136,8 @@ struct AcoFix {
 public:
   enum { RANGE_SC = 10};
   enum { ANGLE_SC = 10};
+  enum { RSSI_SC = 10};
+  enum { FIT_ERROR_SC = 100};
   enum { x = 1};
   enum { y = 0};
   enum { z = 2};
