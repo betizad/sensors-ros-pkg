@@ -67,6 +67,7 @@ bool NavListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	//Configure transponder information
 	ph.param("use_ahrs", use_ahrs, use_ahrs);
+	ph.param("ahrs_delay", ahrs_delay, ahrs_delay);
 	std::vector<int> tx;
 	ph.param("transponders", tx, tx);
 	std::vector<std::string> txnames;
@@ -114,7 +115,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		return;
 	}
 
-	ros::Time cur_time(ros::Time::now());
+	ros::Time fix_time(ros::Time::now() - ros::Duration(ahrs_delay));
 	if (fix.flags.POSITION_ENHANCED) ROS_DEBUG("\t Enhanced position for "
 					"transponder: %d", fix.src);
 
@@ -133,10 +134,18 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		//If range is already valid the position will be valid as well
 		//otherwise the azimuth is only valid
 		fix_out->type = underwater_msgs::USBLFix::AZIMUTH_ONLY;
+		//Set the RSSI
+		for (int i=0; i<fix.usbl.rssi.size(); ++i)
+		{
+			fix_out->rssi.push_back(float(fix.usbl.rssi[i])/AcoFix::RSSI_SC);
+		}
+		//Set the fit error
+		fix_out->fit_error = float(fix.usbl.fit_error)/AcoFix::FIT_ERROR_SC;
+
 		try
 		{
 			geometry_msgs::TransformStamped transformDeg;
-			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(ahrs_delay));
+			transformDeg = buffer.lookupTransform("local", "usbl_frame", fix_time);
 			//Correct the relative measurement with the local AHRS if needed
 			if (use_ahrs)
 			{
@@ -164,7 +173,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		try
 		{
 			geometry_msgs::TransformStamped transformDeg;
-			transformDeg = buffer.lookupTransform("local", "usbl_frame", ros::Time(ahrs_delay));
+			transformDeg = buffer.lookupTransform("local", "usbl_frame", fix_time);
 			//Correct the relative measurement with the local AHRS if needed
 			if (use_ahrs)
 			{
@@ -186,7 +195,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		pos->vector.x = float(fix.position[AcoFix::x])/AcoFix::RANGE_SC;
 		pos->vector.y = float(fix.position[AcoFix::y])/AcoFix::RANGE_SC;
 		pos->vector.z = float(fix.position[AcoFix::z])/AcoFix::RANGE_SC;
-		pos->header.stamp = cur_time;
+		pos->header.stamp = fix_time;
 		it->second.publish(pos);
 
 		fix_out->relative_position.x = pos->vector.x;
@@ -197,15 +206,15 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	//If anything was valid publish the fix data
 	if (fix.flags.USBL_VALID || fix.flags.RANGE_VALID || fix.flags.POSITION_VALID)
 	{
-		fix_out->header.stamp = cur_time;
-		fix_out->position.header.stamp = cur_time;
+		fix_out->header.stamp = fix_time;
+		fix_out->position.header.stamp = fix_time;
 		fix_out->sound_speed = float(fix.vos)/AcoFix::RANGE_SC;
 		fix_pub[fix.src].publish(fix_out);
 		navsts_pub[fix.src].publish(fix_out->position);
 	}
   else
   {
-    ROS_ERROR("Empty AcoFix.");
+    ROS_INFO("Empty AcoFix.");
   }
 }
 

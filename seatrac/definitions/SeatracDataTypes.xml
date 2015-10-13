@@ -67,6 +67,8 @@
 	<struct name="AcoFix" serialization="object_serializable" >
 	    <enum name="RANGE_SC" value="10" />
 	    <enum name="ANGLE_SC" value="10" />
+        <enum name="RSSI_SC" value="10" />
+        <enum name="FIT_ERROR_SC" value="100" />
 	    <enum name="x" value="1" />
 	    <enum name="y" value="0" />
 	    <enum name="z" value="2" />
