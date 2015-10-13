@@ -39,6 +39,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/image_encodings.h>
+#include <underwater_msgs/SonarFix.h>
 #include <underwater_msgs/USBLFix.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
@@ -66,7 +67,7 @@ void ObjectTrackerNode::onInit() {
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
-  fix_pub = nh.advertise<underwater_msgs::USBLFix>("sonar_fix", 1); 
+  fix_pub = nh.advertise<underwater_msgs::SonarFix>("sonar_fix", 1); 
   
   sonar_detector.setContourClusteringParams(
       500 /* max connected_distance in mm */, 
@@ -92,7 +93,7 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
 }
 
 void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix) {
-  aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.25 * usbl_fix.range);
+  aris.setRangeOfInterest(0.5 * usbl_fix.range, 2 * usbl_fix.range);
 }
 
 void ObjectTrackerNode::processFrame() {
@@ -104,9 +105,10 @@ void ObjectTrackerNode::processFrame() {
   sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
   double range, bearing;
   sonar_detector.getMeasuredRangeAndBearing(&range, &bearing);
-  underwater_msgs::USBLFix sonar_fix;
+  underwater_msgs::SonarFix sonar_fix;
   sonar_fix.range = range;
   sonar_fix.bearing = bearing;
+  sonar_fix.sonar_info = aris.getSonarInfo();
   if (range > 0) {
     aris.setRangeOfInterest(0.5 * range, 2 * range);
     fix_pub.publish(sonar_fix);
