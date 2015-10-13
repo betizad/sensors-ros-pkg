@@ -214,7 +214,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	}
   else
   {
-    ROS_ERROR("Empty AcoFix.");
+    ROS_INFO("Empty AcoFix.");
   }
 }
 
