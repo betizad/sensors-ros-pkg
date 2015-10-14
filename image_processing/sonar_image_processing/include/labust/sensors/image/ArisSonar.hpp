@@ -60,12 +60,12 @@ namespace labust {
             // Window start has to be between 50% and 90% of the distance to target.
             if (sonar_info.window_start < 0.5 * roi_start ||
                 sonar_info.window_start > 0.9 * roi_start) {
-              new_window_start = 0.75 * roi_start;
+              new_window_start = 0.7 * round(roi_start);
             }
             // Window end has to be between 110% and 150% of distance to the target.
-            if (sonar_info.window_start + sonar_info.window_length < 1.1 * roi_end ||
+            if (sonar_info.window_start + sonar_info.window_length < roi_end ||
                 sonar_info.window_start + sonar_info.window_length > 1.5 * roi_end) {
-              new_window_end = 1.25 * roi_end;
+              new_window_end = 1.3 * round(roi_end);
             }
             
             if (frequency_high) {
@@ -87,10 +87,12 @@ namespace labust {
                 frequency_high = true;
               }
             }
-
-            setSonarRange(new_window_start, new_window_end);
-            setSonarFrequencyHigh(frequency_high);
-            uploadSonarConfig();
+            if (new_window_start != sonar_info.window_start ||
+                new_window_end != sonar_info.window_start + sonar_info.window_length) {
+              setSonarRange(new_window_start, new_window_end);
+              setSonarFrequencyHigh(frequency_high);
+              uploadSonarConfig();
+            }
           }
 
           void setSonarRange(double start, double end) {
@@ -168,6 +170,8 @@ namespace labust {
               cfg.request.frequancy_hi = sonar_info.frequency_hi;
               cfg.request.focus = sonar_info.focus;
               cfg.request.pulse_width = sonar_info.pulse_width;
+              // For some reason setting repeatedly the same value for sonar range
+              // results in decreasing range. These constants are to normalize that.
               cfg.request.window_start = sonar_info.window_start * 1.0345;
               cfg.request.window_length = sonar_info.window_length * 1.045;
               cfg.request.samples_per_beam = sonar_info.samples_per_beam;

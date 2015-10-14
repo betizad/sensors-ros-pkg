@@ -93,7 +93,7 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
 }
 
 void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix) {
-  aris.setRangeOfInterest(0.5 * usbl_fix.range, 2 * usbl_fix.range);
+  aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.5 * usbl_fix.range);
 }
 
 void ObjectTrackerNode::processFrame() {
@@ -110,7 +110,7 @@ void ObjectTrackerNode::processFrame() {
   sonar_fix.bearing = bearing;
   sonar_fix.sonar_info = aris.getSonarInfo();
   if (range > 0) {
-    aris.setRangeOfInterest(0.5 * range, 2 * range);
+    aris.setRangeOfInterest(0.75 * range, 1.5 * range);
     fix_pub.publish(sonar_fix);
   }
 }
