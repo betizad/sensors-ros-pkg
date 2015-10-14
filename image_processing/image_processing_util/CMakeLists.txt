@@ -8,6 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   sensor_msgs
   roscpp
+  rosbag
+  snippets
 )
 
 ## System dependencies are found with CMake's conventions
@@ -77,6 +79,7 @@ add_library(image_processing_util ${SRC} ${HPP})
 
 ## Declare a cpp executable
 # add_executable(snippets_node src/snippets_node.cpp)
+add_executable(image_extractor src/ImageExtractor.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -86,6 +89,10 @@ add_library(image_processing_util ${SRC} ${HPP})
 target_link_libraries(image_processing_util
    ${catkin_LIBRARIES}
  )
+target_link_libraries(image_extractor
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
 #############
 ## Install ##
