@@ -1,0 +1,20 @@
+<library path="lib/libcaddy_comms">
+	<class type="labust::seatrac::BuddyUSBL" 
+	    base_class_type="labust::seatrac::DeviceController">
+		<description>
+			The Buddy USBL pinger for the reduced interrogation scheme.
+		</description>
+	</class> 
+    <class type="labust::seatrac::SurfaceUSBL" 
+        base_class_type="labust::seatrac::DeviceController">
+        <description>
+            The Buddy USBL pinger for the reduced interrogation scheme.
+        </description>
+    </class>
+    <class type="labust::seatrac::DiverModem" 
+        base_class_type="labust::seatrac::DeviceController">
+        <description>
+            The Buddy USBL pinger for the reduced interrogation scheme.
+        </description>
+    </class>  
+</library>

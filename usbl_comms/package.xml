@@ -28,5 +28,6 @@
 	<export>
 		<nodelet plugin="${prefix}/nodelet_plugins.xml" />
 		<seatrac plugin="${prefix}/uros_seatrac_plugins.xml" />
+        <seatrac plugin="${prefix}/caddy_seatrac_plugins.xml" />
 	</export>
 </package>

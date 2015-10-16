@@ -79,6 +79,11 @@ add_library(uros_comms src/uros/uros_messages.cpp
     src/uros/uros_modem_controller.cpp
     src/uros/uros_usbl_controller.cpp)
 
+add_library(caddy_comms src/caddy/caddy_messages.cpp 
+	src/caddy/surface_usbl.cpp
+	src/caddy/diver_modem.cpp
+    src/caddy/buddy_usbl.cpp)
+
 ## Declare a cpp executable
 add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)
 add_executable(encoding_test src/test/bitencoding.cpp src/DiverMsg.cpp)

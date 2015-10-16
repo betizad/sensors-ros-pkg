@@ -1,0 +1,9 @@
+<uros_acoustic_messages>       	
+	<struct name="BitMessageTest" assert_size="8" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="type" bits="4" />
+	    <var type="int32_t" name="lat" bits="22" />
+	    <var type="int32_t" name="lon" bits="22" />
+	</struct>
+
+</uros_acoustic_messages>

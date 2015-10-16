@@ -1,0 +1,30 @@
+<uros_acoustic_messages>     
+    <struct name="BuddyReport" assert_size="8" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <enum name="MSG_ID" value="1" />
+	    <var type="uint8_t" name="msg_id" bits="3" />
+	    <var type="int32_t" name="offset_x" bits="10" />
+	    <var type="int32_t" name="offset_y" bits="10" />
+	    <var type="int32_t" name="course" bits="10" />
+	    <var type="uint8_t" name="speed" bits="4" />
+        <var type="uint8_t" name="depth" bits="7" />
+        <var type="uint8_t" name="diver_offset_x" bits="10" />
+        <var type="uint8_t" name="diver_offset_y" bits="10" />
+	</struct>
+    
+    <struct name="SurfaceNav" assert_size="5" serialization="primitive_type"
+        bitfield="TRUE">
+        <var type="uint8_t" name="msg_id" bits="3" />
+        <var type="int32_t" name="course" bits="10" />
+        <var type="int32_t" name="speed" bits="4" />
+        <var type="int32_t" name="offset_x" bits="10" />
+        <var type="int32_t" name="offset_y" bits="10" />
+    </struct>
+	
+	<struct name="DiverNav" assert_size="3" serialization="primitive_type"
+	    bitfield="TRUE">
+	    <var type="uint8_t" name="msg_id" bits="3" />
+	    <var type="int32_t" name="heading" bits="10" />
+	    <var type="int32_t" name="depth" bits="7" />
+	</struct>
+</uros_acoustic_messages>
