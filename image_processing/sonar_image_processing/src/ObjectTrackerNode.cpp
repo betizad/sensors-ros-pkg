@@ -39,8 +39,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <sensor_msgs/image_encodings.h>
-#include <underwater_msgs/SonarFix.h>
-#include <underwater_msgs/USBLFix.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/SonarDetector.hpp>
@@ -63,11 +61,12 @@ ObjectTrackerNode::~ObjectTrackerNode() {};
 
 void ObjectTrackerNode::onInit() {
   ros::Rate rate(1);
-  // TODO: test and enable rangle setting from USBL fix.
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
+  nav_filter_estimate_sub = nh.subscribe("/buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
+  position_sub = nh.subscribe("/buddy/position", 1, &ObjectTrackerNode::setHeading, this);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
-  fix_pub = nh.advertise<underwater_msgs::SonarFix>("sonar_fix", 1); 
+  sonar_fix_pub = nh.advertise<underwater_msgs::SonarFix>("sonar_fix", 1);
   
   sonar_detector.setContourClusteringParams(
       500 /* max connected_distance in mm */, 
@@ -92,6 +91,14 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   }
 }
 
+void ObjectTrackerNode::setNavFilterEstimate(const navcon_msgs::RelativePosition& nav_filter_estimate) {
+  sonar_detector.adjustROIFromFilterEstimate(nav_filter_estimate);
+}
+
+void ObjectTrackerNode::setHeading(const auv_msgs::NavSts& position_estimate) {
+  sonar_detector.setHeading(position_estimate.orientation.yaw * 180 / M_PI);
+}
+
 void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix) {
   aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.5 * usbl_fix.range);
 }
@@ -108,10 +115,9 @@ void ObjectTrackerNode::processFrame() {
   underwater_msgs::SonarFix sonar_fix;
   sonar_fix.range = range;
   sonar_fix.bearing = bearing;
-  sonar_fix.sonar_info = aris.getSonarInfo();
+  sonar_fix.header = aris.getSonarInfo().header;
   if (range > 0) {
-    aris.setRangeOfInterest(0.75 * range, 1.5 * range);
-    fix_pub.publish(sonar_fix);
+    sonar_fix_pub.publish(sonar_fix);
   }
 }
 

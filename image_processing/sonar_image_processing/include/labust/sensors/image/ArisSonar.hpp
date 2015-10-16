@@ -83,7 +83,7 @@ namespace labust {
               if (new_window_end > MAX_LOW_RANGE) {
                 new_window_end = MAX_LOW_RANGE;
               }
-              if (new_window_end < 0.75 * MAX_HIGH_RANGE) {
+              if (new_window_end < 0.5 * MAX_HIGH_RANGE) {
                 frequency_high = true;
               }
             }

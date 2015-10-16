@@ -38,6 +38,8 @@
 #include <aris/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 
+#include <navcon_msgs/RelativePosition.h>
+
 #include <labust/sensors/image/ObjectDetector.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 #include <labust/sensors/image/SonarImageUtil.hpp>
@@ -68,10 +70,10 @@ namespace labust {
               is_kf_initialized(false),
               is_detector_initialized(false),
               frames_without_measurement(0) {
-            //cv::namedWindow("Tracking");
-            //cv::createTrackbar("Blur size", "Tracking", &blur_size, 10);
-            //cv::createTrackbar("Thresh size", "Tracking", &thresh_size, 100);
-            //cv::createTrackbar("Thresh offset", "Tracking", &thresh_offset, 100);
+            cv::namedWindow("Tracking");
+            cv::createTrackbar("Blur size", "Tracking", &blur_size, 10);
+            cv::createTrackbar("Thresh size", "Tracking", &thresh_size, 100);
+            cv::createTrackbar("Thresh offset", "Tracking", &thresh_offset, 100);
            
             KFNav::vector q(5);
             q << std::pow(0.5,2), //x
@@ -128,24 +130,27 @@ namespace labust {
           virtual void detect(cv::Mat image, cv::Point2f& center, double& area) {
             cv::Mat img_temp;
             image.copyTo(img_temp);
+            //visualize(image);
             cvtColor(image, image, CV_BGR2GRAY);
             if (!is_detector_initialized) {
               recalculateBackgroundMask(image);
-              roi = cv::Rect(pixToMM(cv::Point2f(0,0)), pixToMM(cv::Point2f(mask.cols, mask.rows)));
+              //roi = cv::Rect(pixToMM(cv::Point2f(60,60)), pixToMM(cv::Point2f(350, 500)));
             }
             thresholdImage(image);
              
             cv::vector<cv::Rect> curr_rois = findInterestingRegions(image);
-            updateRoi(curr_rois, center, area);
+            center = processCandidates(curr_rois);            
+            return; 
+            cv::circle(image, MMToPix(center), 5, cv::Scalar(199), -1);
+            cv::rectangle(image, rectMMToRectPix(roi), cv::Scalar(125), 3);
+            cv::rectangle(img_temp, rectMMToRectPix(roi), cv::Scalar(0,0,255), 3);
+            cv::imshow("Tracking", image); cv::waitKey(10);
+            cv::imshow("Sonar tracking", img_temp); cv::waitKey(10);
+            
+            //updateRoi(curr_rois, center, area);
             
             KFNav::vectorref prediction = kf_estimator.getState(); 
             cv::Point2f center_estimate(prediction[0]*1000, prediction[1]*1000);
-            //cv::circle(image, MMToPix(center), 5, cv::Scalar(199), -1);
-            //cv::circle(image, MMToPix(center_estimate), 5, cv::Scalar(100), -1);
-            //cv::rectangle(image, rectMMToRectPix(roi), cv::Scalar(125), 3);
-            //cv::rectangle(img_temp, rectMMToRectPix(roi), cv::Scalar(0,0,255), 3);
-            //cv::imshow("Tracking", image); cv::waitKey(10);
-            //cv::imshow("Sonar tracking", img_temp); cv::waitKey(10);
             estimated_range = sqrt(center_estimate.x*center_estimate.x + center_estimate.y*center_estimate.y) / 1e3;
             estimated_bearing = std::atan2(center_estimate.x, center_estimate.y);
             measurement_range = sqrt(center.x*center.x + center.y*center.y) / 1e3;
@@ -160,6 +165,20 @@ namespace labust {
           void getEstimatedRangeAndBearing(double* range, double* bearing) {
             *range = estimated_range;
             *bearing = estimated_bearing;
+          }
+
+          void setHeading(const double new_heading) {
+            heading = new_heading;
+          }
+
+          void adjustROIFromFilterEstimate(const navcon_msgs::RelativePosition& filter_estimate) {
+            // x-y inverted compared to filter; TODO: SonarDetector works in NED x-y system
+            cv::Point roi_center(filter_estimate.y * 1000, filter_estimate.x * 1000);
+            cv::Size roi_size(1000 * sqrt(filter_estimate.y_variance),
+                              1000 * sqrt(filter_estimate.x_variance));
+            cv::Size roi_test_size(2000, 2000);
+            roi = cv::Rect(roi_center, roi_test_size);
+            roi = moveRect(roi, roi.tl());
           }
         
         private:
@@ -230,8 +249,8 @@ namespace labust {
               for (int j=0; j<clusters[i].size(); ++j) {
                 curr_cluster_size += contour_processor.contours[clusters[i][j]].size;
               }
-              if (curr_cluster_size * pix_mm * pix_mm < 0.1 * target_size || 
-                  curr_cluster_size * pix_mm * pix_mm > 2 * target_size) continue;
+              if (curr_cluster_size * pix_mm * pix_mm < 0.25 * target_size || 
+                  curr_cluster_size * pix_mm * pix_mm > 1.5 * target_size) continue;
               clusters[ind++] = clusters[i];
             }
             clusters.resize(ind);
@@ -255,6 +274,34 @@ namespace labust {
               roi_rects.push_back(cv::Rect(pixToMM(brect.tl()), pixToMM(brect.br())));
             }
             return roi_rects;
+          }
+
+          cv::Point2f processCandidates(cv::vector<cv::Rect>& target_candidates) {
+            int j=0;
+            for (int i=0; i<target_candidates.size(); ++i) {
+              if (roi.contains(rectCenter(target_candidates[i]))) {
+                if (i!=j) {
+                 target_candidates[j] = target_candidates[i];
+                }
+                j++;
+              }
+            }
+            target_candidates.resize(j);
+            if (target_candidates.size() == 0) return cv::Point2f(0,0);
+            double best_value = HUGE_VAL;
+            double best_roi_variance;
+            int best_roi_ind;
+            for (int i=0; i<target_candidates.size(); ++i) {
+              double area = target_candidates[i].area();
+              double curr_roi_dist = distanceBetweenPoints(rectCenter(target_candidates[i]), rectCenter(roi));
+              double curr_roi_stdev = 1 - exp(-(0.001*(area-target_size) * 0.001*(area-target_size) / (2 << 20)));
+              if (curr_roi_dist * curr_roi_stdev < best_value) {
+                best_value = curr_roi_dist * sqrt(abs(target_size - target_candidates[i].area()));
+                best_roi_ind = i;
+                best_roi_variance = curr_roi_stdev * curr_roi_stdev;
+              }
+            }
+            return rectCenter(target_candidates[best_roi_ind]);
           }
 
           /**
@@ -287,7 +334,6 @@ namespace labust {
               cv::Size roi_size(sqrt(target_size) * 3 * pow(1.1, frames_without_measurement),
                                 sqrt(target_size) * 3 * pow(1.1, frames_without_measurement));
               roi = cv::Rect(prediction_center, roi_size);
-              // ROI area dependent on estimator covariance. This didn't work that well.
               /*roi = cv::Rect(prediction_center, 
                              cv::Size(sqrt(target_size)+10*1000.0*sqrt(state_covariance(0,0)), 
                                       sqrt(target_size)+10*1000.0*sqrt(state_covariance(1,1))));*/
@@ -348,7 +394,29 @@ namespace labust {
             }
           }
 
- 
+          void visualize(const cv::Mat& frame) {
+            if (!is_detector_initialized) return;
+            int num_pix = (sonar_info.window_start + sonar_info.window_length) * 1000 / pix_mm * 2;
+            cv::Mat image(num_pix, num_pix, CV_8UC3);
+            image = cv::Scalar(0,0,0);
+            cv::Rect area_in_image(cv::Point2f(num_pix/2 - frame.cols/2, 0),
+                                   cv::Size(frame.cols, frame.rows));
+            cv::Mat image_area = image(area_in_image);
+            frame.copyTo(image_area);
+            cv::rectangle(image, rectMMToRectPix(roi)+cv::Point2i(num_pix/2 - frame.cols/2), CV_RGB(255,0,0), 3);
+            cv::resize(image, image, cv::Size(768, 768));
+            cv::Mat buddy = cv::imread("/home/ivor/buddy.png");
+            area_in_image = cv::Rect(cv::Point(image.cols/2 - buddy.cols/2, image.rows/2 - buddy.rows/2),
+                                     buddy.size());
+            image_area = image(area_in_image);
+            buddy.copyTo(image_area);
+
+            cv::Mat rot_mat = cv::getRotationMatrix2D(cv::Point(image.cols/2, image.rows/2), -heading, 1.0);
+            cv::warpAffine(image, image, rot_mat, image.size());
+
+            cv::imshow("testtest", image); cv::waitKey(100); 
+          }
+
           cv::Point2f pixToMM(const cv::Point2f p) {
             cv::Point2f temp(-p.x, p.y);
             cv::Point2f res = cv::Point2f(-mask.cols/2, mask.rows) - temp;
@@ -380,7 +448,9 @@ namespace labust {
           int blur_size, thresh_size, thresh_offset;
           int frames_without_measurement;
           double max_connected_distance, min_contour_size, target_size;
+          double heading;
           bool is_detector_initialized, is_kf_initialized;
+          bool enable_visualization;
       };
     }
   }

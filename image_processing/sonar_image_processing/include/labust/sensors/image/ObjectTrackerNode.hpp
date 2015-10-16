@@ -34,12 +34,17 @@
 #ifndef OBJECTTRACKERNODE_HPP_
 #define OBJECTTRACKERNODE_HPP_
 #include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <sensor_msgs/Image.h>
-#include <image_transport/image_transport.h>
 #include <labust/sensors/image/SonarImageUtil.hpp>
+
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
+
+#include <auv_msgs/NavSts.h>
+#include <navcon_msgs/RelativePosition.h>
+#include <sensor_msgs/Image.h>
+#include <underwater_msgs/SonarFix.h>
+#include <underwater_msgs/USBLFix.h>
+
 
 namespace labust {
   namespace sensors {
@@ -56,14 +61,16 @@ namespace labust {
       private:
         void onInit();
         void adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix);
+        void setNavFilterEstimate(const navcon_msgs::RelativePosition& nav_filter_estimate);
+        void setHeading(const auv_msgs::NavSts& position_estimate);
         void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
         void processFrame();
         ros::NodeHandle nh;
+        ros::Subscriber sonar_info_sub, usbl_fix_sub, nav_filter_estimate_sub, position_sub;
+        ros::Publisher sonar_fix_pub;
         image_transport::ImageTransport it;
-        ros::Subscriber sonar_info_sub, usbl_fix_sub;
         image_transport::Subscriber image_sub;
-        ros::Publisher fix_pub;
         ArisSonar aris;
         SonarDetector sonar_detector;
         int target_size;
