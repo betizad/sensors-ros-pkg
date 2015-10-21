@@ -74,11 +74,11 @@ namespace labust {
             cv::createTrackbar("Blur size", "Tracking", &blur_size, 10);
             cv::createTrackbar("Thresh size", "Tracking", &thresh_size, 100);
             cv::createTrackbar("Thresh offset", "Tracking", &thresh_offset, 100);
-           
+            cv::createTrackbar("Target size", "Tracking", &target_size, 2000000);
             KFNav::vector q(5);
-            q << std::pow(0.5,2), //x
-                 std::pow(0.5,2), //y
-                 std::pow(0.25,2), //u
+            q << std::pow(0.1,2), //x
+                 std::pow(0.1,2), //y
+                 std::pow(0.1,2), //u
                  std::pow(0.1,2), //psi
                  std::pow(0.1,2); //r 
             KFNav::matrix W = KFNav::matrix::Identity(5,5);
@@ -130,25 +130,29 @@ namespace labust {
           virtual void detect(cv::Mat image, cv::Point2f& center, double& area) {
             cv::Mat img_temp;
             image.copyTo(img_temp);
-            //visualize(image);
+            if (enable_visualization) {
+              visualize(image);
+            }
             cvtColor(image, image, CV_BGR2GRAY);
             if (!is_detector_initialized) {
               recalculateBackgroundMask(image);
-              //roi = cv::Rect(pixToMM(cv::Point2f(60,60)), pixToMM(cv::Point2f(350, 500)));
+              roi = cv::Rect(pixToMM(cv::Point2f(0,0)), pixToMM(cv::Point2f(mask.cols, mask.rows)));
             }
             thresholdImage(image);
              
             cv::vector<cv::Rect> curr_rois = findInterestingRegions(image);
-            center = processCandidates(curr_rois);            
-            return; 
+            //center = processCandidates(curr_rois);          
+            //measurement_range = sqrt(center.x*center.x + center.y*center.y) / 1e3;
+            //measurement_bearing = std::atan2(center.x, center.y);
+            
+            updateRoi(curr_rois, center, area);
             cv::circle(image, MMToPix(center), 5, cv::Scalar(199), -1);
             cv::rectangle(image, rectMMToRectPix(roi), cv::Scalar(125), 3);
             cv::rectangle(img_temp, rectMMToRectPix(roi), cv::Scalar(0,0,255), 3);
+            if (enable_visualization) {
             cv::imshow("Tracking", image); cv::waitKey(10);
             cv::imshow("Sonar tracking", img_temp); cv::waitKey(10);
-            
-            //updateRoi(curr_rois, center, area);
-            
+            }
             KFNav::vectorref prediction = kf_estimator.getState(); 
             cv::Point2f center_estimate(prediction[0]*1000, prediction[1]*1000);
             estimated_range = sqrt(center_estimate.x*center_estimate.x + center_estimate.y*center_estimate.y) / 1e3;
@@ -172,12 +176,13 @@ namespace labust {
           }
 
           void adjustROIFromFilterEstimate(const navcon_msgs::RelativePosition& filter_estimate) {
+            return;
             // x-y inverted compared to filter; TODO: SonarDetector works in NED x-y system
             cv::Point roi_center(filter_estimate.y * 1000, filter_estimate.x * 1000);
             cv::Size roi_size(1000 * sqrt(filter_estimate.y_variance),
                               1000 * sqrt(filter_estimate.x_variance));
-            cv::Size roi_test_size(2000, 2000);
-            roi = cv::Rect(roi_center, roi_test_size);
+            //cv::Size roi_test_size(2000, 2000);
+            roi = cv::Rect(roi_center, roi_size);
             roi = moveRect(roi, roi.tl());
           }
         
@@ -249,8 +254,8 @@ namespace labust {
               for (int j=0; j<clusters[i].size(); ++j) {
                 curr_cluster_size += contour_processor.contours[clusters[i][j]].size;
               }
-              if (curr_cluster_size * pix_mm * pix_mm < 0.25 * target_size || 
-                  curr_cluster_size * pix_mm * pix_mm > 1.5 * target_size) continue;
+              if (curr_cluster_size * pix_mm * pix_mm < 0.1 * target_size || 
+                  curr_cluster_size * pix_mm * pix_mm > 2 * target_size) continue;
               clusters[ind++] = clusters[i];
             }
             clusters.resize(ind);
@@ -287,6 +292,12 @@ namespace labust {
               }
             }
             target_candidates.resize(j);
+            if (target_candidates.size() == 0) {
+              if (frames_without_measurement < 50) frames_without_measurement++;
+            } else {
+              frames_without_measurement -= 2;
+              if (frames_without_measurement < 0) frames_without_measurement = 0;
+            }
             if (target_candidates.size() == 0) return cv::Point2f(0,0);
             double best_value = HUGE_VAL;
             double best_roi_variance;
@@ -351,6 +362,9 @@ namespace labust {
             cv::vector<cv::Rect> roi_candidates;
             for (int i=0; i<curr_rois.size(); ++i) {
               if (roi.contains(rectCenter(curr_rois[i]))) {
+                double w = curr_rois[i].width;
+                double h = curr_rois[i].height;
+                if (w/h > 1.5 || w/h < 0.5) continue;
                 roi_candidates.push_back(curr_rois[i]);     
               }
             }
@@ -377,7 +391,8 @@ namespace labust {
               center = rectCenter(roi_candidates[best_roi_ind]);
               area = roi_candidates[best_roi_ind].area();
               KFNav::output_type correction(2);
-              
+              std::cerr << "AREA: " << area << std::endl;
+              std::cerr << "HWRATIO: " << static_cast<double>(roi_candidates[best_roi_ind].width)/roi_candidates[best_roi_ind].height; 
               // Set measurement variance; empirical.
               kf_estimator.setMeasurementParameters(KFNav::matrix::Identity(2,2), 
                   (10*best_roi_variance + 0.1) * KFNav::matrix::Identity(2,2));
@@ -405,16 +420,16 @@ namespace labust {
             frame.copyTo(image_area);
             cv::rectangle(image, rectMMToRectPix(roi)+cv::Point2i(num_pix/2 - frame.cols/2), CV_RGB(255,0,0), 3);
             cv::resize(image, image, cv::Size(768, 768));
-            cv::Mat buddy = cv::imread("/home/ivor/buddy.png");
+            /*cv::Mat buddy = cv::imread("/home/ivor/buddy.png");
             area_in_image = cv::Rect(cv::Point(image.cols/2 - buddy.cols/2, image.rows/2 - buddy.rows/2),
                                      buddy.size());
             image_area = image(area_in_image);
-            buddy.copyTo(image_area);
+            buddy.copyTo(image_area);*/
 
             cv::Mat rot_mat = cv::getRotationMatrix2D(cv::Point(image.cols/2, image.rows/2), -heading, 1.0);
             cv::warpAffine(image, image, rot_mat, image.size());
 
-            cv::imshow("testtest", image); cv::waitKey(100); 
+            cv::imshow("Sonar", image); cv::waitKey(100); 
           }
 
           cv::Point2f pixToMM(const cv::Point2f p) {
@@ -447,7 +462,8 @@ namespace labust {
           double estimated_range, estimated_bearing;
           int blur_size, thresh_size, thresh_offset;
           int frames_without_measurement;
-          double max_connected_distance, min_contour_size, target_size;
+          double max_connected_distance, min_contour_size;
+          int target_size; 
           double heading;
           bool is_detector_initialized, is_kf_initialized;
           bool enable_visualization;

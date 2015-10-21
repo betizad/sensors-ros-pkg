@@ -69,7 +69,7 @@ void ObjectTrackerNode::onInit() {
   sonar_fix_pub = nh.advertise<underwater_msgs::SonarFix>("sonar_fix", 1);
   
   sonar_detector.setContourClusteringParams(
-      500 /* max connected_distance in mm */, 
+      100 /* max connected_distance in mm */, 
       100 /* min_contour_size in mm^2 */, 
       target_size /* target_size (area) in mm^2 */);
 }
