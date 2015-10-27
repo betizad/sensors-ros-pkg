@@ -112,7 +112,6 @@ include_directories(
 
 ## Declare a cpp library
 add_library(seatrac_sdk
-   src/seatrac_sdk/SeatracHandler.cpp
    src/seatrac_sdk/seatrac_serial.cpp
    src/seatrac_sdk/seatrac_factory.cpp
    src/seatrac_node/status_listener.cpp
@@ -127,25 +126,16 @@ add_library(seatrac_sdk
 
 
 ## Declare a cpp executable
-add_executable(seatrac_serialization_test src/test/serialization_test.cpp)
 add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
 add_executable(bitfield_encoding_test src/test/bitfield_encodings.cpp)
 add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
-add_executable(seatrac_node 
-    src/seatrac_node/SeatracNode.cpp
-    src/seatrac_node/NavHandler.cpp
-    src/seatrac_node/StatusHandler.cpp)
-    
-add_executable(seatrac_core
-    src/seatrac_node/seatrac_core.cpp)
+add_executable(seatrac_core src/seatrac_node/seatrac_core.cpp)
     
 add_executable(static_beacon src/static_beacon/static_beacon.cpp)
 
 if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(ac_medium_sim ${catkin_EXPORTED_TARGETS})
- add_dependencies(seatrac_node ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_core ${catkin_EXPORTED_TARGETS})
- add_dependencies(seatrac_serialization_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(seatrac_sdk ${catkin_EXPORTED_TARGETS})
  add_dependencies(static_beacon ${catkin_EXPORTED_TARGETS})
 endif()
@@ -162,21 +152,8 @@ target_link_libraries(seatrac_sdk
    ${Boost_SERIALIZATION_LIBRARY}
 )
 
-target_link_libraries(seatrac_node
-   ${catkin_LIBRARIES}
-   ${Boost_SERIALIZATION_LIBRARY}
-   ${Boost_THREAD_LIBRARY}
-   seatrac_sdk
-)
-
 target_link_libraries(seatrac_core
    ${catkin_LIBRARIES}
-   seatrac_sdk
-)
-
-target_link_libraries(seatrac_serialization_test
-   ${catkin_LIBRARIES}
-   ${Boost_SERIALIZATION_LIBRARY}
    seatrac_sdk
 )
 
