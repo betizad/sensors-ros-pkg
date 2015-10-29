@@ -78,7 +78,6 @@ include_directories(include
 ## Declare a cpp library
 add_library(usbl-plugs
   src/USBLNodelet.cpp
-  src/USBLFilter.cpp
 )
 
 ## Declare a cpp executable
