@@ -41,6 +41,9 @@
 #include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
 
+#include <GeographicLib/Geocentric.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
+
 #include <Eigen/Dense>
 
 #include <vector>
@@ -100,6 +103,8 @@ namespace labust
 			tf2_ros::TransformListener listener;
 			///Transponder map
 			std::map<int, std::string> ids;
+			///The projection to ENU
+			GeographicLib::LocalCartesian proj;
 		};
 	}
 }

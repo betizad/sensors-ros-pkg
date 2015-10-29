@@ -150,6 +150,7 @@ target_link_libraries(seatrac_sdk
    ${Boost_SYSTEM_LIBRARY}
    ${Boost_THREAD_LIBRARY}
    ${Boost_SERIALIZATION_LIBRARY}
+   Geographic
 )
 
 target_link_libraries(seatrac_core

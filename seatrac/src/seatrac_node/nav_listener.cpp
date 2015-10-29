@@ -34,7 +34,6 @@
 #include <labust/seatrac/nav_listener.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/mediator.h>
-#include <labust/tools/GeoUtilities.hpp>
 #include <labust/tools/conversions.hpp>
 #include <labust/math/NumberManipulation.hpp>
 #include <pluginlib/class_list_macros.h>
@@ -229,16 +228,29 @@ void NavListener::calculateNavSts(auv_msgs::NavSts& nav, const Eigen::Vector3d& 
 	try
 	{
 		geometry_msgs::TransformStamped transformDeg;
-		transformDeg = buffer.lookupTransform("worldLatLon", "local", ros::Time(0));
-
-		std::pair<double, double> diffAngle = labust::tools::meter2deg(nav.position.north, 
-					nav.position.east,
-					//The latitude angle
-					transformDeg.transform.translation.y);
-		nav.origin.latitude = transformDeg.transform.translation.y;
-		nav.origin.longitude = transformDeg.transform.translation.x;
-		nav.global_position.latitude = transformDeg.transform.translation.y + diffAngle.first;
-		nav.global_position.longitude = transformDeg.transform.translation.x + diffAngle.second;
+		transformDeg = buffer.lookupTransform("ecef", "world", ros::Time(0));
+		//Set the projection origin
+		double lat0,lon0,h0;
+		GeographicLib::Geocentric::WGS84.Reverse(
+				transformDeg.transform.translation.x,
+				transformDeg.transform.translation.y,
+				transformDeg.transform.translation.z,
+				lat0, lon0, h0);
+		proj.Reset(lat0, lon0, h0);
+		//Convert to ENU
+		Eigen::Quaternion<double> qrot;
+		labust::tools::quaternionFromEulerZYX(M_PI,0,M_PI/2,qrot);
+		Eigen::Vector3d ned;
+		ned<<nav.position.north,
+				nav.position.east,
+				nav.position.depth;
+		Eigen::Vector3d enu = qrot.toRotationMatrix().transpose() * ned;
+		double h;
+		proj.Reverse(enu(0), enu(1), enu(2),
+				nav.global_position.latitude,
+				nav.global_position.longitude, h);
+		nav.origin.latitude = lat0;
+		nav.origin.longitude = lon0;
 	}
 	catch(tf2::TransformException& ex)
 	{
