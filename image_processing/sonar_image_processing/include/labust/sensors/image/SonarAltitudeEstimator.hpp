@@ -44,7 +44,9 @@
 namespace labust {
   namespace sensors {
     namespace image {
-
+      
+      // Class for estimating altitude for eash of the sonar's beam
+      // from ARIS sonar image.
       class SonarAltitudeEstimator {
         public:
           SonarAltitudeEstimator() :
@@ -52,14 +54,22 @@ namespace labust {
          
           ~SonarAltitudeEstimator() {}
          
+          // Stores the sonar info message.
           void setSonarInfo(aris::SonarInfo si) {
             sonar_info = si;
           }
 
+          // Main processing function.
           std::vector<double> process(cv::Mat image) {
+            // Convert image to opencv grayscale.
             cvtColor(image, image, CV_BGR2GRAY);
+
+            // Apply Gaussian blurring.
             cv::GaussianBlur(image, image, cv::Size(3*2+1, 3*2+1), 0, 0, cv::BORDER_DEFAULT);
+            
             std::vector<double> res(image.cols);
+            std::vector<int> val(image.cols);
+            // For each of the beams (each beam is one column), find the max intensity pixel.
             for (int beam=0; beam<image.cols; ++beam) {
               uchar max = 0;
               double ind = 0;
@@ -68,9 +78,30 @@ namespace labust {
                 if (curr > max) {max = curr; ind = sample;}
               }
 	      
-	            if (max<100) ind = HUGE_VAL;
+	            //if (max<100) ind = HUGE_VAL;
+              // Calculate distance from pixel index.
               res[beam] = ind / image.rows * sonar_info.window_length + sonar_info.window_start;
+              val[beam] = max;
             }
+            // Adaptive bottom detection - experimental.
+            // Samples must be above some minimum threshold or strong enough
+            // compared to their neighbour (starting from the strongest one).
+            std::vector<int>::iterator max_ind = std::max_element(val.begin(), val.end());
+            int max_val = *max_ind;
+            for (std::vector<int>::iterator ind = max_ind; ind != val.begin(); --ind) {
+              if (!(*(ind-1) > 127 || static_cast<float>(*(ind-1)) / max_val > 0.75)) {
+                res[ind-val.begin()-1] = HUGE_VAL;
+              }
+            }
+            for (std::vector<int>::iterator ind = max_ind; ind != val.end(); ++ind) {
+              if (!(*(ind+1) > 127 || static_cast<float>(*(ind+1)) / max_val > 0.9)) {
+                res[ind-val.begin()+1] = HUGE_VAL;
+              }
+            }
+            for (int i=0; i<image.cols; ++i) {
+              cv::circle(image, cv::Point(i, (res[i] - sonar_info.window_start) / sonar_info.window_length * image.rows), 3, 255, -1);
+            }
+            cv::imshow("img", image); cv::waitKey(100);
             return res;
           }
 

@@ -71,16 +71,20 @@ void BathymetryNode::onInit() {
   sonar_altitude_pub = nh.advertise<std_msgs::Float32>("altitude", 1);
 }
 
+// Calculates bearings for each of the sonar beams.
+// ARIS has nbeams=128, with horizontal FOV of 28 deg.
 void BathymetryNode::recalculateBearings(int nbeams) {
   bearing.resize(nbeams);
-  bearing[0] = -15.0+15.0/nbeams;
-  double step = 30.0/nbeams;
+  bearing[0] = -14.0+14.0/nbeams;
+  double step = 28.0/nbeams;
   for (int i=1; i<nbeams; ++i) {
     bearing[i] = bearing[i-1]+step;
   }
 
 }
 
+// Callback for sonar info message. Stores it and, if there is already
+// a matching sonar image with same timestamp, calls for processing.
 void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   if (msg->beams != aris.getSonarInfo().beams) {
     recalculateBearings(msg->beams);    
@@ -93,6 +97,8 @@ void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
   }
 }
 
+// Callback for sonar image message. Stores it and, if there is already 
+// a matching sonar info message with same timestamp, calls for processing.
 void BathymetryNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
   aris::SonarInfo si = aris.getSonarInfo();
@@ -101,16 +107,28 @@ void BathymetryNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   }
 }
 
+// Main processing function.
 void BathymetryNode::processFrame() {
+  // Transform image to cvBridge format.
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
+  
+  // Provide the altitude estimator the sonar info.
   aris::SonarInfo si = aris.getSonarInfo();
   sonar_altitude_estimator.setSonarInfo(si);
+  
+  // Call process method with the sonar image in opencv format. Result are ranges for each beam.
   std::vector<double> bath = sonar_altitude_estimator.process(cv_image_bgr->image.clone());
+  
+  // min_alt is closest point to the bottom (minimum range accross all beams).
   double min_alt = *(std::min_element(bath.begin(), bath.end()));
+
   double max_alt = 0;
   sonar_image_processing::ArisBathymetry::Ptr sonar_bathymetry(new sonar_image_processing::ArisBathymetry);
   std_msgs::Float32::Ptr sonar_altitude(new std_msgs::Float32);
+  
+  // For altitude use min_alt.
   sonar_altitude->data = min_alt + altitude_offset;
+  // For bathymetry use data received by sonar_altitude_estimator.
   sonar_bathymetry->range.resize(bath.size());
   sonar_bathymetry->bearing = bearing;
   for (int i=0; i<bath.size(); ++i) {
@@ -119,10 +137,14 @@ void BathymetryNode::processFrame() {
     }
     sonar_bathymetry->range[i] = bath[i] + altitude_offset;
   }
+
+  // Optional - live sonar ranging.
   if (min_alt != 0 && max_alt != 0) {
     //aris.setRangeOfInterest(min_alt-altitude_offset, max_alt-altitude_offset);
     //aris.setRangeOfInterest(0.3, max_alt-altitude_offset);
   }
+
+  // Add timestamp and publish bathymetry and altitude.
   sonar_bathymetry->header.stamp = si.header.stamp;
   sonar_bathymetry_pub.publish(sonar_bathymetry);
   sonar_altitude_pub.publish(sonar_altitude);
