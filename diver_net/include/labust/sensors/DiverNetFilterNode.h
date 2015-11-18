@@ -1,7 +1,7 @@
-#ifndef DIVERNETFILTERNODE_HPP_
-#define DIVERNETFILTERNODE_HPP_
+#ifndef DIVERNETFILTERNODE_H_
+#define DIVERNETFILTERNODE_H_
 #include <ros/ros.h>
-#include <labust/sensors/ImuComplementaryQuaternionFilter.hpp>
+#include <labust/sensors/ImuComplementaryQuaternionFilter.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -62,30 +62,30 @@ namespace labust
         void calibratePose(const std::vector<Eigen::Quaternion<double> >& q);
         
         // ROS subscribers for data, calibration request and gyro mean calculation request.
-        ros::Subscriber raw_data, calibrate_sub, gyro_mean_sub;
+        ros::Subscriber raw_data_, calibrate_sub_, gyro_mean_sub_;
         // ROS publishers for raw and filtered rpy angles.
-        ros::Publisher raw_angles_publisher, filtered_angles_publisher;
+        ros::Publisher raw_angles_pub_, filtered_angles_pub_;
         // ROS publishers for raw and filtered quaternions.
-        ros::Publisher filtered_quaternion_publisher;
+        ros::Publisher filtered_quaternion_pub_;
         // Arrays holding raw and filtered rpy angles.
-        std_msgs::Float64MultiArrayPtr rpy_raw, rpy_filtered, quaternion_filtered;
+        std_msgs::Float64MultiArrayPtr rpy_raw_, rpy_filtered_, quaternion_filtered_;
         // Vector with axes permutation of the DiverNet.
-        std::vector<Eigen::Matrix3d> axes_permutation;
+        std::vector<Eigen::Matrix3d> axes_permutation_;
         // Holds mean gyro values.
-        Eigen::MatrixXd gyro_bias;
+        Eigen::MatrixXd gyro_bias_;
         // Madgwick's complementary quaternion filter.
-        ImuComplementaryQuaternionFilter *filter;
+        ImuComplementaryQuaternionFilter *filter_;
         // Number of DiverNet nodes.
-        const int node_count;
+        const int node_count_;
         // Number of frames for gyro mean calculation.
-        const int gyro_mean_num_frames;
+        const int gyro_mean_num_frames_;
         // Number of frames until gyro mean calculation is done.
-        int gyro_mean_calculation_frames_left;
+        int gyro_mean_calculation_frames_left_;
         // Stores request for pose calibration.
-        bool should_calibrate;
+        bool should_calibrate_;
     };
   }
 }
 
-/* DIVERNETFILTERNODE_HPP_ */
+/* DIVERNETFILTERNODE_H_ */
 #endif

@@ -31,8 +31,8 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef DIVERNETREADNODE_HPP_
-#define DIVERNETREADNODE_HPP_
+#ifndef DIVERNETREADNODE_H_
+#define DIVERNETREADNODE_H_
 #include <ros/ros.h>
 
 #include <boost/asio.hpp>
@@ -149,5 +149,5 @@ namespace labust
 	}
 }
 
-/* DIVERNETREADNODE_HPP_ */
+/* DIVERNETREADNODE_H_ */
 #endif

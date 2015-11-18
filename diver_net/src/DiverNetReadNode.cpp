@@ -1,4 +1,4 @@
-#include <labust/sensors/DiverNetReadNode.hpp>
+#include <labust/sensors/DiverNetReadNode.h>
 #include <labust/tools/conversions.hpp>
 
 #include <std_msgs/Int16MultiArray.h>

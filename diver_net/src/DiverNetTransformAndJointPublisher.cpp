@@ -1,4 +1,4 @@
-#include <labust/sensors/DiverNetTransformAndJointPublisher.hpp>
+#include <labust/sensors/DiverNetTransformAndJointPublisher.h>
 #include <labust/tools/conversions.hpp>
 
 #include <std_msgs/Int16MultiArray.h>

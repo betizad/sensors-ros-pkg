@@ -1,4 +1,4 @@
-#include <labust/sensors/ImuComplementaryQuaternionFilter.hpp>
+#include <labust/sensors/ImuComplementaryQuaternionFilter.h>
 #include <labust/tools/conversions.hpp>
 
 
