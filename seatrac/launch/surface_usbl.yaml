@@ -7,8 +7,9 @@ listener_plugins: ["labust::seatrac::StatusListener",
 
 # USBLController configuration
 auto_mode: false
-timeout: 4.0
+timeout: 10.0
 transponders: [2,3]
+use_ahrs: true
 
 # NavListener setup
 transponder_names: ["diver","buddy"]

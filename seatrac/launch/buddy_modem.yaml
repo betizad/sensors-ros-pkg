@@ -7,6 +7,7 @@ listener_plugins: ["labust::seatrac::StatusListener",
 
 # USBLController configuration
 auto_mode: false
+timeout: 10
 transponders: [1,2]
 transponder_names: ["surface","diver"]
 

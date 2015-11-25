@@ -60,7 +60,7 @@ void AcMediumSim::onInit()
 
 	registration = nh.advertiseService("register_modem",&AcMediumSim::onRegistration, this);
 	unregistration = nh.advertiseService("unregister_modem",&AcMediumSim::onUnRegistration, this);
-	registered_nodes = nh.advertise<std_msgs::Int32MultiArray>("registered_nodes",16);
+	registered_nodes = nh.advertise<std_msgs::Int32MultiArray>("registered_nodes",16, true);
 	
 	unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
 	std_msgs::Bool out;
@@ -96,7 +96,6 @@ bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& reques
 		nodes[request.node_id] = auv_msgs::NavSts();
 		//Add to node list
 		node_list.insert(request.node_id);
-		this->sendNodeList();
 	}
 	else
 	{
@@ -154,6 +153,9 @@ void AcMediumSim::onMediumTransmission(const
 {
 	//The node has to be registered (if no NavSts message is received the default is NavSts()).
 	boost::mutex::scoped_lock l(state_mux);
+	//Inform about existing nodes
+	this->sendNodeList();
+	//Check for node existance
 	NavStsMap::const_iterator it(nodes.find(msg->sender));
 	if (it == nodes.end())
 	{

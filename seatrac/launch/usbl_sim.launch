@@ -5,6 +5,7 @@
     <remap from="unregister_modems" to="/unregister_modems" />
     <remap from="register_modem" to="/register_modem" />
     <remap from="unregister_modem" to="/unregister_modem" />
+    <remap from="registered_nodes" to="/registered_nodes" />
     
     <group ns="surface">
     	<node pkg="seatrac" type="seatrac_core" name="surface_sim">
@@ -13,10 +14,11 @@
 		</node>
 		<node pkg="seatrac" type="static_beacon" name="surface_pos">
 			<rosparam param="position">[0.0,0.0,0.0]</rosparam>
+			<rosparam param="orientation">[0.0,0.0,1.0]</rosparam>
 		</node>
     </group>
     <!-- The diver modem -->
-    <group ns="diver">
+ <!--   <group ns="diver">
 	<node pkg="seatrac" type="seatrac_core" name="diver_sim">
 		<rosparam command="load" file="$(find seatrac)/launch/diver_modem.yaml" />
 		<remap from="navsts" to="position" />
@@ -24,7 +26,7 @@
 	<node pkg="seatrac" type="static_beacon" name="diver_pos">
 	    <rosparam param="position">[0.0,1.0,10.0]</rosparam>
 	</node>
-    </group>
+    </group> -->
  	<!-- The buddy USBL -->
  	<group ns="buddy">
  		<node pkg="seatrac" type="seatrac_core" name="buddy_sim">
