@@ -55,7 +55,8 @@ SeatracSim::SeatracSim():
 	time_overhead(0.1),
 	is_modem(false),
 	bps(100),
-	registered(false){}
+	registered(false),
+	max_data_duration(1.5){}
 
 SeatracSim::~SeatracSim()
 {
@@ -70,6 +71,7 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	ph.param("sim_vos", vos, vos);
 	ph.param("sim_time_overhead", time_overhead, time_overhead);
 	ph.param("sim_is_modem", is_modem, is_modem);
+	ph.param("sim_max_data_duration", max_data_duration, max_data_duration);
 	ph.param("sim_bps", bps, bps);
 
 	navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
@@ -79,6 +81,8 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	unregister_sub = nh.subscribe<std_msgs::Bool>("unregister_modems", 1,
 			&SeatracSim::onUnregisterModem, this);
 	medium_out = nh.advertise<underwater_msgs::MediumTransmission>("medium_out",1);
+	registered_nodes = nh.subscribe<std_msgs::Int32MultiArray>("registered_nodes",16,
+			&SeatracSim::onRegisteredNodes,this);
 
 	//Create timer
 	sleeper = nh.createTimer(ros::Duration(ping_duration),
@@ -138,6 +142,19 @@ void SeatracSim::unregisterModem()
 	}
 }
 
+void SeatracSim::onRegisteredNodes(const std_msgs::Int32MultiArray::ConstPtr& msg)
+{
+	for(int i=0; i < msg->data.size(); ++i) node_list.insert(msg->data[i]);
+}
+
+bool SeatracSim::nodeExists(int node_id)
+{
+	//Backward compatibility
+	if (node_list.empty()) return true;
+
+	return node_list.find(node_id)!=node_list.end();
+}
+
 void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 {
 	boost::shared_ptr<StatusResp> resp(new StatusResp());
@@ -183,12 +200,18 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 	tomedium->receiver = 0;
 	//Minimum duration is ping
 	tomedium->duration = ping_duration;
+	//Minimum data duration is 0
+	double data_duration(0);
+	//Total timeout for ping
+	double total_timeout(ping_duration);
 
 	if (msg->getCid() == PingSendCmd::CID)
 	{
 		PingSendCmd::ConstPtr cmd = boost::dynamic_pointer_cast<PingSendCmd const>(msg);
 		tomedium->receiver = cmd->dest;
 		expected_id = cmd->dest;
+		//Check timeout
+		if (this->nodeExists(tomedium->receiver)) total_timeout += ping_duration;
 		ROS_DEBUG("SeatracSim: Sending ping (%d->%d).", node_id, expected_id);
 		this->setState(WAIT_PING_REPLY);
 	}
@@ -203,12 +226,20 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 		{
 			ROS_DEBUG("SeatracSim: Sending data with USBL ping (%d->%d).", node_id, expected_id);
 			tomedium->duration += 8*cmd->data.size()/bps;
+			//The 2*ping payload + data sent + the maximum amount of data that can be returned
+			total_timeout += 8*cmd->data.size()/bps;
+			//Add the maximum return data time if node exists
+			if (this->nodeExists(tomedium->receiver)) total_timeout += ping_duration + max_data_duration;
 		}
 		else
 		{
 			//No ping, no USBL info; pure data
 			ROS_DEBUG("SeatracSim: Sending only data (%d->%d).", node_id, expected_id);
 			tomedium->duration = 8*cmd->data.size()/bps;
+			//The data sent
+			total_timeout = 8*cmd->data.size()/bps;
+			//Add the maximum return data time if node exists
+			if (this->nodeExists(tomedium->receiver)) total_timeout += max_data_duration;
 		}
 
 		this->setState(WAIT_DATA_REPLY);
@@ -244,7 +275,16 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 	//Pack ping and send
 	SeatracFactory::encodePacket(msg, &tomedium->message);
 	this->sendToMedium(tomedium);
-	this->startTimer(2*tomedium->duration + 2*max_distance/vos + time_overhead);
+	if (this->nodeExists(tomedium->receiver))
+	{
+		//Standard wait time if node exists (Transmission time + distance + safety overhead)
+		this->startTimer(total_timeout + 2*max_distance/vos + time_overhead);
+	}
+	else
+	{
+		//Only send time + range timeout
+		this->startTimer(total_timeout + 2*max_distance/vos + time_overhead);
+	}
 
 	return true;
 }
@@ -269,6 +309,7 @@ void SeatracSim::onMediumTransmission(const
 	//Test if it is possible to hear the message
 
 	//Throw dice if we will have a CRC error
+
 	//Unpack message
 	SeatracMessage::Ptr message;
 	if (SeatracFactory::decodePacket(msg->message, message))
@@ -366,7 +407,7 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 		}
 		else
 		{
-			ROS_DEBUG("SeatracSim: Waited for ping reply (%d->%d). Received ping cmd from %d.", node_id, expected_id, msg->sender);
+			ROS_WARN("SeatracSim: Waited for ping reply (%d->%d). Received ping cmd from %d.", node_id, expected_id, msg->sender);
 			//Send PING_ERROR with XCVR_RESP_WRONG
 			PingError::Ptr err(new PingError());
 			err->beacon_id = expected_id;
@@ -375,7 +416,7 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
 		}
 	}
 	this->setState(IDLE);
-	this->sendMessage(out);
+	if (out != 0) this->sendMessage(out);
 }
 
 template <class MsgType>
@@ -515,7 +556,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		}
 		else
 		{
-			ROS_DEBUG("SeatracSim: Waited for data cmd reply (%d->%d). Received data cmd from %d.", node_id, expected_id, msg->sender);
+			ROS_WARN("SeatracSim: Waited for data cmd reply (%d->%d). Received data cmd from %d.", node_id, expected_id, msg->sender);
 			//Send DAT_ERROR with XCVR_RESP_WRONG
 			DatError::Ptr err(new DatError());
 			err->beacon_id = expected_id;
@@ -524,7 +565,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		}
 	}
 	this->setState(IDLE);
-	this->sendMessage(out);
+	if (out != 0) this->sendMessage(out);
 }
 
 

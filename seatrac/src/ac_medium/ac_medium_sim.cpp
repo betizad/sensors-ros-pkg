@@ -36,6 +36,7 @@
  *********************************************************************/
 #include <labust/simulation/ac_medium_sim.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Int32MultiArray.h>
 #include <ros/ros.h>
 
 using namespace labust::seatrac;
@@ -59,8 +60,9 @@ void AcMediumSim::onInit()
 
 	registration = nh.advertiseService("register_modem",&AcMediumSim::onRegistration, this);
 	unregistration = nh.advertiseService("unregister_modem",&AcMediumSim::onUnRegistration, this);
+	registered_nodes = nh.advertise<std_msgs::Int32MultiArray>("registered_nodes",16);
 	
-  unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
+	unsubscribe_event = nh.advertise<std_msgs::Bool>("unregister_modems",1,true);
 	std_msgs::Bool out;
 	out.data = true;
 	unsubscribe_event.publish(out);
@@ -92,6 +94,9 @@ bool AcMediumSim::onRegistration(underwater_msgs::AcSimRegister::Request& reques
 		subs[request.node_id] = nh.subscribe<auv_msgs::NavSts>(request.navsts_topic, 1,
 				boost::bind(&AcMediumSim::onNavSts, this, request.node_id, _1));
 		nodes[request.node_id] = auv_msgs::NavSts();
+		//Add to node list
+		node_list.insert(request.node_id);
+		this->sendNodeList();
 	}
 	else
 	{
@@ -129,8 +134,19 @@ bool AcMediumSim::onUnRegistration(underwater_msgs::AcSimRegister::Request& requ
 	//Remove navsts topic
 	NavStsMap::iterator nit = nodes.find(request.node_id);
 	if (nit != nodes.end()) nodes.erase(nit);
+	//Remove from node list
+	node_list.erase(request.node_id);
+	this->sendNodeList();
 
 	return true;
+}
+
+void AcMediumSim::sendNodeList()
+{
+	std_msgs::Int32MultiArray::Ptr outlist(new std_msgs::Int32MultiArray());
+	for (std::set<int>::const_iterator it=node_list.begin();
+			it != node_list.end(); ++it) outlist->data.push_back(*it);
+	registered_nodes.publish(outlist);
 }
 
 void AcMediumSim::onMediumTransmission(const
@@ -139,6 +155,12 @@ void AcMediumSim::onMediumTransmission(const
 	//The node has to be registered (if no NavSts message is received the default is NavSts()).
 	boost::mutex::scoped_lock l(state_mux);
 	NavStsMap::const_iterator it(nodes.find(msg->sender));
+	if (it == nodes.end())
+	{
+		ROS_ERROR("Trying to publish from unregistered node.");
+		return;
+	}
+	it = nodes.find(msg->receiver);
 	if (it == nodes.end())
 	{
 		ROS_ERROR("Trying to publish from unregistered node.");

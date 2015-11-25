@@ -147,7 +147,7 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 	//Sort messages by priorities ?
 	SeatracMessage::Ptr message;
 	bool has_data(msg->payload.size() != 0);
-	ROS_INFO("Data size: %d", msg->payload.size());
+	//ROS_ERROR("Data size: %d", msg->payload.size());
 	has_data = true;
 
 	switch (msg->action)
@@ -178,47 +178,54 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 		break;
 	}
 
+	//ROS_ERROR("Setup reply.");
 	boost::mutex::scoped_lock l(data_mux);
 	if (message != 0) outgoing.push(message);
-	l.unlock();
-
 	//Only master can send data
-	if (!auto_mode && !is_busy)
+	if (!auto_mode && !is_busy && !outgoing.empty())
 	{
 		//Spin-off a worker thread to send one packet
 		//The thread is used to avoid blocking the callback queue
+		is_busy = true;
+		l.unlock();
+		//ROS_ERROR("Start thread.");
 		worker = boost::thread(boost::bind(&USBLController::sendPkg,this));
 	}
 	else
 	{
-		ROS_WARN("Failed sending message. The device is busy.");
+		//ROS_ERROR("Failed sending message. The device is busy.");
 	}
 }
 
 void USBLController::sendPkg()
 {
+	//ROS_ERROR("Enter thread.");
 	SeatracMessage::Ptr message;
 	boost::mutex::scoped_lock l(data_mux);
 	//Debug turn-around time measurement
 	static ros::Time ltime;
 	ROS_INFO("Turnaround: %f",(ros::Time::now() - ltime).toSec());
 	ltime = ros::Time::now();
-
-	if (outgoing.size())
+	//ROS_ERROR("Check queue: %d", outgoing.size());
+	if (!outgoing.empty())
 	{
 		message = outgoing.front();
 		outgoing.pop();
 	}
 	l.unlock();
 
+	//ROS_ERROR("Queue checked");
+
 	//Send the message
 	if (message != 0)
 	{
+		//ROS_ERROR("Message send.");
 		if (!(is_busy = this->sender(message)))
 		{
 			ROS_WARN("USBLController: Message sending failed for CID=0x%d", message->getCid());
 			return;
 		}
+		//ROS_ERROR("Message sent.");
 
 		boost::mutex::scoped_lock ping_lock(ping_mux);
 		boost::system_time const maxtime=boost::get_system_time()+boost::posix_time::seconds(timeout);
@@ -235,6 +242,8 @@ void USBLController::sendPkg()
 			}
 		}
 	}
+
+	//ROS_ERROR("Exit thread.");
 }
 
 void USBLController::autorun()

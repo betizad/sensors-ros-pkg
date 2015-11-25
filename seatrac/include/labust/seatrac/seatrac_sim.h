@@ -38,11 +38,13 @@
 #include <auv_msgs/NavSts.h>
 #include <std_msgs/Bool.h>
 #include <underwater_msgs/MediumTransmission.h>
+#include <std_msgs/Int32MultiArray.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
 
 #include <queue>
+#include <set>
 
 namespace labust
 {
@@ -95,6 +97,9 @@ namespace labust
 			///Medium transmission handler
 			void onMediumTransmission(const
 				underwater_msgs::MediumTransmission::ConstPtr& msg);
+			///Node list handler handler
+			void onRegisteredNodes(const
+				std_msgs::Int32MultiArray::ConstPtr& msg);
 			///Helper method for received Pings
 			void processPingCmd(const
 				underwater_msgs::MediumTransmission::ConstPtr& msg);
@@ -108,6 +113,8 @@ namespace labust
 			void registerModem();
 			///Helper method for unregistration
 			void unregisterModem();
+			///Helper method to check if node is in system
+			bool nodeExists(int node_id);
 			///Helper method
 			template <class MsgType>
 			void fillPosReply(MsgType& resp, const underwater_msgs::MediumTransmission::ConstPtr& msg, bool passive=false);
@@ -183,6 +190,8 @@ namespace labust
 			ros::Subscriber medium_in;
 			///Unregister topic request
 			ros::Subscriber unregister_sub;
+			///Registered nodes lsit
+			ros::Subscriber registered_nodes;
 			///Outgoing data to medium
 			ros::Publisher medium_out;
 			///Muxer for the publisher
@@ -221,11 +230,15 @@ namespace labust
 			auv_msgs::NavSts navstate;
 			///Modem registration flag
 			bool registered;
+			///Max data transmission duration
+			double max_data_duration;
 
 			///The internal message queue
 			std::queue<DatSendCmd::Ptr> reply_queue;
 			///Mutex for the reply queue
 			boost::mutex reply_queue_mux;
+			///The registered nodes list
+			std::set<int> node_list;
 		};
 	}
 }

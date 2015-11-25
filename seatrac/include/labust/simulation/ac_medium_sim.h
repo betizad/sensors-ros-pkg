@@ -42,6 +42,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include <map>
+#include <set>
 
 namespace labust
 {
@@ -86,6 +87,8 @@ namespace labust
 			///Helper function to start medium delay
 			void distributeToMedium(const DistanceMap& dist,
 					const underwater_msgs::MediumTransmission::ConstPtr msg);
+			///Helper method to send the node list to other simulators
+			void sendNodeList();
 
 			/**
 			 * Helper method to simulate data transmission through medium. This
@@ -115,6 +118,8 @@ namespace labust
 			ros::Publisher medium_out;
 			///General unsubscribe event publisher
 			ros::Publisher unsubscribe_event;
+			///The registered nodes info
+			ros::Publisher registered_nodes;
 			///Service for node registration
 			ros::ServiceServer registration;
 			///Service for node unregistration
@@ -123,6 +128,8 @@ namespace labust
 			NavStsMap nodes;
 			///Map of NavSts subscribers for each node.
 			SubscriberMap subs;
+			///The current node list
+			std::set<int> node_list;
 			///Map of transport timers
 			TimerVectorMap transport_timers;
 			///Map of delivery timers
