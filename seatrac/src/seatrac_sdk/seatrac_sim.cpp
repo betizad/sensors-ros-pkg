@@ -254,7 +254,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 		data->data = dat->data;
 		data->msg_type = AMsgType::MSG_OWAY;
 		reply_queue.push(data);
-		ROS_INFO("Queue size: %d",reply_queue.size());
+		//ROS_INFO("Queue size: %d",reply_queue.size());
 		return true;
 	}
 	else if (msg->getCid() == DatQueueClearCmd::CID)
@@ -471,7 +471,7 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
 		//Look into data command
 		if (msg->receiver == node_id)
 		{
-			ROS_DEBUG("SeatracSim: Reply on DatCmd (%d->%d).", msg->sender, node_id);
+			ROS_INFO("SeatracSim: Reply on DatCmd (%d->%d).", msg->sender, node_id);
 			if ((incoming.msg_type == AMsgType::MSG_REQU) || (incoming.msg_type == AMsgType::MSG_REQX))
 			{
 				underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());

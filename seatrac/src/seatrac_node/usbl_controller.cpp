@@ -180,20 +180,27 @@ void USBLController::onOutgoing(const underwater_msgs::ModemTransmission::ConstP
 
 	//ROS_ERROR("Setup reply.");
 	boost::mutex::scoped_lock l(data_mux);
-	if (message != 0) outgoing.push(message);
-	//Only master can send data
-	if (!auto_mode && !is_busy && !outgoing.empty())
+	if (message != 0)
 	{
-		//Spin-off a worker thread to send one packet
-		//The thread is used to avoid blocking the callback queue
-		is_busy = true;
-		l.unlock();
-		//ROS_ERROR("Start thread.");
-		worker = boost::thread(boost::bind(&USBLController::sendPkg,this));
-	}
-	else
-	{
-		//ROS_ERROR("Failed sending message. The device is busy.");
+		ROS_INFO("Sending message (%d->%d).", msg->sender, msg->receiver);
+		//Add to queue
+		outgoing.push(message);
+		//Clean queue
+		while (outgoing.size() > 1) outgoing.pop();
+		//Only master can send data
+		if (!auto_mode && !is_busy)
+		{
+			//Spin-off a worker thread to send one packet
+			//The thread is used to avoid blocking the callback queue
+			is_busy = true;
+			l.unlock();
+			//ROS_ERROR("Start thread.");
+			worker = boost::thread(boost::bind(&USBLController::sendPkg,this));
+		}
+		else
+		{
+			ROS_WARN("Failed sending message (%d->%d). The device is busy.", msg->sender, msg->receiver);
+		}
 	}
 }
 
@@ -204,7 +211,7 @@ void USBLController::sendPkg()
 	boost::mutex::scoped_lock l(data_mux);
 	//Debug turn-around time measurement
 	static ros::Time ltime;
-	ROS_INFO("Turnaround: %f",(ros::Time::now() - ltime).toSec());
+	//ROS_INFO("Turnaround: %f",(ros::Time::now() - ltime).toSec());
 	ltime = ros::Time::now();
 	//ROS_ERROR("Check queue: %d", outgoing.size());
 	if (!outgoing.empty())
@@ -319,7 +326,7 @@ bool USBLController::onPingErrors(const SeatracMessage::ConstPtr& msg)
 	}
 	else
 	{
-		ROS_WARN("USBLController: No handling for PingError: 0x%x",cid);
+		ROS_WARN("USis_busy = true;BLController: No handling for PingError: 0x%x",cid);
 	}
 
 	if (unlock)

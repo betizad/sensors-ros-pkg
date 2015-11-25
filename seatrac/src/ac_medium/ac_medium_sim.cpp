@@ -117,8 +117,8 @@ bool AcMediumSim::onUnRegistration(underwater_msgs::AcSimRegister::Request& requ
 	if (it != transport_timers.end())
 	{
 		//Stop timers if available
-		for(std::list<ros::Timer>::iterator tit = it->second.begin();
-				tit != it->second.end(); ++tit)	tit->stop();
+		for(IdTimerList::iterator tit = it->second.begin();
+				tit != it->second.end(); ++tit)	tit->second.stop();
 		//Clear from map
 		transport_timers.erase(it);
 	}
@@ -160,12 +160,6 @@ void AcMediumSim::onMediumTransmission(const
 		ROS_ERROR("Trying to publish from unregistered node.");
 		return;
 	}
-	it = nodes.find(msg->receiver);
-	if (it == nodes.end())
-	{
-		ROS_ERROR("Trying to publish from unregistered node.");
-		return;
-	}
 	l.unlock();
 
 	DistanceMap dist;
@@ -188,38 +182,44 @@ void AcMediumSim::distributeToMedium(const DistanceMap& dist,
 	{
 		//TODO Determine if node can hear the transmission
 		//Get timer list
-		std::list<ros::Timer>& timer_list(transport_timers[it->first]);
-		processTimerList(timer_list);
-		timer_list.push_back(nh.createTimer(ros::Duration(it->second/vos),
-					boost::bind(&AcMediumSim::transportMessage, this, it->first, msg, _1),
-							true, true));
+		IdTimerList& timer_list(transport_timers[it->first]);
+		int newid(0);
+		if (timer_list.size()) newid = ++timer_list.rbegin()->first;
+		timer_list.push_back(std::make_pair(newid, nh.createTimer(ros::Duration(it->second/vos),
+					boost::bind(&AcMediumSim::transportMessage, this, it->first, msg, newid, _1),
+							true, true)));
 		ROS_DEBUG("Sent message from %d to %d. Distance is %f.",msg->sender, it->first, it->second);
 	}
 }
 
-void AcMediumSim::processTimerList(std::list<ros::Timer>& list)
+void AcMediumSim::removeTimer(IdTimerList& list, int tid)
 {
 	//Clean dead timers
 	if (list.empty()) return;
 
-	std::list<ros::Timer>::iterator it = list.begin();
+	IdTimerList::iterator it = list.begin();
 	while (it != list.end())
 	{
-		if (!it->hasPending())
+		if (it->first == tid)
 		{
 			it = list.erase(it);
+			break;
 		}
-		else
-		{
-			++it;
-		}
+		++it;
 	}
 }
 
 void AcMediumSim::transportMessage(int node_id,
 		underwater_msgs::MediumTransmission::ConstPtr msg,
+		int tid,
 		const ros::TimerEvent& event)
 {
+	//Remove the transport timer
+	boost::mutex::scoped_lock ltt(transport_mux);
+	IdTimerList& timer_list(transport_timers[node_id]);
+	removeTimer(timer_list, tid);
+	ltt.unlock();
+
 	//Message arrived to the node_id transponder
 	ROS_DEBUG("Message arrived at %d.", node_id);
 	boost::mutex::scoped_lock l(delivery_mux);
@@ -228,12 +228,12 @@ void AcMediumSim::transportMessage(int node_id,
 	if (it != delivery_timers.end())
 	{
 		//Is already receiving a different message
-		if (it->second.hasPending())
-		{
+		//if (it->second.isValid())
+		//{
 			ROS_WARN("Conflict in communication on acoustic node %d.", node_id);
 			it->second.stop();
 			return;
-		}
+		//}
 	}
 
 	ros::NodeHandle nh;
@@ -246,8 +246,14 @@ void AcMediumSim::receiveMessage(int node_id,
 		underwater_msgs::MediumTransmission::ConstPtr msg,
 		const ros::TimerEvent& event)
 {
+	//Clear the delivery timer
+	boost::mutex::scoped_lock ldt(delivery_mux);
+	delivery_timers.erase(node_id);
+	ldt.unlock();
+	//Process message
 	ROS_INFO("Message (sender=%d, receiver=%d) arrived at node %d.",
-					msg->sender, msg->receiver, node_id);
+			msg->sender, msg->receiver, node_id);
+	ROS_INFO("Message is: %s", msg->message.substr(0, msg->message.size()-2).c_str());
 	underwater_msgs::MediumTransmission::Ptr msgout(new underwater_msgs::MediumTransmission(*msg));
 	msgout->listener_id = node_id;
 	///TODO Check mutexing here

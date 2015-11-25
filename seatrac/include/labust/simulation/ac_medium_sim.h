@@ -56,7 +56,9 @@ namespace labust
 			///The node navigation state map
 			typedef std::map<int, auv_msgs::NavSts> NavStsMap;
 			typedef std::map<int, ros::Timer> TimerMap;
-			typedef std::map<int, std::list<ros::Timer> > TimerVectorMap;
+			typedef std::pair<int, ros::Timer> IdTimer;
+			typedef std::list<IdTimer> IdTimerList;
+			typedef std::map<int, IdTimerList > TimerVectorMap;
 			typedef boost::function<void(const auv_msgs::NavSts::ConstPtr&)> Callback;
 			typedef std::map<int, ros::Subscriber> SubscriberMap;
 			typedef std::map<int, double> DistanceMap;
@@ -99,6 +101,7 @@ namespace labust
 			 */
 			void transportMessage(int node_id,
 					underwater_msgs::MediumTransmission::ConstPtr msg,
+					int tid,
 					const ros::TimerEvent& event);
 			/**
 			 * Helper method to simulate arrived data at the other end.
@@ -110,7 +113,7 @@ namespace labust
 					const ros::TimerEvent& event);
 
 			///Helper function for timer list processing
-			void processTimerList(std::list<ros::Timer>& list);
+			void removeTimer(IdTimerList& list, int tid);
 
 			///Medium input subscriber
 			ros::Subscriber medium_in;
