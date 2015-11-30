@@ -576,9 +576,9 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0948566
-        Y: -0.600771
-        Z: 0.795835
+        X: 0
+        Y: 0
+        Z: 0
       Name: Current View
       Near Clip Distance: 0.01
       Pitch: 0.200401
