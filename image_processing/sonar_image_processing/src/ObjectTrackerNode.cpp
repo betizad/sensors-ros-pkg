@@ -74,7 +74,7 @@ void ObjectTrackerNode::onInit() {
       target_size /* target_size (area) in mm^2 */);
 }
 
-void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
+void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg) {
   aris.saveSonarInfo(*msg);
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
@@ -85,7 +85,7 @@ void ObjectTrackerNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
 
 void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
-  aris::SonarInfo si = aris.getSonarInfo();
+  underwater_msgs::SonarInfo si = aris.getSonarInfo();
   if (img->header.stamp == si.header.stamp) {
     processFrame();
   }

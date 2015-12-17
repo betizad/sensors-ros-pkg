@@ -12,8 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   image_processing_util
   labust_navigation
-  aris
   message_generation
+  underwater_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -50,10 +50,10 @@ find_package(OpenCV REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-   FILES
-   ArisBathymetry.msg
-)
+#add_message_files(
+#   FILES
+#   ArisBathymetry.msg
+#)
 
 ## Generate services in the 'srv' folder
 # add_service_files(

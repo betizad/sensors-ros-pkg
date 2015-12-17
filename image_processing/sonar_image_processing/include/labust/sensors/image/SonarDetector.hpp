@@ -34,8 +34,8 @@
 #ifndef SONARDETECTOR_HPP_
 #define SONARDETECTOR_HPP_
 #include <ros/ros.h>
-#include <aris/SonarInfo.h>
-#include <aris/ARISConfig.h>
+#include <underwater_msgs/SonarInfo.h>
+#include <underwater_msgs/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 
 #include <navcon_msgs/RelativePosition.h>
@@ -103,7 +103,7 @@ namespace labust {
           /**
            * Save sonar info. Recalculate parameters if range or frame rate changes.
            */ 
-          void setSonarInfo(aris::SonarInfo si) {
+          void setSonarInfo(underwater_msgs::SonarInfo si) {
             // Re-initialize the detector if the range changes.
             if (si.window_start != sonar_info.window_start || si.window_length != sonar_info.window_length) {
               is_detector_initialized = false;
@@ -451,7 +451,7 @@ namespace labust {
             return cv::Rect(MMToPix(rect_mm.tl()), MMToPix(rect_mm.br()));
           }
 
-          aris::SonarInfo sonar_info;
+          underwater_msgs::SonarInfo sonar_info;
           cv::Mat mask;
           cv::vector<cv::Rect> roi_rects;
           cv::Rect roi;

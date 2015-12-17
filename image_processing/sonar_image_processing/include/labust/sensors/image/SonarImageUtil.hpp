@@ -34,8 +34,8 @@
 #ifndef SONARIMAGEUTIL_HPP_
 #define SONARIMAGEUTIL_HPP_
 #include <ros/ros.h>
-#include <aris/SonarInfo.h>
-#include <aris/ARISConfig.h>
+#include <underwater_msgs/SonarInfo.h>
+#include <underwater_msgs/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 

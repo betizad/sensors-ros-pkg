@@ -34,8 +34,8 @@
 #ifndef SONARALTITUDEESTIMATOR_HPP_
 #define SONARALTITUDEESTIMATOR_HPP_
 #include <ros/ros.h>
-#include <aris/SonarInfo.h>
-#include <aris/ARISConfig.h>
+#include <underwater_msgs/SonarInfo.h>
+#include <underwater_msgs/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
 #include <labust/sensors/image/SonarImageUtil.hpp>
@@ -55,7 +55,7 @@ namespace labust {
           ~SonarAltitudeEstimator() {}
          
           // Stores the sonar info message.
-          void setSonarInfo(aris::SonarInfo si) {
+          void setSonarInfo(underwater_msgs::SonarInfo si) {
             sonar_info = si;
           }
 
@@ -106,7 +106,7 @@ namespace labust {
           }
 
         private:
-          aris::SonarInfo sonar_info;
+          underwater_msgs::SonarInfo sonar_info;
           double pix_mm;
           bool is_initialized;
       };

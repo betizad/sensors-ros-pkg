@@ -63,7 +63,7 @@ namespace labust {
         void adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix);
         void setNavFilterEstimate(const navcon_msgs::RelativePosition& nav_filter_estimate);
         void setHeading(const auv_msgs::NavSts& position_estimate);
-        void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
+        void setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
         void processFrame();
         ros::NodeHandle nh;

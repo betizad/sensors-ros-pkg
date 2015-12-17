@@ -55,7 +55,7 @@ namespace labust {
         ~BathymetryNode();
       private:
         void onInit();
-        void setSonarInfo(const aris::SonarInfo::ConstPtr &msg);
+        void setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
         void processFrame();
         void recalculateBearings(int nbeams);

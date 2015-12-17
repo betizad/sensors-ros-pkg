@@ -40,7 +40,7 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/image_encodings.h>
-#include <sonar_image_processing/ArisBathymetry.h>
+#include <underwater_msgs/SonarBathymetry.h>
 
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/ArisSonar.hpp>
@@ -67,7 +67,7 @@ void BathymetryNode::onInit() {
   ros::Rate rate(1);
   sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &BathymetryNode::setSonarInfo, this);
   image_sub = it.subscribe("/soundmetrics_aris3000/polar", 1, &BathymetryNode::setSonarImage, this);
-  sonar_bathymetry_pub = nh.advertise<sonar_image_processing::ArisBathymetry>("bathymetry", 1);
+  sonar_bathymetry_pub = nh.advertise<underwater_msgs::SonarBathymetry>("bathymetry", 1);
   sonar_altitude_pub = nh.advertise<std_msgs::Float32>("altitude", 1);
 }
 
@@ -85,7 +85,7 @@ void BathymetryNode::recalculateBearings(int nbeams) {
 
 // Callback for sonar info message. Stores it and, if there is already
 // a matching sonar image with same timestamp, calls for processing.
-void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
+void BathymetryNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg) {
   if (msg->beams != aris.getSonarInfo().beams) {
     recalculateBearings(msg->beams);    
   }
@@ -101,7 +101,7 @@ void BathymetryNode::setSonarInfo(const aris::SonarInfo::ConstPtr &msg) {
 // a matching sonar info message with same timestamp, calls for processing.
 void BathymetryNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
-  aris::SonarInfo si = aris.getSonarInfo();
+  underwater_msgs::SonarInfo si = aris.getSonarInfo();
   if (img->header.stamp == si.header.stamp) {
     processFrame();
   }
@@ -113,7 +113,7 @@ void BathymetryNode::processFrame() {
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   
   // Provide the altitude estimator the sonar info.
-  aris::SonarInfo si = aris.getSonarInfo();
+  underwater_msgs::SonarInfo si = aris.getSonarInfo();
   sonar_altitude_estimator.setSonarInfo(si);
   
   // Call process method with the sonar image in opencv format. Result are ranges for each beam.
@@ -123,7 +123,7 @@ void BathymetryNode::processFrame() {
   double min_alt = *(std::min_element(bath.begin(), bath.end()));
 
   double max_alt = 0;
-  sonar_image_processing::ArisBathymetry::Ptr sonar_bathymetry(new sonar_image_processing::ArisBathymetry);
+  underwater_msgs::SonarBathymetry::Ptr sonar_bathymetry(new underwater_msgs::SonarBathymetry);
   std_msgs::Float32::Ptr sonar_altitude(new std_msgs::Float32);
   
   // For altitude use min_alt.

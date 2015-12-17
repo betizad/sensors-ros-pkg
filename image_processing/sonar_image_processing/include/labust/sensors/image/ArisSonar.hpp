@@ -34,8 +34,8 @@
 #ifndef ARISSONAR_HPP_
 #define ARISSONAR_HPP_
 #include <ros/ros.h>
-#include <aris/SonarInfo.h>
-#include <aris/ARISConfig.h>
+#include <underwater_msgs/SonarInfo.h>
+#include <underwater_msgs/ARISConfig.h>
 #include <opencv2/opencv.hpp>
 #include <labust/sensors/image/SonarImageUtil.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
@@ -129,7 +129,7 @@ namespace labust {
             }
           } 
 
-          void saveSonarInfo(aris::SonarInfo si) {
+          void saveSonarInfo(underwater_msgs::SonarInfo si) {
             processConfigQueue(si);
             sonar_info = si;
             sonar_cfg = getArisServiceMsg();
@@ -139,7 +139,7 @@ namespace labust {
             sonar_cv_image = sensorImage2CvImage(image, sensor_msgs::image_encodings::BGR8);
           }
 
-          aris::SonarInfo getSonarInfo() {
+          underwater_msgs::SonarInfo getSonarInfo() {
             return sonar_info;
           }
 
@@ -160,8 +160,8 @@ namespace labust {
           }
           
         private:
-          aris::ARISConfig getArisServiceMsg() {
-            aris::ARISConfig cfg;
+          underwater_msgs::ARISConfig getArisServiceMsg() {
+            underwater_msgs::ARISConfig cfg;
             if (!pending_sonar_cfg.empty()) {
               cfg = pending_sonar_cfg.back().first;
             } else {
@@ -179,7 +179,7 @@ namespace labust {
             return cfg;
           }
           
-          bool hasSonarInfoChanged(aris::SonarInfo new_sonar_info) {
+          bool hasSonarInfoChanged(underwater_msgs::SonarInfo new_sonar_info) {
             return !(sonar_info.window_start == new_sonar_info.window_start &&
                 sonar_info.window_length == new_sonar_info.window_length &&
                 sonar_info.frame_rate == new_sonar_info.frame_rate && 
@@ -210,12 +210,12 @@ namespace labust {
               if (sonar_cfg.request.samples_per_beam == 0) sonar_cfg.request.samples_per_beam = sonar_info.samples_per_beam;
           }
 
-          void processConfigQueue(aris::SonarInfo new_sonar_info) {
+          void processConfigQueue(underwater_msgs::SonarInfo new_sonar_info) {
             if (pending_sonar_cfg.empty()) return;
             // If top of the queue is not processed, send it to sonar.
             if (pending_sonar_cfg.front().second < 0) {
               ros::NodeHandle nh;
-              ros::ServiceClient client = nh.serviceClient<aris::ARISConfig>("/aris_configuration");
+              ros::ServiceClient client = nh.serviceClient<underwater_msgs::ARISConfig>("/aris_configuration");
               updateSonarConfigMessage();
               if (!checkSonarConfigMessageIsValid()) {
                 ROS_ERROR("Invalid sonar configuration data, possibly waiting for sonar info.");
@@ -248,9 +248,9 @@ namespace labust {
             pix_mm = (sonar_info.window_length - sonar_info.window_start) * 1000.0 / cartesian_img_size.height;
           }
 
-          aris::SonarInfo sonar_info;
-          aris::ARISConfig sonar_cfg;
-          std::queue<std::pair<aris::ARISConfig, int> > pending_sonar_cfg;
+          underwater_msgs::SonarInfo sonar_info;
+          underwater_msgs::ARISConfig sonar_cfg;
+          std::queue<std::pair<underwater_msgs::ARISConfig, int> > pending_sonar_cfg;
           cv_bridge::CvImagePtr sonar_cv_image;
           cv::Size cartesian_img_size;
           bool polar;
