@@ -1,0 +1,12 @@
+<launch>
+    <remap from="medium_out" to="/medium_out" />
+    <remap from="medium_in" to="/medium_in" />
+    <remap from="unregister_modems" to="/unregister_modems" />
+    <remap from="register_modem" to="/register_modem" />
+    <remap from="unregister_modem" to="/unregister_modem" />
+
+	<node pkg="seatrac" type="ac_medium_sim" name="ac_medium" />
+ 	
+ 	<node pkg="rqt_gui" type="rqt_gui" name="debuger" 
+ 		args="--perspective-file $(find seatrac)/launch/seatrac_v2_debug.perspective" />
+</launch>
