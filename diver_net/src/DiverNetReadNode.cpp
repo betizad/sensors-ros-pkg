@@ -215,7 +215,7 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
       hr_pulse_ptr->data = rawBuffer[nodeCount*dataPerNode+pressureData+temperatureData] != 0;
       
       pressure_pub.publish(pressure_ptr);    
-			temperature_pub.publish(temperature_ptr);
+      temperature_pub.publish(temperature_ptr);
       hr_pulse_pub.publish(hr_pulse_ptr);
       rawData.publish(out);
 		}
