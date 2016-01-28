@@ -3,7 +3,8 @@
 
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
-#include <std_msgs/Int16.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/Bool.h>
 
 #include <Eigen/Dense>
 
@@ -42,8 +43,9 @@ void DiverNetReadNode::onInit()
 
 	//Setup publisher
 	rawData = nh.advertise<std_msgs::Int16MultiArray>("net_data",1);
-	breathingBelt = nh.advertise<std_msgs::Int16>("breathing_belt",1);
-
+  temperature_pub = nh.advertise<std_msgs::Float32>("temperature",1);
+  pressure_pub = nh.advertise<std_msgs::Float32>("pressure",1);
+  hr_pulse_pub = nh.advertise<std_msgs::Bool>("hr_pulse",1);
 	netInit = nh.subscribe<std_msgs::Bool>("net_init",1,&DiverNetReadNode::onNetInit, this);
 
 	if (setupOk)
@@ -62,7 +64,7 @@ void DiverNetReadNode::configureNet()
 	//Read number of nodes
 	ros::NodeHandle ph("~");
 	ph.param("node_count", nodeCount, nodeCount);
-	rawBuffer.resize(nodeCount * dataPerNode + crc + adc);
+	rawBuffer.resize(nodeCount * dataPerNode + crc + pressureData + temperatureData + hrPulseData);
 }
 
 void DiverNetReadNode::start_receive()
@@ -204,11 +206,18 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
 					raw(i,e) /= (1 << 15);
 				}
 			}
-                        std_msgs::Int16Ptr bbelt(new std_msgs::Int16());
-                        bbelt->data = (rawBuffer[nodeCount * dataPerNode] + 256 * rawBuffer[nodeCount * dataPerNode + 1]);
-                        out->data.push_back(bbelt->data);
-                        breathingBelt.publish(bbelt);
-			rawData.publish(out);
+      std_msgs::Float32Ptr pressure_ptr(new std_msgs::Float32());
+      std_msgs::Float32Ptr temperature_ptr(new std_msgs::Float32());
+      std_msgs::BoolPtr hr_pulse_ptr(new std_msgs::Bool());
+      float pressure, temperature;
+      memcpy(&pressure_ptr->data, &rawBuffer[nodeCount*dataPerNode], sizeof(pressure_ptr->data));
+      memcpy(&temperature_ptr->data, &rawBuffer[nodeCount*dataPerNode+pressureData], sizeof(temperature_ptr->data));
+      hr_pulse_ptr->data = rawBuffer[nodeCount*dataPerNode+pressureData+temperatureData] != 0;
+      
+      pressure_pub.publish(pressure_ptr);    
+			temperature_pub.publish(temperature_ptr);
+      hr_pulse_pub.publish(hr_pulse_ptr);
+      rawData.publish(out);
 		}
 		else
 		{
