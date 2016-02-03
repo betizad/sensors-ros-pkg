@@ -138,6 +138,7 @@ void BuddyUSBL::run()
 		data->data.assign(buf.begin(),buf.end());
 		lock.unlock();
 
+		ROS_INFO("Pinging: %d", data->dest);
 		if (!pinger.send(boost::dynamic_pointer_cast<SeatracMessage>(data), TIMEOUT))
 		{
 			ROS_ERROR("BuddyUSBL: Message sending failed.");
@@ -171,6 +172,7 @@ void BuddyUSBL::onData(const labust::seatrac::DatReceive& msg)
 		divernav->orientation.yaw = labust::math::wrapRad(
 				M_PI*decodemeas(diver.heading, 0, 1024, 360.0/1024.0)/180);
 		divernav->position.depth = decodemeas(diver.depth, 0, 128, 0.5);
+		divernav->header.stamp = ros::Time::now();
 		divernav_pub.publish(divernav);
 	}
 	else if (msg.acofix.src == SURFACE_ID)
@@ -191,6 +193,7 @@ void BuddyUSBL::onData(const labust::seatrac::DatReceive& msg)
 		surfnav->gbody_velocity.x = decodemeas(surf.speed, 0, 16, 1.0/16.0);
 		surfnav->orientation.yaw = labust::math::wrapRad(
 				M_PI*decodemeas(surf.course, 0, 1024, 360.0/1024.0)/180);
+		surfnav->header.stamp = ros::Time::now();
 		surfacenav_pub.publish(surfnav);
 	}
 }

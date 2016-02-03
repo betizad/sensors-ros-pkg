@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
     misc_msgs)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system serialization thread)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -89,6 +89,7 @@ add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)
 add_executable(encoding_test src/test/bitencoding.cpp src/DiverMsg.cpp)
 add_executable(uros_modem src/uros/UROSModem.cpp src/DiverMsg.cpp)
 add_executable(encoding_v2_test src/test/encoding_v2.cpp)
+add_executable(packer_test src/test/packer_test.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -102,6 +103,7 @@ if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(divermsg_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(encoding_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(encoding_v2_test ${catkin_EXPORTED_TARGETS})
+ add_dependencies(packer_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 ## Specify libraries to link a library or executable target against
@@ -115,6 +117,11 @@ target_link_libraries(uros_comms
 
 target_link_libraries(uros_modem
    ${catkin_LIBRARIES}
+)
+
+target_link_libraries(packer_test
+   ${catkin_LIBRARIES} 
+   ${Boost_SERIALIZATION_LIBRARIES}
 )
 
 #############

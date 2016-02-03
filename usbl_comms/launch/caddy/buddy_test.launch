@@ -10,7 +10,7 @@
 	
     <!-- The Buddy USBL -->   
     <group ns="buddy">
-    	<node pkg="seatrac" type="seatrac_core" name="buddy_sim">
+    	<node pkg="seatrac" type="seatrac_core" name="buddy_sim" output="screen">
 			<!-- Core configuration -->
 			<param name="comms_plugin" value="labust::seatrac::SeatracSim" if="$(arg is_sim)"/>
 			<param name="comms_plugin" value="labust::seatrac::SeatracSerial" unless="$(arg is_sim)"/>
@@ -33,10 +33,11 @@
 			
 			<remap from="navsts" to="position" />
 		</node>
-		
-		<node pkg="seatrac" type="static_beacon" name="buddy_pos">
+		<node pkg="ist_util" type="ramp_pub.py" name="buddy_pos" />
+
+		<!-- <node pkg="seatrac" type="static_beacon" name="buddy_pos">
 			<rosparam param="position">[10.0,11.0,0.0]</rosparam>
 			<rosparam param="orientation">[0.0,0.0,1.0]</rosparam>
-		</node>
+		</node> -->
     </group>
 </launch>

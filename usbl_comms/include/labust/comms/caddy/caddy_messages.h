@@ -38,6 +38,7 @@
 #define USBL_COMMS_CADDY_MESSAGES_H
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
+#include <labust/tools/bitstorage.h>
 #include <cstdint>
 
 namespace labust
