@@ -56,7 +56,7 @@ namespace labust
 		 */
 		class DiverNetReadNode
 		{
-			enum {headerSize=4, dataPerNode = 18, crc = 2, adc=2};
+			enum {headerSize=4, dataPerNode = 18, crc = 2, pressureData=4, temperatureData=4, hrPulseData=1};
 
 		public:
 			/**
@@ -108,7 +108,7 @@ namespace labust
 			/**
 			 * The ROS publisher.
 			 */
-			ros::Publisher rawData, breathingBelt;
+			ros::Publisher rawData, temperature_pub, pressure_pub, hr_pulse_pub;
 			/**
 			 * Subscriber
 			 */
