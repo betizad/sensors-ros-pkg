@@ -111,7 +111,7 @@ void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 
 	if (!sender.empty())
 	{
-		sender(clr);
+		//sender(clr);
 		sender(cmd);
 	}
 }
@@ -120,6 +120,8 @@ void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 {
 	///TODO: Put decoders/encoders for each agent in a class to be shared
 	/// between modem controllers
+
+	ROS_ERROR("WTF?");
 
 	if (msg.acofix.src == BUDDY_ID)
 	{
@@ -146,11 +148,14 @@ void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 		buddynav->orientation.yaw = labust::math::wrapRad(
 					M_PI*decodemeas(buddy.course, 0, 1024, 360.0/1024.0)/180);
 	  buddynav->gbody_velocity.x = decodemeas(buddy.speed, 0, 16, 1.0/16.0);
+		buddynav->header.stamp = ros::Time::now();
+		ROS_INFO("Set timestamp %f",buddynav->header.stamp.toSec());
 		buddynav_pub.publish(buddynav);
 
 		auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
 	  divernav->position.north = decodemeas(buddy.diver_offset_x, POS_A, POS_B, POS_QUANT);
 	  divernav->position.east = decodemeas(buddy.diver_offset_y, POS_A, POS_B, POS_QUANT);
+	  divernav->header.stamp = buddynav->header.stamp;
 	  diverpos_pub.publish(divernav);
 	}
 	else if (msg.acofix.src == DIVER_ID)
@@ -166,6 +171,7 @@ void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 		divernav->orientation.yaw = labust::math::wrapRad(
 				M_PI*decodemeas(diver.heading, 0, 1024, 360.0/1024.0)/180);
 		divernav->position.depth = decodemeas(diver.depth, 0, 128, 0.5);
+		divernav->header.stamp = ros::Time::now();
 		divernav_pub.publish(divernav);
 	}
 }
