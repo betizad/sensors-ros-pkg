@@ -33,6 +33,8 @@
  *********************************************************************/
 #include <labust/seatrac/diver_modem.h>
 #include <labust/comms/caddy/caddy_messages.h>
+#include <labust/comms/caddy/buddy_handler.h>
+#include <labust/comms/caddy/surface_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/seatrac/mediator.h>
@@ -59,26 +61,14 @@ DiverModem::~DiverModem(){}
 
 bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
-	surfacenav_pub = nh.advertise<auv_msgs::NavSts>("surface_nav",	1);
-	buddynav_pub = nh.advertise<auv_msgs::NavSts>("buddy_nav",	1);
+	handlers[BUDDY_ID].reset(new BuddyHandler());
+  handlers[SURFACE_ID].reset(new SurfaceHandler());
+	handlers[BUDDY_ID]->configure(nh,ph);
+	handlers[SURFACE_ID]->configure(nh,ph);
 
 	state_sub = nh.subscribe("position",	1, &DiverModem::onNavSts, this);
 
 	return true;
-}
-
-int DiverModem::adaptmeas(double value, int a, int b, double q)
-{
-	assert(q !=0 && "Quantization of zero is not realistic.");
-	value = labust::math::coerce(value, a*q, b*q);
-	return int(value/q - a);
-}
-
-double DiverModem::decodemeas(double value, int a, int b, double q)
-{
-	assert(q !=0 && "Quantization of zero is not realistic.");
-	return q*(value+a);
 }
 
 void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
@@ -87,11 +77,9 @@ void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
 	std::vector<char> binary;
-	DiverNav diver;
-	double heading = 180*msg->orientation.yaw/M_PI;
-  if (heading < 0) heading = heading + 360;
-  diver.heading = adaptmeas(heading, 0, 1024, 360.0/1024.0);
-  diver.depth = adaptmeas(msg->position.depth, 0, 128, 0.5);
+	DiverReport diver;
+  diver.heading = 180*msg->orientation.yaw/M_PI;;
+  diver.depth = msg->position.depth;
 	labust::tools::encodePackable(diver, &binary);
 	cmd->data.assign(binary.begin(),binary.end());
 
@@ -104,62 +92,15 @@ void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 
 void DiverModem::onData(const labust::seatrac::DatReceive& msg)
 {
-	///TODO: Put decoders/encoders for each agent in a class to be shared
-	/// between modem controllers
-
-	if (msg.acofix.src == BUDDY_ID)
+	HandlerMap::iterator it=handlers.find(msg.acofix.src);
+	if (it != handlers.end())
 	{
-		///TODO: add handling of messages based on message ID
-		///TODO: create acofix processor similar to pinger class
-		/// in order to process position in-place and fuse with
-		/// payload information
-
-		BuddyReport buddy;
-		if (!labust::tools::decodePackable(msg.data, &buddy))
-		{
-			ROS_WARN("BuddyUSBL: Empty message received from modem.");
-			return;
-		}
-
-		auv_msgs::NavSts::Ptr buddynav(new auv_msgs::NavSts());
-		enum {POS_A = -512, POS_B=512};
-		const double POS_QUANT = 0.1;
-
-		///TODO add substraction from init point and init point broadcast
-		buddynav->position.north = decodemeas(buddy.offset_x, POS_A, POS_B, POS_QUANT);
-		buddynav->position.east = decodemeas(buddy.offset_y, POS_A, POS_B, POS_QUANT);
-		buddynav->position.depth = decodemeas(buddy.depth, 0, 128, 0.5);
-		buddynav->orientation.yaw = labust::math::wrapRad(
-					M_PI*decodemeas(buddy.course, 0, 1024, 360.0/1024.0)/180);
-	  buddynav->gbody_velocity.x = decodemeas(buddy.speed, 0, 16, 1.0/16.0);
-		buddynav_pub.publish(buddynav);
-
-		auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
-	  divernav->position.north = decodemeas(buddy.diver_offset_x, POS_A, POS_B, POS_QUANT);
-	  divernav->position.east = decodemeas(buddy.diver_offset_y, POS_A, POS_B, POS_QUANT);
-	  divernav_pub.publish(divernav);
+		(*handlers[msg.acofix.src])(msg);
 	}
-	else if (msg.acofix.src == SURFACE_ID)
+	else
 	{
-		SurfaceNav surf;
-		if (!labust::tools::decodePackable(msg.data, &surf))
-		{
-			ROS_WARN("BuddyUSBL: Empty message received from modem.");
-			return;
-		}
-
-		enum {POS_A = -512, POS_B=512};
-		const double POS_QUANT = 0.1;
-
-		auv_msgs::NavSts::Ptr surfnav(new auv_msgs::NavSts());
-		surfnav->position.north = decodemeas(surf.offset_x, POS_A, POS_B, POS_QUANT);
-		surfnav->position.east = decodemeas(surf.offset_y, POS_A, POS_B, POS_QUANT);
-		surfnav->gbody_velocity.x = decodemeas(surf.speed, 0, 16, 1.0/16.0);
-		surfnav->orientation.yaw = labust::math::wrapRad(
-				M_PI*decodemeas(surf.course, 0, 1024, 360.0/1024.0)/180);
-		surfacenav_pub.publish(surfnav);
+		ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
 	}
-
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem, labust::seatrac::DeviceController)

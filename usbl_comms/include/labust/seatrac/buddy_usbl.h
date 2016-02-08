@@ -34,6 +34,7 @@
 #ifndef USBL_COMMS_BUDDY_USBL_H
 #define USBL_COMMS_BUDDY_USBL_H
 #include <labust/seatrac/device_controller.h>
+#include <labust/comms/caddy/ac_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/pinger.h>
 #include <labust/comms/caddy/caddy_messages.h>
@@ -53,6 +54,8 @@ namespace labust
 		 */
 		class BuddyUSBL : virtual public DeviceController
 		{
+			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
+
 			enum {TIMEOUT=4, DIVER_ID=2, SURFACE_ID=1};
 		public:
 			///Main constructor
@@ -78,18 +81,11 @@ namespace labust
 			void onData(const labust::seatrac::DatReceive& data);
 			///The pinging function
 			void run();
-			///Helper methods
-			int adaptmeas(double value, int a, int b, double q);
-			double decodemeas(double value, int a, int b, double q);
 
 			///Position estimate subscriber.
 			ros::Subscriber nav_sub;
 			///The diver navigation information publisher.
 			ros::Subscriber diverpos_sub;
-			///The diver navigation information publisher.
-			ros::Publisher divernav_pub;
-			///The surface navigation state subscription.
-			ros::Publisher surfacenav_pub;
 
 			///The next message mux.
 			boost::mutex message_mux;
@@ -99,6 +95,8 @@ namespace labust
 			labust::comms::caddy::BuddyReport message;
 			///The diver position
 			auv_msgs::NavSts diver;
+			///Handlers for acoustic messages
+			HandlerMap handlers;
 
 			///The worker thread
 			boost::thread worker;
