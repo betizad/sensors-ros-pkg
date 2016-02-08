@@ -31,88 +31,45 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/seatrac/surface_usbl.h>
-#include <labust/comms/caddy/caddy_messages.h>
-#include <labust/comms/caddy/buddy_handler.h>
 #include <labust/comms/caddy/diver_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
-#include <labust/seatrac/mediator.h>
-#include <labust/tools/packer.h>
 #include <labust/math/NumberManipulation.hpp>
+#include <labust/tools/packer.h>
 
 #include <pluginlib/class_list_macros.h>
 
-#include <std_msgs/UInt8.h>
-#include <sensor_msgs/NavSatFix.h>
+#include <auv_msgs/NavSts.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-SurfaceUSBL::SurfaceUSBL()
+bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&SurfaceUSBL::onData,this,_1)));
-}
-
-SurfaceUSBL::~SurfaceUSBL(){}
-
-bool SurfaceUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-{
-	state_sub = nh.subscribe("position",	1, &SurfaceUSBL::onNavSts, this);
-
-	handlers[BUDDY_ID].reset(new BuddyHandler());
-	handlers[DIVER_ID].reset(new DiverHandler());
-	handlers[DIVER_ID]->configure(nh,ph);
-	handlers[BUDDY_ID]->configure(nh,ph);
-
+	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
 	return true;
 }
 
-void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
+void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
 {
-	static int cmdd = 0;
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
-	SurfaceReport surf;
-
-	surf.offset_x = msg->position.north;
-	surf.offset_y = msg->position.east;
-	surf.course = msg->orientation.yaw*180/M_PI;
-	double u(msg->gbody_velocity.x), v(msg->gbody_velocity.y);
-	surf.speed = sqrt(u*u+v*v);
-	if (surf.speed > 0.1) surf.course = 180*atan2(u,v)/M_PI;
-	//TODO Add mission command specifics
-	surf.mission_cmd = cmdd++;
-	cmdd = cmdd%4;
-	//surf.lawn_width;
-	//surf.lawn_length;
-
-	labust::tools::encodePackable(surf, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
-
-	if (!sender.empty())
+	///TODO: add handling of messages based on message ID
+	///TODO: create acofix processor similar to pinger class
+	/// in order to process position in-place and fuse with
+	/// payload information
+	DiverReport diver;
+	if (!labust::tools::decodePackable(msg.data, &diver))
 	{
-		sender(clr);
-		sender(cmd);
+		ROS_WARN("DiverHandler: Wrong message received from modem.");
+		return;
 	}
+
+	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+	divernav->orientation.yaw = labust::math::wrapRad(M_PI*diver.heading/180);
+	divernav->position.depth = diver.depth;
+	divernav->header.stamp = ros::Time::now();
+	divernav_pub.publish(divernav);
+	//TODO Handle paddle_rate, hearth_rate and breathing_rate
 }
-
-void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
-{
-	HandlerMap::iterator it=handlers.find(msg.acofix.src);
-	if (it != handlers.end())
-	{
-		(*handlers[msg.acofix.src])(msg);
-	}
-	else
-	{
-		ROS_WARN("No acoustic data handler found in SurfaceUSBL for ID=%d.",msg.acofix.src);
-	}
-}
-
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::SurfaceUSBL, labust::seatrac::DeviceController)
