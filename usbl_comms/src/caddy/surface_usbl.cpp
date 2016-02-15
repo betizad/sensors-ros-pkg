@@ -61,7 +61,16 @@ SurfaceUSBL::~SurfaceUSBL(){}
 
 bool SurfaceUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+	//Configure defaults for the surface message
+	//The command 0 represents NOP
+	surf.mission_cmd = NOP;
+	//Lawn mower parameter 0,0
+	surf.lawn_length = 0;
+	surf.lawn_width = 0;
+
 	state_sub = nh.subscribe("position",	1, &SurfaceUSBL::onNavSts, this);
+	surfacecmd_sub = nh.subscribe("surface_cmd",	1, &SurfaceUSBL::onMissionCmd, this);
+	lawnmower_sub = nh.subscribe("lawnmower_req",	1, &SurfaceUSBL::onLawnMower, this);
 
 	handlers[BUDDY_ID].reset(new BuddyHandler());
 	handlers[DIVER_ID].reset(new DiverHandler());
@@ -78,7 +87,6 @@ void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
 	std::vector<char> binary;
-	SurfaceReport surf;
 
 	surf.offset_x = msg->position.north;
 	surf.offset_y = msg->position.east;
@@ -86,12 +94,6 @@ void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 	double u(msg->gbody_velocity.x), v(msg->gbody_velocity.y);
 	surf.speed = sqrt(u*u+v*v);
 	if (surf.speed > 0.1) surf.course = 180*atan2(u,v)/M_PI;
-	//TODO Add mission command specifics
-	surf.mission_cmd = cmdd++;
-	cmdd = cmdd%4;
-	//surf.lawn_width;
-	//surf.lawn_length;
-
 	labust::tools::encodePackable(surf, &binary);
 	cmd->data.assign(binary.begin(),binary.end());
 
@@ -100,6 +102,18 @@ void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 		sender(clr);
 		sender(cmd);
 	}
+}
+
+void SurfaceUSBL::onMissionCmd(const std_msgs::UInt8::ConstPtr& msg)
+{
+	surf.mission_cmd = msg->data;
+}
+
+void SurfaceUSBL::onLawnMower(const caddy_msgs::LawnmowerReq::ConstPtr& msg)
+{
+	surf.lawn_width = msg->width;
+	surf.lawn_length = msg->length;
+	surf.mission_cmd = LAWN_MOWER;
 }
 
 void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)

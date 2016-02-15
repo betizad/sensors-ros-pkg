@@ -63,6 +63,8 @@ namespace labust
 				ros::Publisher surfacenav_pub;
 				//Surface command publisher
 				ros::Publisher surfacecmd_pub;
+				//Surface lawn mower publisher
+				ros::Publisher lawnreq_pub;
 			};
 		}
 	}
