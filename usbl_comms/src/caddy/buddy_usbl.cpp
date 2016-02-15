@@ -65,7 +65,7 @@ bool BuddyUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	ph.param("ping_rate", ping_rate, ping_rate);
 
-	nav_sub = nh.subscribe("navsts", 1, &BuddyUSBL::onEstimatedPos, this);
+	nav_sub = nh.subscribe("position", 1, &BuddyUSBL::onEstimatedPos, this);
 
 	handlers[SURFACE_ID].reset(new SurfaceHandler());
 	handlers[DIVER_ID].reset(new DiverHandler());

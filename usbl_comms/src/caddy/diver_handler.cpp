@@ -71,5 +71,5 @@ void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
 	divernav->position.depth = diver.depth;
 	divernav->header.stamp = ros::Time::now();
 	divernav_pub.publish(divernav);
-	//TODO Handle paddle_rate, hearth_rate and breathing_rate
+	//TODO Handle paddle_rate, hearth_rate and breathing_rate and command
 }

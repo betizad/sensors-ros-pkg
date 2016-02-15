@@ -42,6 +42,7 @@
 
 #include <auv_msgs/NavSts.h>
 #include <std_msgs/UInt8.h>
+#include <caddy_msgs/LawnmowerReq.h>
 
 #include <string>
 
@@ -52,6 +53,7 @@ bool SurfaceHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
  	surfacenav_pub = nh.advertise<auv_msgs::NavSts>("surface_nav",	1);
  	surfacecmd_pub = nh.advertise<std_msgs::UInt8>("surface_cmd",	1);
+ 	lawnreq_pub = nh.advertise<caddy_msgs::LawnmowerReq>("lawnmower_req",	1);
 	return true;
 }
 
@@ -80,4 +82,10 @@ void SurfaceHandler::operator()(const labust::seatrac::DatReceive& msg)
 	std_msgs::UInt8 cmd;
 	cmd.data = surf.mission_cmd;
 	surfacecmd_pub.publish(cmd);
+
+	//The lawn mower parameters
+	caddy_msgs::LawnmowerReq req;
+	req.header.stamp = ros::Time::now();
+	req.length = surf.lawn_length;
+	req.width = surf.lawn_width;
 }

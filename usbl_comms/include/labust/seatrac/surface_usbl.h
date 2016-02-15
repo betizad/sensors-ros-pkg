@@ -40,6 +40,8 @@
 
 #include <auv_msgs/NavSts.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/UInt8.h>
+#include <caddy_msgs/LawnmowerReq.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
@@ -56,6 +58,7 @@ namespace labust
 		class SurfaceUSBL : virtual public DeviceController
 		{
 			enum {TIMEOUT=4, BUDDY_ID=3, DIVER_ID=2, SURFACE_ID=1};
+			enum {NOP=0, LAWN_MOWER=1, STOP=2};
 			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
 		public:
 			///Main constructor
@@ -69,6 +72,10 @@ namespace labust
 		private:
 			///Handles the diver position.
 			void onNavSts(const auv_msgs::NavSts::ConstPtr& msg);
+			///Handles the mission command for transmission.
+			void onMissionCmd(const std_msgs::UInt8::ConstPtr& msg);
+			///Handles the lawn mower mission request.
+			void onLawnMower(const caddy_msgs::LawnmowerReq::ConstPtr& msg);
 			///Handles incoming acoustic data.
 			void onData(const labust::seatrac::DatReceive& data);
 
@@ -76,6 +83,12 @@ namespace labust
 			HandlerMap handlers;
 			///The navigation state subscription.
 			ros::Subscriber state_sub;
+			///The command subscription
+			ros::Subscriber surfacecmd_sub;
+			///The lawn mower subscription
+			ros::Subscriber lawnmower_sub;
+			///The outgoing message
+			labust::comms::caddy::SurfaceReport surf;
 		};
 	}
 }
