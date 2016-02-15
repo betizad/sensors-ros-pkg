@@ -19,7 +19,7 @@
                    "labust::seatrac::NavListener",
                    "labust::seatrac::DataListener"]</rosparam>
             <!-- Serial parameters -->
-            <param name="port_name" value="/dev/ttyUSB1" />
+            <param name="port_name" value="/dev/usbl" />
             <!-- USBLController configuration -->
             <param name="auto_mode" value="false" />
             <param name="timeout" value="4.0" />

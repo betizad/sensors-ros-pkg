@@ -84,8 +84,12 @@ void SurfaceHandler::operator()(const labust::seatrac::DatReceive& msg)
 	surfacecmd_pub.publish(cmd);
 
 	//The lawn mower parameters
-	caddy_msgs::LawnmowerReq req;
-	req.header.stamp = ros::Time::now();
-	req.length = surf.lawn_length;
-	req.width = surf.lawn_width;
+	if (surf.mission_cmd == LAWN_MOWER)
+	{
+	  caddy_msgs::LawnmowerReq req;
+	  req.header.stamp = ros::Time::now();
+	  req.length = surf.lawn_length;
+	  req.width = surf.lawn_width;
+	  lawnreq_pub.publish(req);
+ 	}
 }
