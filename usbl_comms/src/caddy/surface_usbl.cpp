@@ -91,9 +91,7 @@ void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 	surf.offset_x = msg->position.north;
 	surf.offset_y = msg->position.east;
 	surf.course = msg->orientation.yaw*180/M_PI;
-	double u(msg->gbody_velocity.x), v(msg->gbody_velocity.y);
-	surf.speed = sqrt(u*u+v*v);
-	if (surf.speed > 0.1) surf.course = 180*atan2(u,v)/M_PI;
+	surf.speed = msg->gbody_velocity.x;
 	labust::tools::encodePackable(surf, &binary);
 	cmd->data.assign(binary.begin(),binary.end());
 

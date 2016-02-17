@@ -85,9 +85,7 @@ void BuddyUSBL::onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
   message.offset_x = msg->position.north;
   message.offset_y = msg->position.east;
   message.course = msg->orientation.yaw*180/M_PI;
-  double u(msg->gbody_velocity.x), v(msg->gbody_velocity.y);
-  message.speed = sqrt(u*u+v*v);
-  if (message.speed > 0.1) message.course = 180*atan2(u,v)/M_PI;
+  message.speed = msg->gbody_velocity.x;
   message.depth = msg->position.depth;
   message.altitude = msg->altitude;
 

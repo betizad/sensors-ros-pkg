@@ -55,10 +55,6 @@ bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
 {
-	///TODO: add handling of messages based on message ID
-	///TODO: create acofix processor similar to pinger class
-	/// in order to process position in-place and fuse with
-	/// payload information
 	DiverReport diver;
 	if (!labust::tools::decodePackable(msg.data, &diver))
 	{
