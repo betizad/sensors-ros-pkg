@@ -50,6 +50,7 @@ namespace labust
 			///Class for handling Surface acoustic messages and publish them to ROS.
 			class SurfaceHandler : public virtual AcHandler
 			{
+			enum {NOP=0, LAWN_MOWER=1, STOP=2};
 			public:
 				///Main constructor
 				SurfaceHandler(){};
