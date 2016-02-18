@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   pluginlib
   dynamic_reconfigure
+  roslint
 )
 
 ## System dependencies are found with CMake's conventions
@@ -81,6 +82,9 @@ generate_dynamic_reconfigure_options(
 #   DEPENDENCIES
 #   std_msgs#   underwater_msgs
 # )
+
+# Generate linter
+roslint_cpp(src/seatrac_sdk/seatrac_sim.cpp)
 
 ###################################
 ## catkin specific configuration ##
