@@ -95,6 +95,10 @@ namespace labust
 
 			///Internal AHRS compensation
 			bool use_ahrs;
+
+			///Inverted USBL configuration
+			bool inverted_cfg;
+
 			///Assumed time delay to use for AHRS compensation
 			double ahrs_delay;
 			///TF broadcast listener buffer
