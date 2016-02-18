@@ -41,6 +41,9 @@
 #include <pluginlib/class_list_macros.h>
 
 #include <auv_msgs/NavSts.h>
+#include <std_msgs/Int32.h>
+#include <std_msgs/UInt8.h>
+#include <std_msgs/Bool.h>
 
 #include <string>
 
@@ -51,6 +54,9 @@ bool BuddyHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_pos", 1);
 	buddynav_pub = nh.advertise<auv_msgs::NavSts>("buddy_nav",	1);
+	mission_pub = nh.advertise<std_msgs::Int32>("buddy_mission_status",	1);
+	leak_pub = nh.advertise<std_msgs::Bool>("buddy_leak",	1);
+	battery_pub = nh.advertise<std_msgs::UInt8>("buddy_battery_status",	1);
 	return true;
 }
 
@@ -76,7 +82,19 @@ void BuddyHandler::operator()(const labust::seatrac::DatReceive& msg)
   buddynav->gbody_velocity.x = buddy.speed;
 	buddynav->header.stamp = ros::Time::now();
 	buddynav_pub.publish(buddynav);
-	//TODO handle the battery, leak and mission status
+
+	//Handle mission status, leak and battery info
+	std_msgs::Int32 ms;
+	ms.data = buddy.mission_status;
+	mission_pub.publish(ms);
+
+	std_msgs::Bool leak;
+	leak.data = buddy.leak_info;
+	leak_pub.publish(leak);
+
+	std_msgs::UInt8 battery;
+	battery.data = buddy.battery_info;
+	battery_pub.publish(battery);
 
 	//Handle diver position
 	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());

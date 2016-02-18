@@ -38,6 +38,22 @@ public:
 };
 
 
+struct SurfaceChat {
+public:
+
+  void pack(boost::archive::binary_oarchive& out) const;
+
+  void unpack(boost::archive::binary_iarchive& in) ;
+
+  double offset_x;
+  double offset_y;
+  double course;
+  double speed;
+  uint8_t chat[5];
+
+};
+
+
 struct DiverReport {
 public:
 
@@ -49,8 +65,21 @@ public:
   double depth;
   double paddle_rate;
   double hearth_rate;
-  double breathing_rate;
   uint8_t mission_cmd;
+
+};
+
+
+struct DiverChat {
+public:
+
+  void pack(boost::archive::binary_oarchive& out) const;
+
+  void unpack(boost::archive::binary_iarchive& in) ;
+
+  double paddle_rate;
+  double hearth_rate;
+  uint8_t chat[8];
 
 };
 

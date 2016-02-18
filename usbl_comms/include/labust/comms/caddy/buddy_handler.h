@@ -59,10 +59,16 @@ namespace labust
 				void operator()(const labust::seatrac::DatReceive& msg);
 
 			protected:
-				//Buddy navigation data publisher
+				///Buddy navigation data publisher
 				ros::Publisher buddynav_pub;
-				//The diver navigation info publisher
+				///The diver navigation info publisher
 				ros::Publisher divernav_pub;
+				///The mission status
+				ros::Publisher mission_pub;
+				///Leak detection
+				ros::Publisher leak_pub;
+				///Battery info
+				ros::Publisher battery_pub;
 			};
 		}
 	}

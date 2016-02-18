@@ -65,12 +65,15 @@ bool BuddyUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	ph.param("ping_rate", ping_rate, ping_rate);
 
-	nav_sub = nh.subscribe("position", 1, &BuddyUSBL::onEstimatedPos, this);
-
 	handlers[SURFACE_ID].reset(new SurfaceHandler());
 	handlers[DIVER_ID].reset(new DiverHandler());
 	handlers[DIVER_ID]->configure(nh,ph);
 	handlers[SURFACE_ID]->configure(nh,ph);
+
+	nav_sub = nh.subscribe("position", 1, &BuddyUSBL::onEstimatedPos, this);
+	leak_sub = nh.subscribe("leak", 1, &BuddyUSBL::onLeak, this);
+	battery_sub = nh.subscribe("battery_status", 1, &BuddyUSBL::onBatteryInfo, this);
+	mission_sub = nh.subscribe("mission_status", 1, &BuddyUSBL::onMissionStatus, this);
 
 	run_flag = true;
 	worker = boost::thread(boost::bind(&BuddyUSBL::run, this));
@@ -88,11 +91,6 @@ void BuddyUSBL::onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
   message.speed = msg->gbody_velocity.x;
   message.depth = msg->position.depth;
   message.altitude = msg->altitude;
-
-  //TODO Handler battery_info, mission status and leak_info
-
-  message.diver_offset_x = diver.position.north;
-  message.diver_offset_y = diver.position.east;
 }
 
 void BuddyUSBL::run()
@@ -108,6 +106,10 @@ void BuddyUSBL::run()
 		data->dest = ping_diver?DIVER_ID:SURFACE_ID;
 		data->msg_type = AMsgType::MSG_REQU;
 
+		//TODO: The diver position will be updated after the ping to the diver
+		//However, the surface ping with diver position will probably contain
+		//the position from quite a previous interrogation (maybe assuring the new
+		//diver position update happens if a ping i successful would be better)
 		boost::mutex::scoped_lock lock(message_mux);
 		SeatracMessage::DataBuffer buf;
 		labust::tools::encodePackable(message,&buf);

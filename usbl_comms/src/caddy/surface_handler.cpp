@@ -79,17 +79,24 @@ void SurfaceHandler::operator()(const labust::seatrac::DatReceive& msg)
 	surfacenav_pub.publish(surfnav);
 
 	//Add handling of mission_cmd and lawn parameters
-	std_msgs::UInt8 cmd;
-	cmd.data = surf.mission_cmd;
-	surfacecmd_pub.publish(cmd);
-
-	//The lawn mower parameters
-	if (surf.mission_cmd == LAWN_MOWER)
+	if (surf.mission_cmd != last_cmd)
 	{
-	  caddy_msgs::LawnmowerReq req;
-	  req.header.stamp = ros::Time::now();
-	  req.length = surf.lawn_length;
-	  req.width = surf.lawn_width;
-	  lawnreq_pub.publish(req);
- 	}
+		last_cmd = surf.mission_cmd;
+
+		std_msgs::UInt8 cmd;
+		cmd.data = surf.mission_cmd;
+		surfacecmd_pub.publish(cmd);
+
+		//The lawn mower parameters
+		if ((surf.mission_cmd == LAWN_MOWER) &&
+			 (surf.lawn_length != 0) &&
+			 (surf.lawn_width != 0))
+		{
+			caddy_msgs::LawnmowerReq req;
+			req.header.stamp = ros::Time::now();
+			req.length = surf.lawn_length;
+			req.width = surf.lawn_width;
+	  	lawnreq_pub.publish(req);
+		}
+	}
 }

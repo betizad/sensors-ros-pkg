@@ -17,8 +17,8 @@
   <!-- <var type="double" name="depth_alt" bits="8" min="-10" max="54" /> -->
   <var type="double" name="depth" bits="7" min="0" max="63.5" />
   <var type="double" name="altitude" bits="5" min="0" max="7.75" />
-  <var type="uint8_t" name="battery_info" bits="3" min="0" max="7" />
-  <var type="uint8_t" name="leak_info" bits="2" min="0" max="3" />
+  <var type="uint8_t" name="battery_info" bits="3" min="0" max="100" />
+  <var type="uint8_t" name="leak_info" bits="1" min="0" max="1" />
   <var type="uint8_t" name="mission_status" bits="2" min="0" max="3" />
   <var type="double" name="diver_offset_x" bits="10" min="-51.2"
    max="51.2" />

@@ -53,7 +53,7 @@ namespace labust
 			enum {NOP=0, LAWN_MOWER=1, STOP=2};
 			public:
 				///Main constructor
-				SurfaceHandler(){};
+				SurfaceHandler():last_cmd(0){};
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
@@ -66,6 +66,9 @@ namespace labust
 				ros::Publisher surfacecmd_pub;
 				//Surface lawn mower publisher
 				ros::Publisher lawnreq_pub;
+
+				//Last command
+				uint8_t last_cmd;
 			};
 		}
 	}
