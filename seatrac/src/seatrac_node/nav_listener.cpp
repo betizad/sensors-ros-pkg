@@ -49,6 +49,7 @@ using namespace labust::seatrac;
 NavListener::NavListener():
 	listener(buffer),
 	use_ahrs(false),
+	inverted_cfg(true),
 	ahrs_delay(0),
 	vos(0.0)
 {
@@ -67,6 +68,8 @@ bool NavListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	//Configure transponder information
 	ph.param("use_ahrs", use_ahrs, use_ahrs);
 	ph.param("ahrs_delay", ahrs_delay, ahrs_delay);
+	ph.param("inverted_cfg", inverted_cfg, inverted_cfg);
+
 	std::vector<int> tx;
 	ph.param("transponders", tx, tx);
 	std::vector<std::string> txnames;
@@ -128,8 +131,11 @@ void NavListener::processAcoFix(const AcoFix& fix)
 	//Add angle information
 	if (fix.flags.USBL_VALID)
 	{
-		fix_out->bearing = fix_out->bearing_raw = float(fix.usbl.azimuth)/AcoFix::ANGLE_SC;
-		fix_out->elevation = fix_out->elevation_raw = float(fix.usbl.elevation)/AcoFix::ANGLE_SC;
+		float aux_inv = inverted_cfg ? 1.0 : -1.0;
+		fix_out->bearing_raw = float(fix.usbl.azimuth)/AcoFix::ANGLE_SC;
+		fix_out->bearing = aux_inv*fix_out->bearing_raw;
+		fix_out->elevation_raw = float(fix.usbl.elevation)/AcoFix::ANGLE_SC;
+		fix_out->elevation = aux_inv*fix_out->elevation_raw;
 		//If range is already valid the position will be valid as well
 		//otherwise the azimuth is only valid
 		fix_out->type = underwater_msgs::USBLFix::AZIMUTH_ONLY;
