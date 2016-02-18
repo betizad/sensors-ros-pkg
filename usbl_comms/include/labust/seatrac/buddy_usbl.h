@@ -34,12 +34,15 @@
 #ifndef USBL_COMMS_BUDDY_USBL_H
 #define USBL_COMMS_BUDDY_USBL_H
 #include <labust/seatrac/device_controller.h>
+#include <labust/comms/caddy/ac_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/pinger.h>
 #include <labust/comms/caddy/caddy_messages.h>
 
 #include <auv_msgs/NavSts.h>
+#include <std_msgs/Int32.h>
 #include <std_msgs/UInt8.h>
+#include <std_msgs/Bool.h>
 #include <ros/ros.h>
 
 #include <boost/thread.hpp>
@@ -53,6 +56,8 @@ namespace labust
 		 */
 		class BuddyUSBL : virtual public DeviceController
 		{
+			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
+
 			enum {TIMEOUT=4, DIVER_ID=2, SURFACE_ID=1};
 		public:
 			///Main constructor
@@ -67,29 +72,48 @@ namespace labust
 			///The USBL pinger
 			Pinger pinger;
 
-			///Handle the Buddy position estimated position position.
+			///Handle the Buddy estimated position position.
 			void onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg);
-			///Handle the Diver position estimated position position.
-			void onDiverPos(const auv_msgs::NavSts::ConstPtr& msg)
+			///Handle the Diver estimated position.
+			void onDiverPos(const auv_msgs::NavSts::ConstPtr& diver)
 			{
-				diver = *msg;
+				boost::mutex::scoped_lock lock(message_mux);
+				message.diver_offset_x = diver->position.north;
+				message.diver_offset_y = diver->position.east;
+			}
+			///Handle the leak warning.
+			void onLeak(const std_msgs::Bool::ConstPtr& msg)
+			{
+				boost::mutex::scoped_lock lock(message_mux);
+				message.leak_info = msg->data;
+			}
+			///Handle the mission status.
+			void onMissionStatus(const std_msgs::Int32::ConstPtr& msg)
+			{
+				boost::mutex::scoped_lock lock(message_mux);
+				message.mission_status = msg->data;
+			}
+			///Handle the battery info.
+			void onBatteryInfo(const std_msgs::UInt8::ConstPtr& msg)
+			{
+				boost::mutex::scoped_lock lock(message_mux);
+				message.battery_info = msg->data;
 			}
 			///Handles incoming acoustic data.
 			void onData(const labust::seatrac::DatReceive& data);
 			///The pinging function
 			void run();
-			///Helper methods
-			int adaptmeas(double value, int a, int b, double q);
-			double decodemeas(double value, int a, int b, double q);
 
 			///Position estimate subscriber.
 			ros::Subscriber nav_sub;
 			///The diver navigation information publisher.
 			ros::Subscriber diverpos_sub;
-			///The diver navigation information publisher.
-			ros::Publisher divernav_pub;
-			///The surface navigation state subscription.
-			ros::Publisher surfacenav_pub;
+			///Leak information
+			ros::Subscriber leak_sub;
+			///Battery information
+			ros::Subscriber battery_sub;
+			///Mission status
+			ros::Subscriber mission_sub;
 
 			///The next message mux.
 			boost::mutex message_mux;
@@ -97,8 +121,8 @@ namespace labust
 			double ping_rate;
 			///The payload message
 			labust::comms::caddy::BuddyReport message;
-			///The diver position
-			auv_msgs::NavSts diver;
+			///Handlers for acoustic messages
+			HandlerMap handlers;
 
 			///The worker thread
 			boost::thread worker;

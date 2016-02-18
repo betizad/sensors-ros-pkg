@@ -31,76 +31,75 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/seatrac/diver_modem.h>
-#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/surface_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
-#include <labust/seatrac/mediator.h>
-#include <labust/tools/packer.h>
 #include <labust/math/NumberManipulation.hpp>
+#include <labust/tools/packer.h>
 
 #include <pluginlib/class_list_macros.h>
 
+#include <auv_msgs/NavSts.h>
+#include <std_msgs/Int32.h>
 #include <std_msgs/UInt8.h>
-#include <sensor_msgs/NavSatFix.h>
+#include <std_msgs/Bool.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-DiverModem::DiverModem()
+bool BuddyHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&DiverModem::onData,this,_1)));
-}
-
-DiverModem::~DiverModem(){}
-
-bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-{
-	handlers[BUDDY_ID].reset(new BuddyHandler());
-  handlers[SURFACE_ID].reset(new SurfaceHandler());
-	handlers[BUDDY_ID]->configure(nh,ph);
-	handlers[SURFACE_ID]->configure(nh,ph);
-
-	state_sub = nh.subscribe("position",	1, &DiverModem::onNavSts, this);
-
+	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_pos", 1);
+	buddynav_pub = nh.advertise<auv_msgs::NavSts>("buddy_nav",	1);
+	mission_pub = nh.advertise<std_msgs::Int32>("buddy_mission_status",	1);
+	leak_pub = nh.advertise<std_msgs::Bool>("buddy_leak",	1);
+	battery_pub = nh.advertise<std_msgs::UInt8>("buddy_battery_status",	1);
 	return true;
 }
 
-void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
+void BuddyHandler::operator()(const labust::seatrac::DatReceive& msg)
 {
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
-	DiverReport diver;
-  diver.heading = 180*msg->orientation.yaw/M_PI;;
-  diver.depth = msg->position.depth;
-	labust::tools::encodePackable(diver, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
-
-	if (!sender.empty())
+	///TODO: add handling of messages based on message ID
+	///TODO: create acofix processor similar to pinger class
+	/// in order to process position in-place and fuse with
+	/// payload information
+	BuddyReport buddy;
+	if (!labust::tools::decodePackable(msg.data, &buddy))
 	{
-		sender(clr);
-		sender(cmd);
+		ROS_WARN("BuddyHandler: Wrong message received from modem.");
+		return;
 	}
+
+	auv_msgs::NavSts::Ptr buddynav(new auv_msgs::NavSts());
+	buddynav->position.north = buddy.offset_x;
+	buddynav->position.east = buddy.offset_y;
+	buddynav->position.depth = buddy.depth;
+	buddynav->altitude = buddy.altitude;
+	buddynav->orientation.yaw = labust::math::wrapRad(M_PI*buddy.course/180);
+  buddynav->gbody_velocity.x = buddy.speed;
+	buddynav->header.stamp = ros::Time::now();
+	buddynav_pub.publish(buddynav);
+
+	//Handle mission status, leak and battery info
+	std_msgs::Int32 ms;
+	ms.data = buddy.mission_status;
+	mission_pub.publish(ms);
+
+	std_msgs::Bool leak;
+	leak.data = buddy.leak_info;
+	leak_pub.publish(leak);
+
+	std_msgs::UInt8 battery;
+	battery.data = buddy.battery_info;
+	battery_pub.publish(battery);
+
+	//Handle diver position
+	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+  divernav->position.north = buddy.diver_offset_x;
+  divernav->position.east = buddy.diver_offset_y;
+  divernav->header.stamp = buddynav->header.stamp;
+  divernav_pub.publish(divernav);
 }
-
-void DiverModem::onData(const labust::seatrac::DatReceive& msg)
-{
-	HandlerMap::iterator it=handlers.find(msg.acofix.src);
-	if (it != handlers.end())
-	{
-		(*handlers[msg.acofix.src])(msg);
-	}
-	else
-	{
-		ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
-	}
-}
-
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem, labust::seatrac::DeviceController)

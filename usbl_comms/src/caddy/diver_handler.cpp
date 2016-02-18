@@ -31,76 +31,41 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/seatrac/diver_modem.h>
+#include <labust/comms/caddy/diver_handler.h>
 #include <labust/comms/caddy/caddy_messages.h>
-#include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/surface_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
-#include <labust/seatrac/mediator.h>
-#include <labust/tools/packer.h>
 #include <labust/math/NumberManipulation.hpp>
+#include <labust/tools/packer.h>
 
 #include <pluginlib/class_list_macros.h>
 
-#include <std_msgs/UInt8.h>
-#include <sensor_msgs/NavSatFix.h>
+#include <auv_msgs/NavSts.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-DiverModem::DiverModem()
+bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&DiverModem::onData,this,_1)));
-}
-
-DiverModem::~DiverModem(){}
-
-bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-{
-	handlers[BUDDY_ID].reset(new BuddyHandler());
-  handlers[SURFACE_ID].reset(new SurfaceHandler());
-	handlers[BUDDY_ID]->configure(nh,ph);
-	handlers[SURFACE_ID]->configure(nh,ph);
-
-	state_sub = nh.subscribe("position",	1, &DiverModem::onNavSts, this);
-
+	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
 	return true;
 }
 
-void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
+void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
 {
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
 	DiverReport diver;
-  diver.heading = 180*msg->orientation.yaw/M_PI;;
-  diver.depth = msg->position.depth;
-	labust::tools::encodePackable(diver, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
-
-	if (!sender.empty())
+	if (!labust::tools::decodePackable(msg.data, &diver))
 	{
-		sender(clr);
-		sender(cmd);
+		ROS_WARN("DiverHandler: Wrong message received from modem.");
+		return;
 	}
+
+	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+	divernav->orientation.yaw = labust::math::wrapRad(M_PI*diver.heading/180);
+	divernav->position.depth = diver.depth;
+	divernav->header.stamp = ros::Time::now();
+	divernav_pub.publish(divernav);
+	//TODO Handle paddle_rate, hearth_rate and breathing_rate and command
 }
-
-void DiverModem::onData(const labust::seatrac::DatReceive& msg)
-{
-	HandlerMap::iterator it=handlers.find(msg.acofix.src);
-	if (it != handlers.end())
-	{
-		(*handlers[msg.acofix.src])(msg);
-	}
-	else
-	{
-		ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
-	}
-}
-
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem, labust::seatrac::DeviceController)

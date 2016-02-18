@@ -33,6 +33,8 @@
  *********************************************************************/
 #include <labust/seatrac/surface_usbl.h>
 #include <labust/comms/caddy/caddy_messages.h>
+#include <labust/comms/caddy/buddy_handler.h>
+#include <labust/comms/caddy/diver_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/seatrac/mediator.h>
@@ -59,120 +61,69 @@ SurfaceUSBL::~SurfaceUSBL(){}
 
 bool SurfaceUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
-	diverpos_pub = nh.advertise<auv_msgs::NavSts>("diver_pos", 1);
-	buddynav_pub = nh.advertise<auv_msgs::NavSts>("buddy_nav",	1);
+	//Configure defaults for the surface message
+	//The command 0 represents NOP
+	surf.mission_cmd = NOP;
+	//Lawn mower parameter 0,0
+	surf.lawn_length = 0;
+	surf.lawn_width = 0;
 
 	state_sub = nh.subscribe("position",	1, &SurfaceUSBL::onNavSts, this);
+	surfacecmd_sub = nh.subscribe("surface_cmd",	1, &SurfaceUSBL::onMissionCmd, this);
+	lawnmower_sub = nh.subscribe("lawnmower_req",	1, &SurfaceUSBL::onLawnMower, this);
+
+	handlers[BUDDY_ID].reset(new BuddyHandler());
+	handlers[DIVER_ID].reset(new DiverHandler());
+	handlers[DIVER_ID]->configure(nh,ph);
+	handlers[BUDDY_ID]->configure(nh,ph);
 
 	return true;
 }
 
-int SurfaceUSBL::adaptmeas(double value, int a, int b, double q)
-{
-	assert(q !=0 && "Quantization of zero is not realistic.");
-	value = labust::math::coerce(value, a*q, b*q);
-	return int(value/q - a);
-}
-
-double SurfaceUSBL::decodemeas(double value, int a, int b, double q)
-{
-	assert(q !=0 && "Quantization of zero is not realistic.");
-	return q*(value+a);
-}
-
 void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 {
+	static int cmdd = 0;
 	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
 	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
 	cmd->dest = labust::seatrac::BEACON_ALL;
 	std::vector<char> binary;
-	SurfaceNav surf;
 
-	enum {POS_A = -512, POS_B=512};
-	const double POS_QUANT = 0.1;
-
-	///TODO add substraction from init point and init point broadcast
-	surf.offset_x = adaptmeas(msg->position.north, POS_A, POS_B, POS_QUANT);
-	surf.offset_y = adaptmeas(msg->position.east, POS_A, POS_B, POS_QUANT);
-
-	///TODO add heading if stationary or course if moving
-	/// depending on speed value
-	double heading(msg->orientation.yaw*180/M_PI), u(msg->gbody_velocity.x),
-	  		v(msg->gbody_velocity.y), speed(sqrt(u*u+v*v));
-
-	if (speed > 0.1) heading = 180*atan2(u,v)/M_PI;
-	if (heading < 0) heading = heading + 360;
-	surf.course = adaptmeas(heading, 0, 1024, 360.0/1024.0);
-	surf.speed = adaptmeas(speed, 0, 16, 1.0/16.0);
-
+	surf.offset_x = msg->position.north;
+	surf.offset_y = msg->position.east;
+	surf.course = msg->orientation.yaw*180/M_PI;
+	surf.speed = msg->gbody_velocity.x;
 	labust::tools::encodePackable(surf, &binary);
 	cmd->data.assign(binary.begin(),binary.end());
 
 	if (!sender.empty())
 	{
-		//sender(clr);
+		sender(clr);
 		sender(cmd);
 	}
 }
 
+void SurfaceUSBL::onMissionCmd(const std_msgs::UInt8::ConstPtr& msg)
+{
+	surf.mission_cmd = msg->data;
+}
+
+void SurfaceUSBL::onLawnMower(const caddy_msgs::LawnmowerReq::ConstPtr& msg)
+{
+	surf.lawn_width = msg->width;
+	surf.lawn_length = msg->length;
+	surf.mission_cmd = LAWN_MOWER;
+}
+
 void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 {
-	///TODO: Put decoders/encoders for each agent in a class to be shared
-	/// between modem controllers
-
-	ROS_ERROR("WTF?");
-
-	if (msg.acofix.src == BUDDY_ID)
+	HandlerMap::iterator it=handlers.find(msg.acofix.src);
+	if (it != handlers.end())
 	{
-		///TODO: add handling of messages based on message ID
-		///TODO: create acofix processor similar to pinger class
-		/// in order to process position in-place and fuse with
-		/// payload information
-
-		BuddyReport buddy;
-		if (!labust::tools::decodePackable(msg.data, &buddy))
-		{
-			ROS_WARN("BuddyUSBL: Empty message received from modem.");
-			return;
-		}
-
-		auv_msgs::NavSts::Ptr buddynav(new auv_msgs::NavSts());
-		enum {POS_A = -512, POS_B=512};
-		const double POS_QUANT = 0.1;
-
-		///TODO add substraction from init point and init point broadcast
-		buddynav->position.north = decodemeas(buddy.offset_x, POS_A, POS_B, POS_QUANT);
-		buddynav->position.east = decodemeas(buddy.offset_y, POS_A, POS_B, POS_QUANT);
-		buddynav->position.depth = decodemeas(buddy.depth, 0, 128, 0.5);
-		buddynav->orientation.yaw = labust::math::wrapRad(
-					M_PI*decodemeas(buddy.course, 0, 1024, 360.0/1024.0)/180);
-	  buddynav->gbody_velocity.x = decodemeas(buddy.speed, 0, 16, 1.0/16.0);
-		buddynav->header.stamp = ros::Time::now();
-		ROS_INFO("Set timestamp %f",buddynav->header.stamp.toSec());
-		buddynav_pub.publish(buddynav);
-
-		auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
-	  divernav->position.north = decodemeas(buddy.diver_offset_x, POS_A, POS_B, POS_QUANT);
-	  divernav->position.east = decodemeas(buddy.diver_offset_y, POS_A, POS_B, POS_QUANT);
-	  divernav->header.stamp = buddynav->header.stamp;
-	  diverpos_pub.publish(divernav);
+		(*handlers[msg.acofix.src])(msg);
 	}
-	else if (msg.acofix.src == DIVER_ID)
+	else
 	{
-		DiverNav diver;
-		if (!labust::tools::decodePackable(msg.data, &diver))
-		{
-			ROS_WARN("BuddyUSBL: Empty message received from modem.");
-			return;
-		}
-
-		auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
-		divernav->orientation.yaw = labust::math::wrapRad(
-				M_PI*decodemeas(diver.heading, 0, 1024, 360.0/1024.0)/180);
-		divernav->position.depth = decodemeas(diver.depth, 0, 128, 0.5);
-		divernav->header.stamp = ros::Time::now();
-		divernav_pub.publish(divernav);
+		ROS_WARN("No acoustic data handler found in SurfaceUSBL for ID=%d.",msg.acofix.src);
 	}
 }
 

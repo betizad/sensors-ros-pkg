@@ -10,23 +10,24 @@
     	<node pkg="seatrac" type="seatrac_core" name="surface_sim">
 			<rosparam command="load" file="$(find usbl_comms)/launch/caddy/surface_usbl.yaml" />
 			<remap from="navsts" to="position" />
+			<remap from="diver_pos" to="buddy/diver_pos" />
 		</node>
 		<node pkg="seatrac" type="static_beacon" name="surface_pos">
-			<rosparam param="position">[0.0,0.0,0.0]</rosparam>
+			<rosparam param="position">[51.1,51.2,0.0]</rosparam>
 			<rosparam param="orientation">[0.0,0.0,1.0]</rosparam>
 		</node>
     </group>
-    <!-- The diver modem -->
-    <group ns="diver">
+  <!-- The diver modem -->
+ <group ns="diver">
 	<node pkg="seatrac" type="seatrac_core" name="diver_sim">
 		<rosparam command="load" file="$(find usbl_comms)/launch/caddy/diver_modem.yaml" />
 		<remap from="navsts" to="position" />
 	</node>
 	<node pkg="seatrac" type="static_beacon" name="diver_pos">
 	    <rosparam param="position">[0.0,1.0,10.0]</rosparam>
-			<rosparam param="orientation">[0.0,0.0,4.0]</rosparam>
+			<rosparam param="orientation">[0.0,0.0,-2.123]</rosparam>
 	</node>
-    </group>
+  </group>
  	<!-- The buddy USBL -->
  	<group ns="buddy">
  		<node pkg="seatrac" type="seatrac_core" name="buddy_sim">
@@ -34,7 +35,7 @@
 			<remap from="navsts" to="/buddy/position" />
 		</node>
 		<node pkg="seatrac" type="static_beacon" name="buddy_pos">
-			<rosparam param="position">[5.0, 10.0, 8.0]</rosparam>
+			<rosparam param="position">[-51.1, -51.2, 8.0]</rosparam>
 			<rosparam param="orientation">[0.0,0.0,-3.0]</rosparam>
 		</node>
  	</group>
