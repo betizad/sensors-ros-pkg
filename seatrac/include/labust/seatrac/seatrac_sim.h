@@ -232,6 +232,8 @@ namespace labust
 			bool registered;
 			///Max data transmission duration
 			double max_data_duration;
+			///Flag for use of internal
+			bool internal_ahrs;
 
 			///The internal message queue
 			std::queue<DatSendCmd::Ptr> reply_queue;

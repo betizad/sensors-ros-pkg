@@ -37,6 +37,7 @@
 #include <labust/seatrac/seatrac_sim.h>
 #include <labust/seatrac/seatrac_factory.h>
 #include <labust/seatrac/seatrac_definitions.h>
+#include <labust/math/NumberManipulation.hpp>
 #include <pluginlib/class_list_macros.h>
 
 #include <underwater_msgs/AcSimRegister.h>
@@ -56,7 +57,8 @@ SeatracSim::SeatracSim():
 	is_modem(false),
 	bps(100),
 	registered(false),
-	max_data_duration(1.5){}
+	max_data_duration(1.5),
+	internal_ahrs(false){}
 
 SeatracSim::~SeatracSim()
 {
@@ -73,6 +75,7 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	ph.param("sim_is_modem", is_modem, is_modem);
 	ph.param("sim_max_data_duration", max_data_duration, max_data_duration);
 	ph.param("sim_bps", bps, bps);
+	ph.param("use_ahrs", internal_ahrs, internal_ahrs);
 
 	navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
 			&SeatracSim::onNavSts, this);
@@ -445,7 +448,9 @@ void SeatracSim::fillPosReply(MsgType& resp, const underwater_msgs::MediumTransm
       double rh = sqrt(dn*dn+de*de);
       double el(0);
       if (rh == 0) el = 90 * (dd >= 0?1:-1); else  el = 180*atan(dd/rh)/M_PI;
-      double az = 180*atan2(de,dn)/M_PI;
+      double az = atan2(de,dn);
+      if (internal_ahrs) az -= navstate.orientation.yaw;
+      az = 180*labust::math::wrapRad(az)/M_PI;
       if (az < 0) az += 360;
       resp->acofix.usbl.azimuth = az*AcoFix::ANGLE_SC;
       resp->acofix.usbl.elevation = el*AcoFix::ANGLE_SC;
