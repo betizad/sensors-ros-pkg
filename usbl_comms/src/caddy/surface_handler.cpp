@@ -51,6 +51,7 @@ using namespace labust::comms::caddy;
 
 bool SurfaceHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+    ph.param("lawnmower_scaling", lm_scale, lm_scale);
  	surfacenav_pub = nh.advertise<auv_msgs::NavSts>("surface_nav",	1);
  	surfacecmd_pub = nh.advertise<std_msgs::UInt8>("surface_cmd",	1);
  	lawnreq_pub = nh.advertise<caddy_msgs::LawnmowerReq>("lawnmower_req",	1);
@@ -94,8 +95,8 @@ void SurfaceHandler::operator()(const labust::seatrac::DatReceive& msg)
 		{
 			caddy_msgs::LawnmowerReq req;
 			req.header.stamp = ros::Time::now();
-			req.length = surf.lawn_length;
-			req.width = surf.lawn_width;
+			req.length = surf.lawn_length*lm_scale;
+			req.width = surf.lawn_width*lm_scale;
 	  	lawnreq_pub.publish(req);
 		}
 	}

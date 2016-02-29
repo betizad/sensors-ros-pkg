@@ -53,7 +53,7 @@ namespace labust
 			enum {NOP=0, LAWN_MOWER=1, STOP=2};
 			public:
 				///Main constructor
-				SurfaceHandler():last_cmd(0){};
+				SurfaceHandler():last_cmd(0),lm_scale(10){};
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
@@ -69,6 +69,8 @@ namespace labust
 
 				//Last command
 				uint8_t last_cmd;
+				//Lawnmower size scaling
+				double lm_scale;
 			};
 		}
 	}
