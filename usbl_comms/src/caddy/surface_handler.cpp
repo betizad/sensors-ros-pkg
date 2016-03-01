@@ -51,7 +51,8 @@ using namespace labust::comms::caddy;
 
 bool SurfaceHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-    ph.param("lawnmower_scaling", lm_scale, lm_scale);
+    	ph.param("lawnmower_scaling", lm_scale, lm_scale);
+    	ph.param("surface_delay", surface_delay, surface_delay);
  	surfacenav_pub = nh.advertise<auv_msgs::NavSts>("surface_nav",	1);
  	surfacecmd_pub = nh.advertise<std_msgs::UInt8>("surface_cmd",	1);
  	lawnreq_pub = nh.advertise<caddy_msgs::LawnmowerReq>("lawnmower_req",	1);
@@ -76,7 +77,7 @@ void SurfaceHandler::operator()(const labust::seatrac::DatReceive& msg)
 	surfnav->position.east = surf.offset_y;
 	surfnav->gbody_velocity.x = surf.speed;
 	surfnav->orientation.yaw = labust::math::wrapRad(M_PI*surf.course/180);
-	surfnav->header.stamp = ros::Time::now();
+	surfnav->header.stamp = ros::Time::now() - ros::Duration(surface_delay);
 	surfacenav_pub.publish(surfnav);
 
 	//Add handling of mission_cmd and lawn parameters
