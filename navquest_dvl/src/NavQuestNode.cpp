@@ -54,6 +54,7 @@
 #include <boost/serialization/string.hpp>
 
 #include <iosfwd>
+#include <algorithm>
 
 PP_LABUST_CLEAN_ARRAY_OSERIALIZATOR_IMPL(labust::archive::delimited_oarchive)
 PP_LABUST_CLEAN_ARRAY_ISERIALIZATOR_IMPL(labust::archive::delimited_iarchive)
@@ -252,9 +253,13 @@ void NavQuestNode::publishDvlData(const NQRes& data)
 	//Altitude
 	if (data.altitude_estimate > 0)
 	{
-		std_msgs::Float32Ptr alt(new std_msgs::Float32());
-		alt->data = data.altitude_estimate;
-		altitude.publish(alt);
+	  std::vector<double> salt;
+	  for (int i=0; i < 4; ++i) salt.push_back(data.v_altitude[i]);
+	  std::sort(salt.begin(), salt.end());
+
+	  std_msgs::Float32Ptr alt(new std_msgs::Float32());
+	  alt->data = (salt[1] + salt[2])/2;
+	  altitude.publish(alt);
 	}
 
 	//TF frame
