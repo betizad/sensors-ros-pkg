@@ -87,7 +87,7 @@ void BuddyUSBL::onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
 	///TODO add substraction from init point and init point broadcast
   message.offset_x = msg->position.north;
   message.offset_y = msg->position.east;
-  message.course = msg->orientation.yaw*180/M_PI;
+  message.course = labust::math::wrapRad(msg->orientation.yaw)*180/M_PI;
   message.speed = msg->gbody_velocity.x;
   message.depth = msg->position.depth;
   message.altitude = msg->altitude;
