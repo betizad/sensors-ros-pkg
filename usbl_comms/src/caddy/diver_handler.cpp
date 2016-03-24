@@ -49,6 +49,7 @@ using namespace labust::comms::caddy;
 
 bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+    ph.param("lawnmower_scaling", lm_scale, lm_scale);
 	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
 	return true;
 }

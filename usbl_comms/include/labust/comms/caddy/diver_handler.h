@@ -61,6 +61,8 @@ namespace labust
 			protected:
 				//Diver navigation data publisher
 				ros::Publisher divernav_pub;
+                //Lawnmower size scaling
+                double lm_scale;
 			};
 		}
 	}
