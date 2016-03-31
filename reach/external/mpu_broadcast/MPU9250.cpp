@@ -109,8 +109,8 @@ bool MPU9250::initialize(int sample_rate_div, int low_pass_filter)
         usleep(10000);  //I2C must slow down the write speed, otherwise it won't work
     }
 
-    set_acc_scale(BITS_FS_16G);
-    set_gyro_scale(BITS_FS_2000DPS);
+    set_acc_scale(BITS_FS_2G);
+    set_gyro_scale(BITS_FS_250DPS);
 
     calib_mag();
     return 0;
@@ -469,9 +469,12 @@ void MPU9250::getMotion9(float *ax, float *ay, float *az, float *gx, float *gy, 
     *gx = gyroscope_data[0];
     *gy = gyroscope_data[1];
     *gz = gyroscope_data[2];
-    *mx = magnetometer_data[0];
-    *my = magnetometer_data[1];
-    *mz = magnetometer_data[2];
+    *mx = magnetometer_data[1];
+    *my = magnetometer_data[0];
+    *mz = -magnetometer_data[2];
+    //*mx = magnetometer_data[0];
+    //*my = magnetometer_data[1];
+    //*mz = magnetometer_data[2];
 }
 
 //-----------------------------------------------------------------------------------------------

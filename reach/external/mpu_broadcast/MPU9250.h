@@ -13,7 +13,7 @@ class MPU9250 {
 public:
     MPU9250();
 
-    bool initialize(int sample_rate_div = 1, int low_pass_filter = 0x01);
+    bool initialize(int sample_rate_div = 1, int low_pass_filter = 0x02);
     bool testConnection();
 
     unsigned int WriteReg( uint8_t WriteAddr, uint8_t WriteData );

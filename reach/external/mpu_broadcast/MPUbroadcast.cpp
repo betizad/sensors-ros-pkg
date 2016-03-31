@@ -79,8 +79,9 @@ int main()
         //for(int i=0; i<9; ++i) printf("%f ",imudata[i]);
         //printf("\n");
         status = sendto(sock, imudata, sizeof(imudata), 0, (struct sockaddr *)&sock_in, sinlen);
-        printf("sendto Status = %d\n", status);
+        //printf("sendto Status = %d\n", status);
         //sleep(2);
+        usleep(8*1000);
     }
 
     close(sock);
