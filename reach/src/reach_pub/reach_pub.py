@@ -20,7 +20,6 @@ class IMUUDPClient:
         
         self.mag_calib = rospy.Subscriber("mag_calib", Bool, self.on_mag_calib)
         
-        
         self.sock= socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('',35050))
         self.sock.setblocking(0)
@@ -34,6 +33,11 @@ class IMUUDPClient:
         self.mag_min = [20000]*3
         self.mag_max = [-20000]*3
         
+        self.mag_bias = rospy.get_param("~mag_bias", self.mag_bias)
+        self.mag_scale = rospy.get_param("~mag_scale", self.mag_scale)
+        
+        rospy.loginfo("Bias: {0}".format(self.mag_bias))
+        rospy.loginfo("Scale: {0}".format(self.mag_scale))
         
         self.runner = Thread(target=self.run)
         self.runner.start()
