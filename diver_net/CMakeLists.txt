@@ -11,12 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   cmake_modules
   sensors_util
+  xacro
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS thread)
 find_package(Eigen REQUIRED)
-find_package(xacro)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures

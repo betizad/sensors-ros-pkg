@@ -17,7 +17,8 @@ if [ -f `basename ${URL}` ]
    echo "File already downloaded."
    downloaded=1
  else
-   if wget --user $username --ask-password ${URL};
+#   if wget --user $username --ask-password ${URL};
+   if wget ${URL};
      then
        echo "Dowloaded"
        downloaded=1
