@@ -32,6 +32,8 @@ void interrupt(int pholder)
 
 int main()
 {
+    //WORKAROUND
+    sleep(120);
     signal(SIGINT, interrupt);
     MPU9250 imu;
     imu.initialize();

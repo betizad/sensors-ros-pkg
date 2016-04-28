@@ -5,4 +5,4 @@ After=reach-setup.service usb0.network
 [Service]
 ExecStart=
 ExecStart=/usr/bin/mpu_broadcast
-Type=forking
+Type=simple
