@@ -1,7 +1,7 @@
 <launch>
   <node pkg="reach" type="reach_pub.py" name="reach_pub" output="screen">
-     <rosparam param="mag_bias">[33.6010,11.3866,37.6229]</rosparam>
-     <rosparam param="mag_scale">[1.0,0.9751,0.9594]</rosparam>
+     <rosparam param="mag_bias">[40.0602,15.9037,2.9697]</rosparam> 
+     <rosparam param="mag_scale">[1.0,0.4572,0.3185]</rosparam>
   </node>
   <node pkg="imu_complementary_filter" type="complementary_filter_node" name="imu_filter">
     <param name="use_mag" value="true" />
