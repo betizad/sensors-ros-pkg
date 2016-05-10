@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <name>reach</name>
+  <version>0.0.1</version>
+  <description>The package contains tools for easy integration of 
+    the Reach RTK device into ROS</description>
+
+  <maintainer email="dula.nad@gmail.com">Gyula Nagy</maintainer>
+  <license>BSD</license>
+  <!-- <url type="website">http://wiki.ros.org/reach</url> -->
+  <author email="dula.nad@gmail.com">Gyula Nagy</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>imu_complementary_filter</run_depend>
+  <run_depend>nmea_navsat_driver</run_depend>
+</package>

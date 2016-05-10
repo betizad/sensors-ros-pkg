@@ -30,29 +30,43 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
- *  Author: Dula Nad
- *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_CADDY_MESSAGES_H
-#define USBL_COMMS_CADDY_MESSAGES_H
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <labust/tools/bitstorage.h>
-#include <cstdint>
+#include <labust/comms/caddy/diver_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
+#include <labust/seatrac/seatrac_messages.h>
+#include <labust/seatrac/seatrac_definitions.h>
+#include <labust/math/NumberManipulation.hpp>
+#include <labust/tools/packer.h>
 
-namespace labust
+#include <pluginlib/class_list_macros.h>
+
+#include <auv_msgs/NavSts.h>
+
+#include <string>
+
+using namespace labust::seatrac;
+using namespace labust::comms::caddy;
+
+bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	namespace comms
-	{
-		namespace caddy
-		{
-			#include <labust/comms/caddy/detail/caddy_messages_defs.h>
-		}
-	}
+    ph.param("lawnmower_scaling", lm_scale, lm_scale);
+	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
+	return true;
 }
-/* USBL_COMMS_CADDY_MESSAGES_H */
-#endif
 
+void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
+{
+	DiverReport diver;
+	if (!labust::tools::decodePackable(msg.data, &diver))
+	{
+		ROS_WARN("DiverHandler: Wrong message received from modem.");
+		return;
+	}
 
-
+	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+	divernav->orientation.yaw = labust::math::wrapRad(M_PI*diver.heading/180);
+	divernav->position.depth = diver.depth;
+	divernav->header.stamp = ros::Time::now();
+	divernav_pub.publish(divernav);
+	//TODO Handle paddle_rate, hearth_rate and breathing_rate and command
+}

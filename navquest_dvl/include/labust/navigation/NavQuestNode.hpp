@@ -105,7 +105,7 @@ namespace labust
 			/**
 			 * Condition the data before publishing.
 			 */
-			void conditionDvlData(const NQRes& data);
+			void conditionDvlData(NQRes& data);
 
 			typedef BeamPublisher<4> NavQuestBP;
 			/**

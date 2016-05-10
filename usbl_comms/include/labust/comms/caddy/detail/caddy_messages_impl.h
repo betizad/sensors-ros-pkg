@@ -1,102 +1,174 @@
   void BuddyReport::pack(boost::archive::binary_oarchive& out) const
 {
-    uint64_t storage = 0;
-  storage |= (uint64_t(msg_id) & ((1<<3)-1)) << 0;
-  storage |= (uint64_t(offset_x) & ((1<<10)-1)) << 3;
-  storage |= (uint64_t(offset_y) & ((1<<10)-1)) << 13;
-  storage |= (uint64_t(course) & ((1<<10)-1)) << 23;
-  storage |= (uint64_t(speed) & ((1<<4)-1)) << 33;
-  storage |= (uint64_t(depth) & ((1<<7)-1)) << 37;
-  storage |= (uint64_t(diver_offset_x) & ((1<<10)-1)) << 44;
-  storage |= (uint64_t(diver_offset_y) & ((1<<10)-1)) << 54;
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<8; ++i,++pt) out << *pt;
+    labust::tools::BitStorage st;
+  st.put(offset_x,-51.2,51.1,10);
+  st.put(offset_y,-51.2,51.1,10);
+  st.put(course,-180,180,9);
+  st.put(speed,0,1,4);
+  st.put(depth,0,63.5,7);
+  st.put(altitude,0,7.75,5);
+  st.put(battery_info,0,100,3);
+  st.put(leak_info,0,1,1);
+  st.put(mission_status,0,3,2);
+  st.put(diver_offset_x,-51.2,51.2,10);
+  st.put(diver_offset_y,-51.2,51.2,10);
+  for(int i=0; i<st.storage().size(); ++i) out << st.storage()[i];
 
 };
 
   void BuddyReport::unpack(boost::archive::binary_iarchive& in) 
 {
-    uint64_t storage(0);
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<8; ++i,++pt) in >> *pt;
-  msg_id = static_cast<uint8_t>(storage & ((1<<3)-1));
-  storage >>= 3;
-  offset_x = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  offset_y = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  course = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  speed = static_cast<uint8_t>(storage & ((1<<4)-1));
-  storage >>= 4;
-  depth = static_cast<uint8_t>(storage & ((1<<7)-1));
-  storage >>= 7;
-  diver_offset_x = static_cast<uint8_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  diver_offset_y = static_cast<uint8_t>(storage & ((1<<10)-1));
-  storage >>= 10;
+    std::vector<uint8_t> data;
+  for(int i=0; i<9; ++i)
+  {
+  uint8_t temp;
+  in >> temp;
+  data.push_back(temp);
+  }
+  labust::tools::BitStorage st(data);
+  st.get(offset_x,-51.2,51.1,10);
+  st.get(offset_y,-51.2,51.1,10);
+  st.get(course,-180,180,9);
+  st.get(speed,0,1,4);
+  st.get(depth,0,63.5,7);
+  st.get(altitude,0,7.75,5);
+  st.get(battery_info,0,100,3);
+  st.get(leak_info,0,1,1);
+  st.get(mission_status,0,3,2);
+  st.get(diver_offset_x,-51.2,51.2,10);
+  st.get(diver_offset_y,-51.2,51.2,10);
 
 };
 
 
 
 
-  void SurfaceNav::pack(boost::archive::binary_oarchive& out) const
+  void SurfaceReport::pack(boost::archive::binary_oarchive& out) const
 {
-    uint64_t storage = 0;
-  storage |= (uint64_t(msg_id) & ((1<<3)-1)) << 0;
-  storage |= (uint64_t(course) & ((1<<10)-1)) << 3;
-  storage |= (uint64_t(speed) & ((1<<4)-1)) << 13;
-  storage |= (uint64_t(offset_x) & ((1<<10)-1)) << 17;
-  storage |= (uint64_t(offset_y) & ((1<<10)-1)) << 27;
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<5; ++i,++pt) out << *pt;
+    labust::tools::BitStorage st;
+  st.put(offset_x,-51.2,51.1,10);
+  st.put(offset_y,-51.2,51.1,10);
+  st.put(course,-180,180,9);
+  st.put(speed,0,1.0,4);
+  st.put(mission_cmd,0,3,2);
+  st.put(lawn_width,0,15,4);
+  st.put(lawn_length,0,15,4);
+  for(int i=0; i<st.storage().size(); ++i) out << st.storage()[i];
 
 };
 
-  void SurfaceNav::unpack(boost::archive::binary_iarchive& in) 
+  void SurfaceReport::unpack(boost::archive::binary_iarchive& in) 
 {
-    uint64_t storage(0);
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<5; ++i,++pt) in >> *pt;
-  msg_id = static_cast<uint8_t>(storage & ((1<<3)-1));
-  storage >>= 3;
-  course = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  speed = static_cast<int32_t>(storage & ((1<<4)-1));
-  storage >>= 4;
-  offset_x = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  offset_y = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
+    std::vector<uint8_t> data;
+  for(int i=0; i<6; ++i)
+  {
+  uint8_t temp;
+  in >> temp;
+  data.push_back(temp);
+  }
+  labust::tools::BitStorage st(data);
+  st.get(offset_x,-51.2,51.1,10);
+  st.get(offset_y,-51.2,51.1,10);
+  st.get(course,-180,180,9);
+  st.get(speed,0,1.0,4);
+  st.get(mission_cmd,0,3,2);
+  st.get(lawn_width,0,15,4);
+  st.get(lawn_length,0,15,4);
 
 };
 
 
 
 
-  void DiverNav::pack(boost::archive::binary_oarchive& out) const
+  void SurfaceChat::pack(boost::archive::binary_oarchive& out) const
 {
-    uint32_t storage = 0;
-  storage |= (uint32_t(msg_id) & ((1<<3)-1)) << 0;
-  storage |= (uint32_t(heading) & ((1<<10)-1)) << 3;
-  storage |= (uint32_t(depth) & ((1<<7)-1)) << 13;
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<3; ++i,++pt) out << *pt;
+    labust::tools::BitStorage st;
+  st.put(offset_x,-51.2,51.1,10);
+  st.put(offset_y,-51.2,51.1,10);
+  st.put(course,-180,180,9);
+  st.put(speed,0,1.0,4);
+  for(int i=0; i<5; ++i) st.put(chat[i],0,63,6);
+  for(int i=0; i<st.storage().size(); ++i) out << st.storage()[i];
 
 };
 
-  void DiverNav::unpack(boost::archive::binary_iarchive& in) 
+  void SurfaceChat::unpack(boost::archive::binary_iarchive& in) 
 {
-    uint32_t storage(0);
-  uint8_t* pt(reinterpret_cast<uint8_t*>(&storage));
-  for(int i=0; i<3; ++i,++pt) in >> *pt;
-  msg_id = static_cast<uint8_t>(storage & ((1<<3)-1));
-  storage >>= 3;
-  heading = static_cast<int32_t>(storage & ((1<<10)-1));
-  storage >>= 10;
-  depth = static_cast<int32_t>(storage & ((1<<7)-1));
-  storage >>= 7;
+    std::vector<uint8_t> data;
+  for(int i=0; i<8; ++i)
+  {
+  uint8_t temp;
+  in >> temp;
+  data.push_back(temp);
+  }
+  labust::tools::BitStorage st(data);
+  st.get(offset_x,-51.2,51.1,10);
+  st.get(offset_y,-51.2,51.1,10);
+  st.get(course,-180,180,9);
+  st.get(speed,0,1.0,4);
+  for(int i=0; i<5; ++i) st.get(chat[i],0,63,6);
+
+};
+
+
+
+
+  void DiverReport::pack(boost::archive::binary_oarchive& out) const
+{
+    labust::tools::BitStorage st;
+  st.put(heading,-180,180,9);
+  st.put(depth,0,63.5,7);
+  st.put(paddle_rate,0,15,4);
+  st.put(hearth_rate,0,15,4);
+  st.put(mission_cmd,0,3,2);
+  for(int i=0; i<st.storage().size(); ++i) out << st.storage()[i];
+
+};
+
+  void DiverReport::unpack(boost::archive::binary_iarchive& in) 
+{
+    std::vector<uint8_t> data;
+  for(int i=0; i<4; ++i)
+  {
+  uint8_t temp;
+  in >> temp;
+  data.push_back(temp);
+  }
+  labust::tools::BitStorage st(data);
+  st.get(heading,-180,180,9);
+  st.get(depth,0,63.5,7);
+  st.get(paddle_rate,0,15,4);
+  st.get(hearth_rate,0,15,4);
+  st.get(mission_cmd,0,3,2);
+
+};
+
+
+
+
+  void DiverChat::pack(boost::archive::binary_oarchive& out) const
+{
+    labust::tools::BitStorage st;
+  st.put(paddle_rate,0,15,4);
+  st.put(hearth_rate,0,15,4);
+  for(int i=0; i<8; ++i) st.put(chat[i],0,63,6);
+  for(int i=0; i<st.storage().size(); ++i) out << st.storage()[i];
+
+};
+
+  void DiverChat::unpack(boost::archive::binary_iarchive& in) 
+{
+    std::vector<uint8_t> data;
+  for(int i=0; i<7; ++i)
+  {
+  uint8_t temp;
+  in >> temp;
+  data.push_back(temp);
+  }
+  labust::tools::BitStorage st(data);
+  st.get(paddle_rate,0,15,4);
+  st.get(hearth_rate,0,15,4);
+  for(int i=0; i<8; ++i) st.get(chat[i],0,63,6);
 
 };
 

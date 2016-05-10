@@ -1,0 +1,18 @@
+<launch>
+  <node pkg="transport_bridges" name="tcpcli" type="tcp_relay">
+     <param name="local_port" value="36060" />
+     <param name="remote_address" value="192.168.2.15" />
+     <param name="remote_port" value="9966" />
+
+     <remap from="outgoing" to="tcpcli/outgoing" />
+     <remap from="incoming" to="gps_sentences" />
+  </node>
+
+  <node pkg="nmea_navsat_driver" type="nmea_topic_driver" name="nmea_gps">
+     <remap from="fix" to="gps" />
+     <remap from="vel" to="gps_vel" />
+     <param name="useRMC" value="true" />
+  </node>
+
+  <node pkg="reach" type="reach_nmea.py" name="reach_nmea" />
+</launch>

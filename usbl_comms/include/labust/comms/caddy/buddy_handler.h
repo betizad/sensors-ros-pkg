@@ -34,11 +34,11 @@
  *  Author: Dula Nad
  *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_CADDY_MESSAGES_H
-#define USBL_COMMS_CADDY_MESSAGES_H
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <labust/tools/bitstorage.h>
+#ifndef USBL_COMMS_BUDDY_HANDLER_H
+#define USBL_COMMS_BUDDY_HANDLER_H
+#include <labust/comms/caddy/ac_handler.h>
+
+#include <ros/ros.h>
 #include <cstdint>
 
 namespace labust
@@ -47,11 +47,33 @@ namespace labust
 	{
 		namespace caddy
 		{
-			#include <labust/comms/caddy/detail/caddy_messages_defs.h>
+			///Class for handling Buddy acoustic messages and publish them to ROS.
+			class BuddyHandler : public virtual AcHandler
+			{
+			public:
+				///Main constructor
+				BuddyHandler(){};
+
+				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+
+				void operator()(const labust::seatrac::DatReceive& msg);
+
+			protected:
+				///Buddy navigation data publisher
+				ros::Publisher buddynav_pub;
+				///The diver navigation info publisher
+				ros::Publisher divernav_pub;
+				///The mission status
+				ros::Publisher mission_pub;
+				///Leak detection
+				ros::Publisher leak_pub;
+				///Battery info
+				ros::Publisher battery_pub;
+			};
 		}
 	}
 }
-/* USBL_COMMS_CADDY_MESSAGES_H */
+/* USBL_COMMS_BUDDY_HANDLER_H */
 #endif
 
 

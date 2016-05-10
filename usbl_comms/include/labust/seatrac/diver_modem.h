@@ -34,6 +34,7 @@
 #ifndef USBL_COMMS_DIVER_MODEM_H
 #define USBL_COMMS_DIVER_MODEM_H
 #include <labust/seatrac/device_controller.h>
+#include <labust/comms/caddy/ac_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/comms/caddy/caddy_messages.h>
 
@@ -52,7 +53,9 @@ namespace labust
 		 */
 		class DiverModem : virtual public DeviceController
 		{
-			enum {TIMEOUT=4, BUDDY_ID=3, DIVER_ID=2, SURFACE_ID=1};
+			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
+
+			enum {TIMEOUT=4, BUDDY_ID=3, SURFACE_ID=1};
 		public:
 			///Main constructor
 			DiverModem();
@@ -67,16 +70,10 @@ namespace labust
 			void onNavSts(const auv_msgs::NavSts::ConstPtr& msg);
 			///Handles incoming acoustic data.
 			void onData(const labust::seatrac::DatReceive& data);
-			///Helper methods
-			int adaptmeas(double value, int a, int b, double q);
-			double decodemeas(double value, int a, int b, double q);
 
-			///The surface navigation publisher
-			ros::Publisher surfacenav_pub;
-			///The buddy navigation publisher
-			ros::Publisher buddynav_pub;
-			///The diver navigation publisher
-			ros::Publisher divernav_pub;
+			///Handlers for acoustic messages
+			HandlerMap handlers;
+
 			///The navigation state subscription.
 			ros::Subscriber state_sub;
 		};

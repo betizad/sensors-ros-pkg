@@ -34,14 +34,19 @@
 #ifndef USBL_COMMS_SURFACE_USBL_H
 #define USBL_COMMS_SURFACE_USBL_H
 #include <labust/seatrac/device_controller.h>
+#include <labust/comms/caddy/ac_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/comms/caddy/caddy_messages.h>
 
 #include <auv_msgs/NavSts.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/UInt8.h>
+#include <caddy_msgs/LawnmowerReq.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
+
+#include <map>
 
 namespace labust
 {
@@ -53,6 +58,8 @@ namespace labust
 		class SurfaceUSBL : virtual public DeviceController
 		{
 			enum {TIMEOUT=4, BUDDY_ID=3, DIVER_ID=2, SURFACE_ID=1};
+			enum {NOP=0, LAWN_MOWER=1, STOP=2};
+			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
 		public:
 			///Main constructor
 			SurfaceUSBL();
@@ -65,20 +72,23 @@ namespace labust
 		private:
 			///Handles the diver position.
 			void onNavSts(const auv_msgs::NavSts::ConstPtr& msg);
+			///Handles the mission command for transmission.
+			void onMissionCmd(const std_msgs::UInt8::ConstPtr& msg);
+			///Handles the lawn mower mission request.
+			void onLawnMower(const caddy_msgs::LawnmowerReq::ConstPtr& msg);
 			///Handles incoming acoustic data.
 			void onData(const labust::seatrac::DatReceive& data);
-			///Helper methods
-			int adaptmeas(double value, int a, int b, double q);
-			double decodemeas(double value, int a, int b, double q);
 
-			///The buddy navigation publisher
-			ros::Publisher buddynav_pub;
-			///The diver navigation publisher
-			ros::Publisher divernav_pub;
-			///The diver navigation publisher
-			ros::Publisher diverpos_pub;
+			///The data handlers
+			HandlerMap handlers;
 			///The navigation state subscription.
 			ros::Subscriber state_sub;
+			///The command subscription
+			ros::Subscriber surfacecmd_sub;
+			///The lawn mower subscription
+			ros::Subscriber lawnmower_sub;
+			///The outgoing message
+			labust::comms::caddy::SurfaceReport surf;
 		};
 	}
 }

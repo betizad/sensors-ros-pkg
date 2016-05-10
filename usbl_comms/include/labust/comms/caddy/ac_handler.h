@@ -34,12 +34,13 @@
  *  Author: Dula Nad
  *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_CADDY_MESSAGES_H
-#define USBL_COMMS_CADDY_MESSAGES_H
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <labust/tools/bitstorage.h>
-#include <cstdint>
+#ifndef USBL_COMMS_AC_HANDLER_H
+#define USBL_COMMS_AC_HANDLER_H
+#include <labust/seatrac/seatrac_messages.h>
+
+#include <ros/ros.h>
+
+#include <boost/shared_ptr.hpp>
 
 namespace labust
 {
@@ -47,11 +48,25 @@ namespace labust
 	{
 		namespace caddy
 		{
-			#include <labust/comms/caddy/detail/caddy_messages_defs.h>
+			///Class for handling Buddy acoustic messages and publish them to ROS.
+			class AcHandler
+			{
+			public:
+				///Pointer
+				typedef boost::shared_ptr<AcHandler> Ptr;
+				///Main constructor
+				AcHandler(){};
+				///Generic destructor
+				virtual ~AcHandler(){};
+
+				virtual bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph) = 0;
+
+				virtual void operator()(const labust::seatrac::DatReceive& msg) = 0;
+			};
 		}
 	}
 }
-/* USBL_COMMS_CADDY_MESSAGES_H */
+/* USBL_COMMS_AC_HANDLER_H */
 #endif
 
 

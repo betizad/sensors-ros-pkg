@@ -1,25 +1,15 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(seatrac)
+project(reach)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  snippets
-  std_msgs
-  underwater_msgs
-  sensor_msgs
-  auv_msgs
-  geometry_msgs
-  tf2_ros
-  pluginlib
-  dynamic_reconfigure
-  roslint
+  rospy
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system thread serialization)
+# find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -36,10 +26,10 @@ find_package(Boost REQUIRED COMPONENTS system thread serialization)
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
+##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependencies might have been
-##     pulled in transitively but can be declared for certainty nonetheless:
-##     * add a build_depend tag for "message_generation"
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
 ##     * add a run_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
@@ -72,19 +62,31 @@ find_package(Boost REQUIRED COMPONENTS system thread serialization)
 #   Action2.action
 # )
 
-## Generate dynamic reconfigurations in the 'cfg' folder
-generate_dynamic_reconfigure_options( 
-  cfg/USBLControllerCfg.cfg
-)
-
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs#   underwater_msgs
+#   std_msgs  # Or other packages containing msgs
 # )
 
-# Generate linter
-roslint_cpp(src/seatrac_sdk/seatrac_sim.cpp)
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
+
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a run_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
+
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
+# )
 
 ###################################
 ## catkin specific configuration ##
@@ -96,90 +98,44 @@ roslint_cpp(src/seatrac_sdk/seatrac_sim.cpp)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
-#  LIBRARIES seatrac
-#  CATKIN_DEPENDS roscpp snippets std_msgs underwater_msgs
+#  INCLUDE_DIRS include
+#  LIBRARIES reach
+#  CATKIN_DEPENDS rospy
 #  DEPENDS system_lib
 )
 
 ###########
 ## Build ##
 ###########
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include)
+# include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
 )
 
-## Declare a cpp library
-add_library(seatrac_sdk
-   src/seatrac_sdk/seatrac_serial.cpp
-   src/seatrac_sdk/seatrac_factory.cpp
-   src/seatrac_node/status_listener.cpp
-   src/seatrac_node/usbl_controller.cpp
-   src/seatrac_node/bridge_controller.cpp
-   src/seatrac_sdk/serialization.cpp
-   src/seatrac_sdk/seatrac_sim.cpp
-   src/seatrac_node/nav_listener.cpp
-   src/seatrac_node/data_listener.cpp
-   src/seatrac_node/pinger.cpp
-)
+## Declare a C++ library
+# add_library(reach
+#   src/${PROJECT_NAME}/reach.cpp
+# )
 
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(reach ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Declare a cpp executable
-add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
-add_executable(bitfield_encoding_test src/test/bitfield_encodings.cpp)
-add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
-add_executable(seatrac_core src/seatrac_node/seatrac_core.cpp)
-    
-add_executable(static_beacon src/static_beacon/static_beacon.cpp)
+## Declare a C++ executable
+# add_executable(reach_node src/reach_node.cpp)
 
-if (DEFINED catkin_EXPORTED_TARGETS)
- add_dependencies(ac_medium_sim ${catkin_EXPORTED_TARGETS})
- add_dependencies(seatrac_core ${catkin_EXPORTED_TARGETS})
- add_dependencies(seatrac_sdk ${catkin_EXPORTED_TARGETS})
- add_dependencies(static_beacon ${catkin_EXPORTED_TARGETS})
-endif()
-
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(seatrac_node seatrac_generate_messages_cpp)
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(reach_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(seatrac_sdk
-   ${catkin_LIBRARIES}
-   ${Boost_SYSTEM_LIBRARY}
-   ${Boost_THREAD_LIBRARY}
-   ${Boost_SERIALIZATION_LIBRARY}
-   Geographic
-)
-
-target_link_libraries(seatrac_core
-   ${catkin_LIBRARIES}
-   seatrac_sdk
-)
-
-target_link_libraries(seatrac_factory_tester
-   ${catkin_LIBRARIES}
-   ${Boost_SERIALIZATION_LIBRARY}
-   seatrac_sdk
-)
-
-target_link_libraries(bitfield_encoding_test
-   ${catkin_LIBRARIES}
-   ${Boost_SERIALIZATION_LIBRARY}
-   seatrac_sdk
-)
-
-target_link_libraries(ac_medium_sim
-   ${catkin_LIBRARIES}
-)
-
-target_link_libraries(static_beacon ${catkin_LIBRARIES})
-
+# target_link_libraries(reach_node
+#   ${catkin_LIBRARIES}
+# )
 
 #############
 ## Install ##
@@ -196,7 +152,7 @@ target_link_libraries(static_beacon ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS seatrac seatrac_node
+# install(TARGETS reach reach_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -221,7 +177,7 @@ target_link_libraries(static_beacon ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_seatrac.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_reach.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

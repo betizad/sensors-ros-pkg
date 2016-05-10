@@ -34,11 +34,11 @@
  *  Author: Dula Nad
  *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_CADDY_MESSAGES_H
-#define USBL_COMMS_CADDY_MESSAGES_H
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <labust/tools/bitstorage.h>
+#ifndef USBL_COMMS_SURFACE_HANDLER_H
+#define USBL_COMMS_SURFACE_HANDLER_H
+#include <labust/comms/caddy/ac_handler.h>
+
+#include <ros/ros.h>
 #include <cstdint>
 
 namespace labust
@@ -47,11 +47,37 @@ namespace labust
 	{
 		namespace caddy
 		{
-			#include <labust/comms/caddy/detail/caddy_messages_defs.h>
+			///Class for handling Surface acoustic messages and publish them to ROS.
+			class SurfaceHandler : public virtual AcHandler
+			{
+			enum {NOP=0, LAWN_MOWER=1, STOP=2};
+			public:
+				///Main constructor
+				SurfaceHandler():last_cmd(0),lm_scale(10),surface_delay(1.5){};
+
+				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+
+				void operator()(const labust::seatrac::DatReceive& msg);
+
+			protected:
+				//Surface navigation data publisher
+				ros::Publisher surfacenav_pub;
+				//Surface command publisher
+				ros::Publisher surfacecmd_pub;
+				//Surface lawn mower publisher
+				ros::Publisher lawnreq_pub;
+
+				//Last command
+				uint8_t last_cmd;
+				//Lawnmower size scaling
+				double lm_scale;
+				//Surface delay value
+				double surface_delay;
+			};
 		}
 	}
 }
-/* USBL_COMMS_CADDY_MESSAGES_H */
+/* USBL_COMMS_SURFACE_HANDLER_H */
 #endif
 
 

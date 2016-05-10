@@ -54,6 +54,7 @@
 #include <boost/serialization/string.hpp>
 
 #include <iosfwd>
+#include <algorithm>
 
 PP_LABUST_CLEAN_ARRAY_OSERIALIZATOR_IMPL(labust::archive::delimited_oarchive)
 PP_LABUST_CLEAN_ARRAY_ISERIALIZATOR_IMPL(labust::archive::delimited_iarchive)
@@ -185,9 +186,9 @@ void NavQuestNode::publishDvlData(const NQRes& data)
 
 	if (useFixed)
 	{
-		labust::tools::quaternionFromEulerZYX(0,0,base_orientation,
-				transform.transform.rotation);
-		broadcast.sendTransform(transform);
+		//labust::tools::quaternionFromEulerZYX(0,0,base_orientation,
+		//		transform.transform.rotation);
+		//broadcast.sendTransform(transform);
 	}
 	else
 	{
@@ -225,14 +226,13 @@ void NavQuestNode::publishDvlData(const NQRes& data)
 	
 	if (!beamValidity)
 	{
-	  //ROS_INFO("One or more beams are invalid. Ignore measurement: %f %f", data.velo_instrument[0]/1000, data.velo_instrument[1]/1000);
+	  ROS_WARN("One or more beams are invalid. Ignore measurement: %f %f", data.velo_instrument[0]/1000, data.velo_instrument[1]/1000);
 	  return;
 	}
 	else
 	{
-	  ROS_INFO("Beams are valid. Accept measurement: %f %f", data.velo_instrument[0]/1000, data.velo_instrument[1]/1000);
+	  ROS_DEBUG("Beams are valid. Accept measurement: %f %f", data.velo_instrument[0]/1000, data.velo_instrument[1]/1000);
 	}
-
 	(*beam_pub["velo_rad"])(data.velo_rad);
 	(*beam_pub["wvelo_rad"])(data.wvelo_rad);
 	(*beam_pub["altitude_beams"])(data.v_altitude);
@@ -253,9 +253,13 @@ void NavQuestNode::publishDvlData(const NQRes& data)
 	//Altitude
 	if (data.altitude_estimate > 0)
 	{
-		std_msgs::Float32Ptr alt(new std_msgs::Float32());
-		alt->data = data.altitude_estimate;
-		altitude.publish(alt);
+	  std::vector<double> salt;
+	  for (int i=0; i < 4; ++i) salt.push_back(data.v_altitude[i]);
+	  std::sort(salt.begin(), salt.end());
+
+	  std_msgs::Float32Ptr alt(new std_msgs::Float32());
+	  alt->data = (salt[1] + salt[2])/2;
+	  altitude.publish(alt);
 	}
 
 	//TF frame
@@ -294,8 +298,13 @@ void NavQuestNode::publishDvlData(const NQRes& data)
 	imuPub.publish(rpy);*/
 }
 
-void NavQuestNode::conditionDvlData(const NQRes& data)
-{}
+void NavQuestNode::conditionDvlData(NQRes& data)
+{
+	//Make the instrument coordinate system right handed by converting Z from up to down
+	//TODO correct adequately the earth values if needed
+	data.velo_instrument[2] *= -1;
+	data.water_velo_instrument[2] *= -1;
+}
 
 void NavQuestNode::onDvlData(const boost::system::error_code& e,
 		std::size_t size)
@@ -316,6 +325,7 @@ void NavQuestNode::onDvlData(const boost::system::error_code& e,
 			ia>>dvl_data;
 
 			//if (error_code(dvl_data) == 0) publishDvlData(dvl_data);
+			conditionDvlData(dvl_data);
 			publishDvlData(dvl_data);
 			ROS_INFO("Calculated checksum:calc=%d, recvd=%d", chk, dvl_data.checksum);
 
