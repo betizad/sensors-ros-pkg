@@ -2,6 +2,7 @@
 #define DIVERNETFILTERNODE_H_
 #include <ros/ros.h>
 #include <labust/sensors/ImuComplementaryQuaternionFilter.h>
+#include <labust/sensors/ImuFilter.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -36,6 +37,18 @@ namespace labust
          */
         void onInit();
         /**
+         * Loads the axes permutation for the model from a text file.
+         */
+        void loadModelAxesPermutation();
+        /**
+         * Loads previously calculated gyro bias from a file.
+         */
+        void loadGyroBiasFromFile();
+        /**
+         * Loads magnetometer calibration data.
+         */
+        void loadMagnetometerCalibration();
+        /**
          * Processes data packet from DiverNet.
          */
         void processData(const std_msgs::Int16MultiArrayPtr &raw_data);
@@ -61,6 +74,7 @@ namespace labust
          */
         void calibratePose(const std::vector<Eigen::Quaternion<double> >& q);
         
+        ros::NodeHandle ph_, nh_;
         // ROS subscribers for data, calibration request and gyro mean calculation request.
         ros::Subscriber raw_data_, calibrate_sub_, gyro_mean_sub_;
         // ROS publishers for raw and filtered rpy angles.
@@ -73,8 +87,11 @@ namespace labust
         std::vector<Eigen::Matrix3d> axes_permutation_;
         // Holds mean gyro values.
         Eigen::MatrixXd gyro_bias_;
-        // Madgwick's complementary quaternion filter.
-        ImuComplementaryQuaternionFilter *filter_;
+        // Holds magnetomter calibration values.
+        Eigen::MatrixXd magnetometer_ellipsoid_center_;
+        Eigen::MatrixXd magnetometer_ellipsoid_scale_;
+        bool should_calibrate_magnetometer_;
+        std::vector<ImuFilter> filters_;
         // Number of DiverNet nodes.
         const int node_count_;
         // Number of frames for gyro mean calculation.
@@ -82,7 +99,7 @@ namespace labust
         // Number of frames until gyro mean calculation is done.
         int gyro_mean_calculation_frames_left_;
         // Stores request for pose calibration.
-        bool should_calibrate_;
+        bool should_calibrate_pose_;
     };
   }
 }

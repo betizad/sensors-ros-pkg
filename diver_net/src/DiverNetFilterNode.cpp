@@ -1,41 +1,41 @@
 #include <labust/sensors/DiverNetFilterNode.h>
-#include <labust/sensors/ImuComplementaryQuaternionFilter.h>
 #include <labust/tools/conversions.hpp>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Float64.h>
-
+#include <labust/sensors/ImuFilter.h>
 #include <fstream>
 
 using namespace labust::sensors;
 
 DiverNetFilterNode::DiverNetFilterNode():
     node_count_(20),
+    ph_("~"),
     gyro_bias_(20,3),
-    should_calibrate_(false),
+    magnetometer_ellipsoid_center_(20,3),
+    magnetometer_ellipsoid_scale_(20,3),
+    should_calibrate_pose_(false),
+    should_calibrate_magnetometer_(false),
     gyro_mean_calculation_frames_left_(0),
-    gyro_mean_num_frames_(150),
+    gyro_mean_num_frames_(100),
     rpy_raw_(new std_msgs::Float64MultiArray()),
     rpy_filtered_(new std_msgs::Float64MultiArray()), 
     quaternion_filtered_(new std_msgs::Float64MultiArray()),
-    filter_(new ImuComplementaryQuaternionFilter(20, /* num nodes */
-                                                 1.0/10, /*dT*/ 
-                                                 0.05, 0.1)) {
+    filters_(20) {
   this->onInit();
 }
 
 void DiverNetFilterNode::onInit() {
-  ros::NodeHandle nh, ph("~");
   ros::Rate rate(1);
 
-  calibrate_sub_ = nh.subscribe<std_msgs::Bool>(
+  calibrate_sub_ = nh_.subscribe<std_msgs::Bool>(
       "calibrate", 1, &DiverNetFilterNode::setCalibrationRequest, this);
-  gyro_mean_sub_ = nh.subscribe<std_msgs::Bool>(
+  gyro_mean_sub_ = nh_.subscribe<std_msgs::Bool>(
       "calculate_gyro_mean", 1, &DiverNetFilterNode::calculateGyroMean, this);
 
-  raw_angles_pub_ = nh.advertise<std_msgs::Float64MultiArray>("rpy_raw", 1);
-  filtered_angles_pub_ = nh.advertise<std_msgs::Float64MultiArray>("rpy_filtered", 1);
-  filtered_quaternion_pub_ = nh.advertise<std_msgs::Float64MultiArray>("quaternion_filtered", 1);
+  raw_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_raw", 1);
+  filtered_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_filtered", 1);
+  filtered_quaternion_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("quaternion_filtered", 1);
   
   rpy_raw_->data.resize(node_count_ * 3);
   rpy_filtered_->data.resize(node_count_ * 3);
@@ -43,44 +43,95 @@ void DiverNetFilterNode::onInit() {
 
   // Set up axes permutation
   // Axes are permuted so that each sensor in null-pose (standing, arms in front) gives zero angles 
-  axes_permutation_.resize(node_count_);
-  Eigen::Matrix3d upper_body(3,3), lower_back(3,3), left_thigh(3,3), left_calf(3,3), right_thigh(3,3), right_calf(3,3);
-  upper_body  << 0,  0,  1,  0, -1,  0,  1,  0,  0;
-  lower_back  << 0,  0, -1,  0,  1,  0,  1,  0,  0;
-  left_thigh  << 0, -1,  0,  0,  0,  1, -1,  0,  0;
-  left_calf   << 0,  0,  1,  0,  1,  0, -1,  0,  0;
-  right_thigh << 0,  1,  0,  0,  0, -1, -1,  0,  0;
-  right_calf  << 0,  0,  1,  0,  1,  0, -1,  0,  0;
-  axes_permutation_[0] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[1] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[2] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[3] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[4] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[5] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[6] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[7] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[8] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[9] = upper_body.transpose();
-  axes_permutation_[10] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[11] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[12] = left_calf.transpose();
-  axes_permutation_[13] = left_thigh.transpose();
-  axes_permutation_[14] = lower_back.transpose();
-  axes_permutation_[15] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[16] = right_thigh.transpose();
-  axes_permutation_[17] = right_calf.transpose();
-  axes_permutation_[18] = Eigen::Matrix3d::Identity(3,3);
-  axes_permutation_[19] = Eigen::Matrix3d::Identity(3,3);
+  loadModelAxesPermutation();
+  loadGyroBiasFromFile();
+  loadMagnetometerCalibration();
 
+  for (int i=0; i<node_count_; ++i) {
+    filters_[i].setAlgorithmGain(0.15);
+    filters_[i].setDriftBiasGain(0.01);
+  }
+
+  raw_data_ = nh_.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
+}
+
+void DiverNetFilterNode::loadModelAxesPermutation() {
+  axes_permutation_.resize(node_count_);
+  std::string model_axes_permutation_file;
+  ph_.getParam("model_axes_permutation_file", model_axes_permutation_file);
+  std::ifstream ifs;
+  ifs.open(model_axes_permutation_file.c_str());
+  if (!ifs.good()) {
+    ROS_ERROR("No axes permutation file!");
+  } else {
+    for (int i=0; i<node_count_; ++i) {
+      for (int j=0; j<9; ++j) {
+        ifs >> axes_permutation_[i](j%3, j/3);
+      }
+    }  
+  }
+}
+
+void DiverNetFilterNode::loadGyroBiasFromFile() {
+  std::string calibration_file("");
+  // Gyro sensor bias
   gyro_bias_ = Eigen::MatrixXd::Zero(node_count_, 3);
-  raw_data_ = nh.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
+  ph_.getParam("gyro_mean_file", calibration_file);
+  if (calibration_file == "") {
+    ROS_ERROR("No gyro calibration file provided, zero mean offset assumed.");
+  } else {
+    ROS_ERROR("Opening gyro calibration file %s", calibration_file.c_str());
+    std::ifstream ifs;
+    ifs.open(calibration_file.c_str());
+    if (!ifs.good()) {
+      ROS_ERROR("File %s does not exist or cannot be opened.", calibration_file.c_str());
+    } else {
+      double gb;
+      for (int i=0; i<node_count_; ++i) {
+        for (int j=0; j<3; ++j) {
+          ifs >> gb;
+          gyro_bias_(i,j) = gb;
+        }
+      }
+      ifs.close();
+      ROS_INFO("Gyro mean file opened successfully.");
+    }
+  }  
+}
+
+void DiverNetFilterNode::loadMagnetometerCalibration() {
+  std::string calibration_file = "";
+  // Magnetometer calibration
+  ph_.getParam("magnetometer_calibration_file", calibration_file);
+  if (calibration_file == "") {
+    ROS_ERROR("No magnetometer calibration file provided.");
+  } else {
+    ROS_ERROR("Opening magnetometer calibration file %s", calibration_file.c_str());
+    std::ifstream ifs;
+    ifs.open(calibration_file.c_str());
+    if (!ifs.good()) {
+      ROS_ERROR("File %s does not exist or cannot be opened.", calibration_file.c_str());
+    } else {
+      for (int i=0; i<node_count_; ++i) {
+        for (int j=0; j<3; ++j) {
+          ifs >> magnetometer_ellipsoid_center_(i,j);
+        }
+        for (int j=0; j<3; ++j) {
+          ifs >> magnetometer_ellipsoid_scale_(i,j);
+        }
+      }
+      ifs.close();
+      ROS_INFO("Magnetometer calibration file opened successfully.");
+      should_calibrate_magnetometer_ = true;
+    }
+  }  
 }
 
 DiverNetFilterNode::~DiverNetFilterNode() {}
 
 void DiverNetFilterNode::setCalibrationRequest(const std_msgs::Bool::ConstPtr& calibrate) {
   if (calibrate->data) {
-    should_calibrate_ = true;
+    should_calibrate_pose_ = true;
   }
 }
 
@@ -133,6 +184,13 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
     raw(i,7) *= 2000.0 * M_PI/180;
     raw(i,8) *= 2000.0 * M_PI/180;
 
+    // Calibrate magnetometer data
+    if (should_calibrate_magnetometer_) {
+      raw(i,3) = magnetometer_ellipsoid_scale_(i,0) * (raw(i,3) - magnetometer_ellipsoid_center_(i,0));
+      raw(i,4) = magnetometer_ellipsoid_scale_(i,1) * (raw(i,4) - magnetometer_ellipsoid_center_(i,1));
+      raw(i,5) = magnetometer_ellipsoid_scale_(i,2) * (raw(i,5) - magnetometer_ellipsoid_center_(i,2));
+    }
+
     // Compensate gyro bias if mean calculation is not in progress
     if (gyro_mean_calculation_frames_left_ == 0) {
       raw(i,6) -= gyro_bias_(i,0);
@@ -142,7 +200,6 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
       gyro_bias_(i,0) += raw(i,6);
       gyro_bias_(i,1) += raw(i,7);
       gyro_bias_(i,2) += raw(i,8);
-    
     }
 
     // Perform axes permutation to match the diver model and calibrated node positions.
@@ -154,7 +211,13 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
   if (gyro_mean_calculation_frames_left_ > 0) {
     if (gyro_mean_calculation_frames_left_ == 1) {
       gyro_bias_ /= gyro_mean_num_frames_;
-      filter_->reset();
+      for (int i=0; i<node_count_; ++i) {
+        filters_[i].reset();
+        double zeta = (gyro_bias_(i,0) + gyro_bias_(i,1) + gyro_bias_(i,2))/3/10;
+        std::cerr << zeta << std::endl;
+        filters_[i].setDriftBiasGain((gyro_bias_(i,0) + gyro_bias_(i,1) + gyro_bias_(i,2))/3/10);
+      }
+      std::cerr << gyro_bias_ << std::endl;
       ROS_INFO("Gyro mean calculation complete.");
     }
     gyro_mean_calculation_frames_left_--;
@@ -164,13 +227,21 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
   calculateRawAngles(raw);
 
   // Process each sensor with a filter to obtain filtered orientation.
-  filter_->processFrame(raw);
-  std::vector<Eigen::Quaternion<double> > q = filter_->getQuaternionOrientation();
-  if (should_calibrate_) {
+  std::vector<Eigen::Quaternion<double> > q(node_count_);
+  for (int i=0; i<node_count_; ++i) {
+    filters_[i].madgwickAHRSupdate(raw(i,6), raw(i,7), raw(i,8),
+                                   raw(i,0), raw(i,1), raw(i,2),
+                                   raw(i,3), raw(i,4), raw(i,5),
+                                   1.0/10.0);
+    filters_[i].getOrientation(q[i].w(), q[i].x(), q[i].y(), q[i].z());
+  }
+  if (should_calibrate_pose_) {
     ROS_WARN("Pose calibration in progress.");
     calibratePose(q);
-    should_calibrate_ = false;
-    filter_->reset();
+    should_calibrate_pose_ = false;
+    for (int i=0; i<node_count_; ++i) {
+      filters_[i].reset();
+    }
     ROS_INFO("Pose calibration done.");
   }
   for (int i=0; i<node_count_; ++i) {
@@ -209,6 +280,7 @@ void DiverNetFilterNode::calculateRawAngles(const Eigen::MatrixXd raw) {
     rpy_raw_->data[3*i+1] = pitch;
     rpy_raw_->data[3*i+2] = yaw;
   }
+  raw_angles_pub_.publish(rpy_raw_);
 }
 
 int main(int argc, char* argv[]) {
