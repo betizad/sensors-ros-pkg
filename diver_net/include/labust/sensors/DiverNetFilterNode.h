@@ -1,7 +1,6 @@
 #ifndef DIVERNETFILTERNODE_H_
 #define DIVERNETFILTERNODE_H_
 #include <ros/ros.h>
-#include <labust/sensors/ImuComplementaryQuaternionFilter.h>
 #include <labust/sensors/ImuFilter.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16MultiArray.h>
