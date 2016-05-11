@@ -31,56 +31,16 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/comms/caddy/buddy_handler.h>
-#include <labust/seatrac/seatrac_messages.h>
-#include <labust/seatrac/seatrac_definitions.h>
+#include <labust/seatrac/nav_handler.h>
 #include <labust/math/NumberManipulation.hpp>
-#include <labust/tools/packer.h>
 
-#include <pluginlib/class_list_macros.h>
+using labust::comms::caddy::NavHandler;
 
-#include <auv_msgs/NavSts.h>
-#include <std_msgs/Int32.h>
-#include <std_msgs/UInt8.h>
-#include <std_msgs/Bool.h>
-#include <geometry_msgs/PointStamped.h>
-
-#include <string>
-
-using namespace labust::seatrac;
-using namespace labust::comms::caddy;
-
-bool BuddyHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-{
-  // Navigation publishers
-  divernav_pub = nh.advertise<auv_msgs::NavSts>("buddy_diver_pos", 1);
-  nav_pub = nh.advertise<auv_msgs::NavSts>("buddy_pos", 1);
-  partialnav_pub = nh.advertise<auv_msgs::NavSts>("buddy_partial_pos", 1);
-  init_pub = nh.advertise<geometry_msgs::PointStamped>("buddy_acoustic_origin_in", 1, true);
-
-  // Status handler
-  status.configure(nh, ph);
-  // Leak publishers
-  leak_pub = nh.advertise<std_msgs::Bool>("buddy_leak", 1);
-  battery_pub = nh.advertise<std_msgs::UInt8>("buddy_battery_status", 1);
-  return true;
-}
-
-void BuddyHandler::operator()(const BuddyReport& message, const Eigen::Vector3d& offset)
-{
-  navHandler(message, offset);
-  if (message.inited)
-  {
-    payloadHandler(message);
-    status(message, offset);
-  }
-}
-
-void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d& offset)
+template<>
+void NavHandler::updateReport<BuddyReport>(const BuddyReport& message, const Eigen::Vector3d& offset)
 {
   if (message.inited)
   {
-    ROS_INFO("Message flags: %d %d", message.has_position, message.has_diver);
     auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
     nav->header.stamp = ros::Time::now();
     nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
@@ -88,17 +48,16 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
 
     if (message.has_position)
     {
-
       nav->position.north = message.north + offset(n);
       nav->position.east = message.east + offset(e);
       nav->position.depth = message.depth + offset(d);
       nav->altitude = message.altitude - offset(d);
 
-      nav_pub.publish(nav);
+      navall_pub.publish(nav);
     }
     else
     {
-      partialnav_pub.publish(nav);
+      nav_pub.publish(nav);
     }
 
     //Handle diver position
@@ -122,16 +81,35 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
   }
 }
 
-void BuddyHandler::payloadHandler(const BuddyReport& message)
+template<>
+void NavHandler::updateReport<SurfaceReport>(const SurfaceReport& message, const Eigen::Vector3d& offset)
 {
-  if (message.inited)
-  {
-    std_msgs::Bool leak;
-    leak.data = message.leak_info;
-    leak_pub.publish(leak);
+  auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
+  nav->position.north = message.north + offset(n);
+  nav->position.east = message.east + offset(e);
 
-    std_msgs::UInt8 battery;
-    battery.data = message.battery_status;
-    battery_pub.publish(battery);
+  nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
+  nav->gbody_velocity.x = message.speed;
+
+  nav->header.stamp = ros::Time::now();
+  navall_pub.publish(nav);
+
+  if (message.is_master && message.has_diver)
+  {
+    auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+    divernav->position.north = message.diver_north;
+    divernav->position.east = message.diver_east;
+    divernav->header.stamp = nav->header.stamp;
+    diverpos_pub.publish(divernav);
   }
+}
+
+template <>
+void NavHandler::updateReport<DiverReport>(const DiverReport& message, const Eigen::Vector3d& offset)
+{
+  auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
+  nav->orientation.yaw = labust::math::wrapRad(M_PI*message.heading/180);
+  nav->position.depth = message.depth;
+  nav->header.stamp = ros::Time::now();
+  divernav_pub.publish(nav);
 }

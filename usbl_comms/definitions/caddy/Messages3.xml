@@ -1,0 +1,165 @@
+<caddy_acoustic_messages>
+ <struct name="BuddyReport" serialization="primitive_type"
+  bitfield3="TRUE">
+  <!-- Message configuration flag: INIT_POSITION or REPORT -->
+  <var type="uint8_t" name="inited" bits="1" min="0" max="1" />
+  
+  <group if="inited != 1">
+    <!-- Initialization position --> 
+    <var type="double" name="origin_lat" bits="31" min="-90" max="90" />
+    <var type="double" name="origin_lon" bits="32" min="-180" max="180" />
+  </group>
+
+  <group if="inited == 1">
+    <!-- Position flag -->
+    <var type="uint8_t" name="has_position" bits="1" min="0" max="1" />
+    
+    <!-- Position data - Optional -->
+    <var type="double" name="north" bits="10" min="-51.2" max="51.1" if="has_position == 1" />
+    <var type="double" name="east"  bits="10" min="-51.2" max="51.1" if="has_position == 1" />
+    <var type="double" name="depth" bits="7" min="0" max="63.5" if="has_position == 1" />
+    <var type="double" name="altitude" bits="5" min="0" max="7.75" if="has_position == 1" />
+    
+    <!-- Dead-reckoning data -->
+    <var type="double" name="course" bits="9" min="-180" max="180" />
+    <var type="double" name="speed" bits="4" min="0" max="1" /> 
+    
+    <!-- Diver data -->
+    <var type="uint8_t" name="has_diver" bits="1" min="0" max="1" />
+    <var type="double" name="diver_north" bits="10" min="-51.2" max="51.2" if="has_diver == 1" />
+    <var type="double" name="diver_east" bits="10" min="-51.2" max="51.2" if="has_diver == 1" />    
+  
+    <!-- Payload data -->  
+    <var type="uint8_t" name="battery_status" bits="3" min="0" max="100" />
+    <var type="uint8_t" name="leak_info" bits="1" min="0" max="1" />
+    
+    <var type="uint8_t" name="mission_status" bits="4" min="0" max="15" />
+    
+    <!-- Mission payloads:
+     Lawn-mower (status=1):
+       north_origin -> north_origin
+       east_origin -> east_origin
+       lawn_width -> lawn_width
+       lawn_height -> lawn_height 
+     Guide-to-point(status=2):
+       target_north -> north_origin
+       target_east -> east_origin
+    -->
+    <var type="double" name="north_origin" bits="6" min="-32" max="31"
+      if="(mission_status == 2) || (mission_status == 1)" />
+    <var type="double" name="east_origin" bits="6" min="-32" max="31"
+      if="(mission_status == 2) || (mission_status == 1)" />
+    
+    <var type="double" name="lawn_width" bits="3" min="1" max="9"
+      if="mission_status == 1" />
+    <var type="double" name="lawn_length" bits="3" min="1" max="9"
+      if="mission_status == 1" />   
+  </group>
+ </struct>
+
+ <struct name="SurfaceReport" serialization="primitive_type"
+  bitfield3="TRUE">
+  
+  <!-- The master flag -->
+  <var type="uint8_t" name="is_master" bits="1" min="0" max="1" />
+  <!-- The master init flag sent only when in master mode -->
+  <var type="uint8_t" name="inited" bits="1" min="0" max="1" if="is_master == 1"/>
+  
+  <group if="(is_master == 1) &amp;&amp; (inited != 1)">
+    <!-- Initialization position --> 
+    <var type="double" name="origin_lat" bits="31" min="-90" max="90" />
+    <var type="double" name="origin_lon" bits="32" min="-180" max="180" />
+  </group>
+
+  <!-- Position data - required (sent only when inited)-->
+  <group if="(is_master == 0) || ((is_master == 1) &amp;&amp; (inited == 1))">
+    <var type="double" name="north" bits="10" min="-51.2" max="51.1" />
+    <var type="double" name="east" bits="10" min="-51.2" max="51.1" />
+  </group>
+  
+  <!-- Master operation (without Buddy) -->
+  <group if="(is_master == 1) &amp;&amp; (inited == 1)">
+    <!-- Diver position - only when master -->
+    <var type="uint8_t" name="has_diver" bits="1" min="0" max="1" />
+    <var type="double" name="diver_north" bits="10" min="-51.2" max="51.2" if="has_diver == 1" />
+    <var type="double" name="diver_east" bits="10" min="-51.2" max="51.2" if="has_diver == 1" />
+  </group>
+
+  <!-- Slave operation (with Buddy master) -->
+  <group if="is_master == 0">
+     <!-- Position data  - required --> 
+     <var type="double" name="course" bits="9" min="-180" max="180" />
+     <var type="double" name="speed" bits="4" min="0" max="1.0" />
+     
+     <!-- Mission command -->
+     <var type="uint8_t" name="command" bits="4" min="0" max="15" />  
+    <!-- Mission payloads:
+     Lawn-mower (status=1):
+       north_origin -> north_origin
+       east_origin -> east_origin
+       lawn_width -> lawn_width
+       lawn_height -> lawn_height 
+     Guide-to-point(status=2):
+       target_north -> north_origin
+       target_east -> east_origin
+    -->
+    <var type="double" name="north_origin" bits="6" min="-32" max="31"
+      if="(command == 2) || (command == 1)" />
+    <var type="double" name="east_origin" bits="6" min="-32" max="31"
+      if="(command == 2) || (command == 1)" />
+    
+    <var type="double" name="lawn_width" bits="3" min="1" max="9"
+      if="command == 1" />
+    <var type="double" name="lawn_length" bits="3" min="1" max="9"
+      if="command == 1" /> 
+  </group>  
+  
+  <!-- The main predefiend chat -->
+  <group if="inited == 1">
+    <var type="uint8_t" name="predefined_chat" bits="5" min="0" max="31" />
+    <var type="uint8_t[]" name="chat" bits="6" min="0" max="63" />
+  </group> 
+</struct>
+
+ <struct name="DiverReport" serialization="primitive_type"
+  bitfield3="TRUE">
+  <var type="double" name="heading" bits="9" min="-180" max="180" />
+  <var type="double" name="depth" bits="7" min="0" max="63.5" />
+  
+  <!-- Diver data required -->
+  <var type="double" name="avg_flipper_rate" bits="4" min="0" max="15" />
+  <var type="double" name="hearth_rate" bits="4" min="0" max="15" />
+  
+  <!-- Diver optional -->
+  <var type="uint8_t" name="optional_data" bits="1" min="0" max="1" />
+  <var type="double" name="breathing_rate" bits="4" min="0" max="15" 
+    if="optional_data == 1"/>
+  <var type="double" name="motion_rate" bits="2" min="0" max="3" 
+    if="optional_data == 1"/>
+  <var type="double" name="pad_space" bits="5" min="0" max="31" 
+    if="optional_data == 1"/>
+
+  <var type="uint8_t" name="alarms" bits="3" min="0" max="7" />
+  <var type="uint8_t" name="command" bits="2" min="0" max="3" />
+  <!-- Mission command payload -->
+  <!--  Lawn-mower -->
+  <var type="double" name="north_origin" bits="6" min="-32" max="31"
+   if="command == 1" />
+  <var type="double" name="east_origin" bits="6" min="-32" max="31"
+   if="command == 1" />
+  <var type="double" name="lawn_width" bits="3" min="1" max="9"
+   if="command == 1" />
+  <var type="double" name="lawn_length" bits="3" min="1" max="9"
+   if="command == 1" />
+  <!-- Guide-to-point and Take photo -->
+  <var type="double" name="target_north" bits="6" min="-32" max="31"
+   if="(command == 2) || (command == 4)" />
+  <var type="double" name="target_east" bits="6" min="-32" max="31"
+   if="(command == 2) || (command == 4)" />
+
+  <!-- Chat data, variable chat data (suggested up to 36 bits max). -->
+  <var type="uint8_t" name="predefined_chat" bits="5" min="0" max="31" />
+  <var type="uint8_t[]" name="chat" bits="6" min="0" max="63"
+   if="command == 5" />
+ </struct>
+</caddy_acoustic_messages>

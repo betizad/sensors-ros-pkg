@@ -5,17 +5,26 @@ public:
 
   void unpack(boost::archive::binary_iarchive& in) ;
 
-  double offset_x;
-  double offset_y;
-  double course;
-  double speed;
+  uint8_t inited;
+  double origin_lat;
+  double origin_lon;
+  uint8_t has_position;
+  double north;
+  double east;
   double depth;
   double altitude;
-  uint8_t battery_info;
+  double course;
+  double speed;
+  uint8_t has_diver;
+  double diver_north;
+  double diver_east;
+  uint8_t battery_status;
   uint8_t leak_info;
   uint8_t mission_status;
-  double diver_offset_x;
-  double diver_offset_y;
+  double north_origin;
+  double east_origin;
+  double lawn_width;
+  double lawn_length;
 
 };
 
@@ -27,29 +36,24 @@ public:
 
   void unpack(boost::archive::binary_iarchive& in) ;
 
-  double offset_x;
-  double offset_y;
+  uint8_t is_master;
+  uint8_t inited;
+  double origin_lat;
+  double origin_lon;
+  double north;
+  double east;
+  uint8_t has_diver;
+  double diver_north;
+  double diver_east;
   double course;
   double speed;
-  uint8_t mission_cmd;
+  uint8_t command;
+  double north_origin;
+  double east_origin;
   double lawn_width;
   double lawn_length;
-
-};
-
-
-struct SurfaceChat {
-public:
-
-  void pack(boost::archive::binary_oarchive& out) const;
-
-  void unpack(boost::archive::binary_iarchive& in) ;
-
-  double offset_x;
-  double offset_y;
-  double course;
-  double speed;
-  uint8_t chat[5];
+  uint8_t predefined_chat;
+  std::vector< uint8_t > chat;
 
 };
 
@@ -63,23 +67,22 @@ public:
 
   double heading;
   double depth;
-  double paddle_rate;
+  double avg_flipper_rate;
   double hearth_rate;
-  uint8_t mission_cmd;
-
-};
-
-
-struct DiverChat {
-public:
-
-  void pack(boost::archive::binary_oarchive& out) const;
-
-  void unpack(boost::archive::binary_iarchive& in) ;
-
-  double paddle_rate;
-  double hearth_rate;
-  uint8_t chat[8];
+  uint8_t optional_data;
+  double breathing_rate;
+  double motion_rate;
+  double pad_space;
+  uint8_t alarms;
+  uint8_t command;
+  double north_origin;
+  double east_origin;
+  double lawn_width;
+  double lawn_length;
+  double target_north;
+  double target_east;
+  uint8_t predefined_chat;
+  std::vector< uint8_t > chat;
 
 };
 

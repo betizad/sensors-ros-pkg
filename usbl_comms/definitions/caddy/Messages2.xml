@@ -3,8 +3,8 @@
   compatibility?) -->
  <!-- Structures should pre-exist, but the serialization info can be separated 
   and runtime configurable ? -->
- <struct name="BuddyReport" assert_size="9" serialization="primitive_type"
-  bitfield2="TRUE">
+ <struct name="BuddyReport" serialization="primitive_type"
+  bitfield3="TRUE">
   <var type="double" name="offset_x" bits="10" min="-51.2" max="51.1" />
   <var type="double" name="offset_y" bits="10" min="-51.2" max="51.1" />
   <var type="double" name="course" bits="9" min="-180" max="180" />
@@ -20,45 +20,49 @@
   <var type="uint8_t" name="battery_info" bits="3" min="0" max="100" />
   <var type="uint8_t" name="leak_info" bits="1" min="0" max="1" />
   <var type="uint8_t" name="mission_status" bits="2" min="0" max="3" />
+
+  <var type="uint8_t" name="has_diver" bits="1" min="0" max="1" />
   <var type="double" name="diver_offset_x" bits="10" min="-51.2"
-   max="51.2" />
+   max="51.2" if="has_diver" />
   <var type="double" name="diver_offset_y" bits="10" min="-51.2"
-   max="51.2" />
+   max="51.2" if="has_diver" />
  </struct>
 
- <struct name="SurfaceReport" assert_size="6" serialization="primitive_type"
-  bitfield2="TRUE">
+ <struct name="SurfaceReport" serialization="primitive_type"
+  bitfield3="TRUE">
   <var type="double" name="offset_x" bits="10" min="-51.2" max="51.1" />
   <var type="double" name="offset_y" bits="10" min="-51.2" max="51.1" />
   <var type="double" name="course" bits="9" min="-180" max="180" />
   <var type="double" name="speed" bits="4" min="0" max="1.0" />
+
   <var type="uint8_t" name="mission_cmd" bits="2" min="0" max="3" />
-  <var type="double" name="lawn_width" bits="4" min="0" max="15" />
-  <var type="double" name="lawn_length" bits="4" min="0" max="15" />
+  <!-- Variable mission data -->
+  <var type="double" name="lawn_width" bits="4" min="0" max="15"
+   if="mission_cmd == 1" />
+  <var type="double" name="lawn_length" bits="4" min="0" max="15"
+   if="mission_cmd == 1" />
+
+  <!-- Variable chat data (up to 36 bits ?) -->
+  <var type="uint8_t[]" name="chat" bits="6" min="0" max="63"
+   if="mission_cmd == 0" />
  </struct>
- 
-  <struct name="SurfaceChat" assert_size="8" serialization="primitive_type"
-  bitfield2="TRUE">
-  <var type="double" name="offset_x" bits="10" min="-51.2" max="51.1" />
-  <var type="double" name="offset_y" bits="10" min="-51.2" max="51.1" />
-  <var type="double" name="course" bits="9" min="-180" max="180" />
-  <var type="double" name="speed" bits="4" min="0" max="1.0" />
-  <var type="uint8_t[5]" name="chat" bits="6" min="0" max="63" />
- </struct>
- 
- <struct name="DiverReport" assert_size="4" serialization="primitive_type"
-  bitfield2="TRUE">
+
+ <struct name="DiverReport" serialization="primitive_type"
+  bitfield3="TRUE">
   <var type="double" name="heading" bits="9" min="-180" max="180" />
   <var type="double" name="depth" bits="7" min="0" max="63.5" />
   <var type="double" name="paddle_rate" bits="4" min="0" max="15" />
   <var type="double" name="hearth_rate" bits="4" min="0" max="15" />
+
   <var type="uint8_t" name="mission_cmd" bits="2" min="0" max="3" />
- </struct>
- 
- <struct name="DiverChat" assert_size="7" serialization="primitive_type"
-   bitfield2="TRUE">
-   <var type="double" name="paddle_rate" bits="4" min="0" max="15" />
-   <var type="double" name="hearth_rate" bits="4" min="0" max="15" />
-   <var type="uint8_t[8]" name="chat" bits="6" min="0" max="63" />
+  <!-- Mission data (either is or isn't) -->
+  <var type="double" name="lawn_width" bits="4" min="0" max="15"
+   if="mission_cmd == 1" />
+  <var type="double" name="lawn_length" bits="4" min="0" max="15"
+   if="mission_cmd == 1" />
+
+  <!-- Variable chat data (up to 36 bits ?) -->
+  <var type="uint8_t[]" name="chat" bits="6" min="0" max="63"
+   if="mission_cmd == 0" />
  </struct>
 </caddy_acoustic_messages>

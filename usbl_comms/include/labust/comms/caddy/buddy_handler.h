@@ -36,9 +36,13 @@
  *********************************************************************/
 #ifndef USBL_COMMS_BUDDY_HANDLER_H
 #define USBL_COMMS_BUDDY_HANDLER_H
-#include <labust/comms/caddy/ac_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
+#include <labust/seatrac/status_handler.h>
 
 #include <ros/ros.h>
+
+#include <Eigen/Dense>
+
 #include <cstdint>
 
 namespace labust
@@ -48,26 +52,44 @@ namespace labust
 		namespace caddy
 		{
 			///Class for handling Buddy acoustic messages and publish them to ROS.
-			class BuddyHandler : public virtual AcHandler
+			class BuddyHandler
 			{
+			  enum {n=0,e,d};
 			public:
 				///Main constructor
-				BuddyHandler(){};
+				BuddyHandler():
+				status("buddy",false){};
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-				void operator()(const labust::seatrac::DatReceive& msg);
+				void operator()(const BuddyReport& message, const Eigen::Vector3d& offset);
 
 			protected:
+				// Method for handling the navigation part.
+				void navHandler(const BuddyReport& message, const Eigen::Vector3d& offset);
+                // Method for handling the payload part.
+                void payloadHandler(const BuddyReport& message);
+                // Method for handling the payload part.
+                void statusHandler(const BuddyReport& message);
+
+				// Navigation handling
 				///Buddy navigation data publisher
-				ros::Publisher buddynav_pub;
+				ros::Publisher nav_pub;
+				///Buddy partial navigation data publisher
+				ros::Publisher partialnav_pub;
 				///The diver navigation info publisher
 				ros::Publisher divernav_pub;
+		        /// The initialization position publisher
+		        ros::Publisher init_pub;
+
+				// Mission status handling
 				///The mission status
-				ros::Publisher mission_pub;
-				///Leak detection
+				labust::seatrac::StatusHandler status;
+
+				//Payload handling
+				///Leak detection.
 				ros::Publisher leak_pub;
-				///Battery info
+				///Battery info.
 				ros::Publisher battery_pub;
 			};
 		}

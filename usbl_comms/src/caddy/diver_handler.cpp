@@ -33,6 +33,7 @@
  *********************************************************************/
 #include <labust/comms/caddy/diver_handler.h>
 #include <labust/comms/caddy/caddy_messages.h>
+#include <labust/comms/ascii6bit.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/math/NumberManipulation.hpp>
@@ -41,31 +42,46 @@
 #include <pluginlib/class_list_macros.h>
 
 #include <auv_msgs/NavSts.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/UInt8.h>
+#include <std_msgs/String.h>
+#include <caddy_msgs/DiverPayload.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
+using labust::comms::Ascii6Bit;
 
 bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_nav", 1);
+	nav_pub = nh.advertise<auv_msgs::NavSts>("diver_pos", 1);
+	payload_pub = nh.advertise<caddy_msgs::DiverPayload>("diver_payload", 1);
+
+	chat.configure(nh, ph);
+	command.configure(nh, ph);
 	return true;
 }
 
-void DiverHandler::operator()(const labust::seatrac::DatReceive& msg)
+void DiverHandler::operator()(const DiverReport& message, const Eigen::Vector3d& offset)
 {
-	DiverReport diver;
-	if (!labust::tools::decodePackable(msg.data, &diver))
-	{
-		ROS_WARN("DiverHandler: Wrong message received from modem.");
-		return;
-	}
+  navHandler(message, offset);
+  payloadHandler(message);
+  chat(message);
+  command(message, offset);
+}
 
-	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
-	divernav->orientation.yaw = labust::math::wrapRad(M_PI*diver.heading/180);
-	divernav->position.depth = diver.depth;
-	divernav->header.stamp = ros::Time::now();
-	divernav_pub.publish(divernav);
-	//TODO Handle paddle_rate, hearth_rate and breathing_rate and command
+// Method for handling the navigation part.
+void DiverHandler::navHandler(const DiverReport& message, const Eigen::Vector3d& offset)
+{
+  auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+  divernav->orientation.yaw = labust::math::wrapRad(M_PI*message.heading/180);
+  divernav->position.depth = message.depth;
+  divernav->header.stamp = ros::Time::now();
+  nav_pub.publish(divernav);
+}
+
+void DiverHandler::payloadHandler(const DiverReport& message)
+{
+
 }

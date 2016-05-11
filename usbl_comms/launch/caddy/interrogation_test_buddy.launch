@@ -1,0 +1,43 @@
+<launch>
+	<arg name="is_sim" default="true"/>
+	
+	<remap from="medium_out" to="/medium_out" />
+    <remap from="medium_in" to="/medium_in" />
+    <remap from="unregister_modems" to="/unregister_modems" />
+    <remap from="register_modem" to="/register_modem" />
+    <remap from="unregister_modem" to="/unregister_modem" />
+    <remap from="registered_nodes" to="/registered_nodes" />
+	
+    <!-- The Buddy USBL -->   
+    <group ns="buddy">
+    	<node pkg="seatrac" type="seatrac_core" name="buddy_sim" output="screen">
+			<!-- Core configuration -->
+			<param name="comms_plugin" value="labust::seatrac::SeatracSim" if="$(arg is_sim)"/>
+			<param name="comms_plugin" value="labust::seatrac::SeatracSerial" unless="$(arg is_sim)"/>
+			<param name="controller_plugin" value="labust::seatrac::BuddyUSBL" />
+			<rosparam param="listener_plugins">["labust::seatrac::StatusListener",
+                   "labust::seatrac::NavListener",
+                   "labust::seatrac::DataListener"]</rosparam>
+            <!-- Serial parameters -->
+            <param name="port_name" value="/dev/ttyUSB1" />
+            <!-- USBLController configuration -->
+            <param name="auto_mode" value="false" />
+            <param name="timeout" value="4.0" />
+            <rosparam param="transponders">[1,2]</rosparam>
+            <param name="use_ahrs" value="true" />
+			<!-- NavListener setup -->
+			<rosparam param="transponder_names">["surface","diver"]</rosparam>
+			<!-- Simulation parameters -->
+			<param name="sim_node_id" value="3" />
+			<param name="sim_is_modem" value="false" />
+			
+			<remap from="navsts" to="position" />
+		</node>
+		<node pkg="ist_util" type="ramp_pub.py" name="buddy_pos" />
+
+		<!-- <node pkg="seatrac" type="static_beacon" name="buddy_pos">
+			<rosparam param="position">[10.0,11.0,0.0]</rosparam>
+			<rosparam param="orientation">[0.0,0.0,1.0]</rosparam>
+		</node> -->
+    </group>
+</launch>

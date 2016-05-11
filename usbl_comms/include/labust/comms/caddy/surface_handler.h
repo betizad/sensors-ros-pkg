@@ -36,9 +36,14 @@
  *********************************************************************/
 #ifndef USBL_COMMS_SURFACE_HANDLER_H
 #define USBL_COMMS_SURFACE_HANDLER_H
-#include <labust/comms/caddy/ac_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
+#include <labust/seatrac/chat_handler.h>
+#include <labust/seatrac/status_handler.h>
 
 #include <ros/ros.h>
+
+#include <Eigen/Dense>
+
 #include <cstdint>
 
 namespace labust
@@ -48,27 +53,31 @@ namespace labust
 		namespace caddy
 		{
 			///Class for handling Surface acoustic messages and publish them to ROS.
-			class SurfaceHandler : public virtual AcHandler
+			class SurfaceHandler
 			{
-			enum {NOP=0, LAWN_MOWER=1, STOP=2};
+			  enum {n=0,e,d};
 			public:
 				///Main constructor
-				SurfaceHandler():last_cmd(0){};
+				SurfaceHandler():command("surface", true){};
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-				void operator()(const labust::seatrac::DatReceive& msg);
+				void operator()(const SurfaceReport& message, const Eigen::Vector3d& offset);
 
 			protected:
-				//Surface navigation data publisher
-				ros::Publisher surfacenav_pub;
-				//Surface command publisher
-				ros::Publisher surfacecmd_pub;
-				//Surface lawn mower publisher
-				ros::Publisher lawnreq_pub;
+                // Method for handling the navigation part.
+                void navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset);
 
-				//Last command
-				uint8_t last_cmd;
+				// Surface navigation data publisher
+				ros::Publisher nav_pub;
+				// Surface diver navigation publisher
+				ros::Publisher diverpos_pub;
+                /// The initialization position publisher
+                ros::Publisher init_pub;
+                /// The common chat handler
+                labust::seatrac::ChatHandler chat;
+                /// The common status/command handler
+                labust::seatrac::StatusHandler command;
 			};
 		}
 	}

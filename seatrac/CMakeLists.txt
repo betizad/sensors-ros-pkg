@@ -97,7 +97,7 @@ roslint_cpp(src/seatrac_sdk/seatrac_sim.cpp)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES seatrac
+  LIBRARIES seatrac_sdk
 #  CATKIN_DEPENDS roscpp snippets std_msgs underwater_msgs
 #  DEPENDS system_lib
 )

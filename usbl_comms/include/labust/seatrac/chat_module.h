@@ -31,80 +31,79 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef USBL_COMMS_DIVER_MODEM_H
-#define USBL_COMMS_DIVER_MODEM_H
-#include <labust/seatrac/device_controller.h>
-#include <labust/comms/caddy/ac_handler.h>
-#include <labust/seatrac/seatrac_messages.h>
+#ifndef USBL_COMMS_CHAT_MODULE_H
+#define USBL_COMMS_CHAT_MODULE_H
 #include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/nav_module.h>
-#include <labust/seatrac/command_module.h>
-#include <labust/seatrac/chat_module.h>
-#include <labust/seatrac/init_module.h>
-#include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/surface_handler.h>
 
-#include <auv_msgs/NavSts.h>
-#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Int32.h>
 #include <ros/ros.h>
-
-#include <boost/thread/mutex.hpp>
-
-using labust::comms::caddy::BuddyHandler;
-using labust::comms::caddy::SurfaceHandler;
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the status publisher and decoder.
+		 * The class implements the chat handling module.
 		 */
-		class DiverModem : virtual public DeviceController
+		class ChatModule
 		{
-		    typedef boost::function<void(const std::vector<uint8_t>& msg)> Functor;
-		    typedef std::map<int, Functor > HandlerMap;
-
-			enum {TIMEOUT=4, BUDDY_ID=3, SURFACE_ID=1};
 		public:
 			///Main constructor
-			DiverModem();
+		    ChatModule():has_chat(false),predefined_chat(0),confirmed(false){};
 			///Default destructor
-			~DiverModem();
+			~ChatModule(){};
 
 			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+			{
+			  text_sub = nh.subscribe("chat_text", 1, &ChatModule::onChatText, this);
+			  predefined_sub = nh.subscribe("chat_predefined", 1, &ChatModule::onPredefinedChat, this);
+			  return true;
+			}
 
-		private:
-			///Helper method for message assembly.
-			void assembleMessage();
-			///Handles incoming acoustic data.
-			void onData(const labust::seatrac::DatReceive& data);
-            ///Handles the Buddy data
-            void onBuddyData(const std::vector<uint8_t>& data);
-            ///Handles the Surface data
-            void onSurfaceData(const std::vector<uint8_t>& data);
+			///Pull the newest data in the report message the offset is the acoustic frame location
+			template <class ReportMessage>
+			void updateReport(ReportMessage& message)
+			{
+			  // Determine if it has chat messages
+			  message.predefined_chat = predefined_chat;
+			}
 
-			///Handlers for acoustic messages
-			HandlerMap handlers;
+            /// Set confirmation
+            void setConfirmation(bool flag)
+            {
+              this->confirmed = flag;
+              // Do stuff
+            }
 
-            /// The initialization module.
-            InitModule init;
-            /// The navigation data module.
-            NavModule nav;
-            /// The command handler.
-            CommandModule command;
-            /// The chat transmission module.
-            ChatModule chat;
+		protected:
+            ///Handle the textual chat messages.
+            void onChatText(const std_msgs::String::ConstPtr& msg)
+            {
+                ROS_ERROR("Chat text not implemented.");
+            }
 
-            /// The Buddy data handler.
-            BuddyHandler buddyhandler;
-            /// The surface data handler.
-            SurfaceHandler surfacehandler;
+            ///Handle the predefined chat messages.
+            void onPredefinedChat(const std_msgs::Int32::ConstPtr& msg)
+            {
+                predefined_chat = msg->data;
+                has_chat = true;
+            }
+
+			/// Subscription to textual messages.
+			ros::Subscriber text_sub;
+			/// Subscription to predefined messages
+			ros::Subscriber predefined_sub;
+			/// Save the predefined chat info.
+			int predefined_chat;
+			/// Chat indicator flag
+			bool has_chat;
+			/// Outgoing delivery confirmation
+			bool confirmed;
 		};
 	}
 }
 
-/* USBL_COMMS_DIVER_MODEM_H */
+/* USBL_COMMS_CHAT_MODULE_H */
 #endif

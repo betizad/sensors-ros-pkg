@@ -31,80 +31,71 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef USBL_COMMS_DIVER_MODEM_H
-#define USBL_COMMS_DIVER_MODEM_H
-#include <labust/seatrac/device_controller.h>
-#include <labust/comms/caddy/ac_handler.h>
-#include <labust/seatrac/seatrac_messages.h>
+#ifndef USBL_COMMS_BUDDY_PAYLOAD_H
+#define USBL_COMMS_BUDDY_PAYLOAD_H
 #include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/nav_module.h>
-#include <labust/seatrac/command_module.h>
-#include <labust/seatrac/chat_module.h>
-#include <labust/seatrac/init_module.h>
-#include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/surface_handler.h>
+#include <labust/math/NumberManipulation.hpp>
 
-#include <auv_msgs/NavSts.h>
 #include <std_msgs/Bool.h>
-#include <std_msgs/String.h>
+#include <std_msgs/UInt8.h>
 #include <ros/ros.h>
 
-#include <boost/thread/mutex.hpp>
-
-using labust::comms::caddy::BuddyHandler;
-using labust::comms::caddy::SurfaceHandler;
+using labust::comms::caddy::BuddyReport;
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the status publisher and decoder.
+		 * The class implements the navigation data module. The module handles
+		 * acquisition of navigation data for CADDY agents.
 		 */
-		class DiverModem : virtual public DeviceController
+		class BuddyPayload
 		{
-		    typedef boost::function<void(const std::vector<uint8_t>& msg)> Functor;
-		    typedef std::map<int, Functor > HandlerMap;
-
-			enum {TIMEOUT=4, BUDDY_ID=3, SURFACE_ID=1};
 		public:
 			///Main constructor
-			DiverModem();
+			BuddyPayload():leak(0),battery(0){};
 			///Default destructor
-			~DiverModem();
+			~BuddyPayload(){};
 
 			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+			{
+			  leak_sub = nh.subscribe("leak", 1, &BuddyPayload::onLeak, this);
+			  battery_sub = nh.subscribe("battery_status", 1, &BuddyPayload::onBatteryInfo, this);
+			  return true;
+			}
 
-		private:
-			///Helper method for message assembly.
-			void assembleMessage();
-			///Handles incoming acoustic data.
-			void onData(const labust::seatrac::DatReceive& data);
-            ///Handles the Buddy data
-            void onBuddyData(const std::vector<uint8_t>& data);
-            ///Handles the Surface data
-            void onSurfaceData(const std::vector<uint8_t>& data);
+			///Pull the newest data in the report message the offset is the acoustic frame location
+			void updateReport(BuddyReport& message)
+			{
+			  message.leak_info = leak;
+			  message.battery_status = battery;
+			}
 
-			///Handlers for acoustic messages
-			HandlerMap handlers;
+		protected:
+            ///Handle the leak warning.
+            void onLeak(const std_msgs::Bool::ConstPtr& msg)
+            {
+                leak = msg->data;
+            }
+            ///Handle the battery info.
+            void onBatteryInfo(const std_msgs::UInt8::ConstPtr& msg)
+            {
+                battery = msg->data;
+            }
 
-            /// The initialization module.
-            InitModule init;
-            /// The navigation data module.
-            NavModule nav;
-            /// The command handler.
-            CommandModule command;
-            /// The chat transmission module.
-            ChatModule chat;
-
-            /// The Buddy data handler.
-            BuddyHandler buddyhandler;
-            /// The surface data handler.
-            SurfaceHandler surfacehandler;
+			///Leak sensor subscription.
+			ros::Subscriber leak_sub;
+			///Battery status subscription.
+			ros::Subscriber battery_sub;
+			///Leak information
+			uint8_t leak;
+			///Battery information
+			uint8_t battery;
 		};
 	}
 }
 
-/* USBL_COMMS_DIVER_MODEM_H */
+/* USBL_COMMS_BUDDY_PAYLOAD_H */
 #endif
