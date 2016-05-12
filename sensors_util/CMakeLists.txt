@@ -76,7 +76,7 @@ include_directories(
 ## Declare a cpp library
 file(GLOB SRC src/ImuFilter.cpp src/*.cpp src/*.c)
 file(GLOB HPP include/labust/sensors/image/*.hpp)
-add_library(sensors_util src/ImuActivityClassifier.cpp src/ImuFilter.cpp ${HPP})
+add_library(sensors_util src/ImuFilter.cpp ${HPP})
 
 ## Declare a cpp executable
 add_executable(serial_sink src/serial_sink.cpp)
