@@ -67,8 +67,8 @@ void DiverHandler::operator()(const DiverReport& message, const Eigen::Vector3d&
 {
   navHandler(message, offset);
   payloadHandler(message);
-  chat(message);
   command(message, offset);
+  chat(message);
 }
 
 // Method for handling the navigation part.
@@ -83,5 +83,17 @@ void DiverHandler::navHandler(const DiverReport& message, const Eigen::Vector3d&
 
 void DiverHandler::payloadHandler(const DiverReport& message)
 {
+  caddy_msgs::DiverPayload payload;
 
+  payload.alarm = message.alarms;
+  payload.average_flipper_rate = message.avg_flipper_rate;
+  payload.hearth_rate = message.hearth_rate;
+  if (message.optional_data == 1)
+  {
+    payload.breathing_rate = message.breathing_rate;
+    payload.motion_rate = message.motion_rate;
+    payload.pad_space = message.pad_space;
+  }
+
+  payload_pub.publish(payload);
 }

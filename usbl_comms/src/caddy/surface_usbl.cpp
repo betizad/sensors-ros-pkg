@@ -228,7 +228,7 @@ void SurfaceUSBL::onBuddyData(const std::vector<uint8_t>& data)
   buddyhandler(message, init.offset());
 
   //Confirmation for commands
-  command.currentStatus(message.mission_status);
+  command.currentStatus(message.command);
 }
 
 void SurfaceUSBL::onDiverData(const std::vector<uint8_t>& data)

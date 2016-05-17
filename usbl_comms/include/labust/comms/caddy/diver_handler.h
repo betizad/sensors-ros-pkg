@@ -57,7 +57,7 @@ namespace labust
       {
       public:
         ///Main constructor
-        DiverHandler():command("diver", true){};
+        DiverHandler():command("diver", true), chat("diver"){};
 
         bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 

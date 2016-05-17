@@ -42,8 +42,15 @@
             <remap from="leak" to="leak" />
             <remap from="battery_status" to="battery_status" />
             <!-- StatusModule -->
-            <remap from="command_outgoing" to="status_outgoing"/>
+            <!-- <remap from="command_outgoing" to="status_outgoing"/>
             <remap from="lawnmower_req" to="status_lawnmower_req"/>
+            <remap from="photo_req" to="status_photo_req"/>
+            <remap from="guide_target" to="status_guide_target"/> -->
+            <!-- StatusModule (shorted to handler output) -->
+            <remap from="command_outgoing" to="command"/>
+            <remap from="lawnmower_req" to="lawnmower_req"/>
+            <remap from="photo_req" to="photo_req"/>
+            <remap from="guide_target" to="guide_target"/>
             
             <!-- SurfaceHandler/Nav -->
             <remap from="surface_diver_pos" to="surface/diver/position" />
@@ -53,8 +60,16 @@
             <remap from="surface_chat_text_in" to="surface/chat_text" />
             <remap from="surface_chat_predefined_in" to="surface/chat_predefined" />
             <!-- SurfaceHandler/Command -->
-            <remap from="surface_command_in" to="surface/command" />
-            <remap from="surface_command_lawnmower_req" to="surface/lawnmower_req" />
+            <!-- <remap from="surface_command_in" to="surface/command" />
+            <remap from="surface_command_lawnmower_req" to="surface/lawnmower_req" /> 
+            <remap from="surface_command_photo_req" to="surface/photo_req" />
+            <remap from="surface_command_guide_target" to="surface/guide_target" />
+            -->
+            <!-- SurfaceHandler/Command (shorted to common topics)-->
+            <remap from="surface_command_in" to="command" />
+            <remap from="surface_command_lawnmower_req" to="lawnmower_req" /> 
+            <remap from="surface_command_photo_req" to="photo_req" />
+            <remap from="surface_command_guide_target" to="guide_target" />
             
             <!-- DiverHandler/Nav -->
             <remap from="diver_pos" to="diver/position_partial" />
@@ -64,8 +79,15 @@
             <remap from="diver_chat_text_in" to="diver/chat_text" />
             <remap from="diver_chat_predefined_in" to="diver/chat_predefined" />
             <!-- DiverHandler/Command -->
-            <remap from="diver_command_in" to="diver/command" />
+            <!-- <remap from="diver_command_in" to="diver/command" />
             <remap from="diver_command_lawnmower_req" to="diver/lawnmower_req" />
+            <remap from="diver_command_photo_req" to="diver/photo_req" />
+            <remap from="diver_command_guide_target" to="diver/guide_target" /> -->
+            <!-- DiverHandler/Command (shorted to common topics)-->
+            <remap from="diver_command_in" to="command" />
+            <remap from="diver_command_lawnmower_req" to="lawnmower_req" /> 
+            <remap from="diver_command_photo_req" to="photo_req" />
+            <remap from="diver_command_guide_target" to="guide_target" />
             
             <!-- Acoustic Simulator -->
             <remap from="navsts" to="position" />           

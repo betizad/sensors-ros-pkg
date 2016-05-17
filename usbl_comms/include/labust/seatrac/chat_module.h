@@ -87,6 +87,7 @@ namespace labust
             ///Handle the predefined chat messages.
             void onPredefinedChat(const std_msgs::Int32::ConstPtr& msg)
             {
+                ROS_INFO("Received new chat: %d", predefined_chat);
                 predefined_chat = msg->data;
                 has_chat = true;
             }

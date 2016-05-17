@@ -36,12 +36,12 @@
 
 using labust::seatrac::CommandModule;
 
-template<>
+/*template<>
 void CommandModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vector3d& offset)
 {
   if (!confirmed)
   {
-    message.mission_status = last_cmd;
+    message.command = last_cmd;
     message.north_origin = data.north - offset(n);
     message.east_origin = data.east - offset(e);
     message.lawn_length = data.length;
@@ -49,6 +49,6 @@ void CommandModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen:
   }
   else
   {
-    message.mission_status = 0;
+    message.command = 0;
   }
-}
+}*/

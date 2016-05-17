@@ -87,9 +87,9 @@ add_library(caddy_comms src/caddy/caddy_messages.cpp
   src/caddy/nav_module.cpp
   src/caddy/buddy_handler.cpp
   src/caddy/surface_handler.cpp
-  src/caddy/diver_handler.cpp
-  src/caddy/command_module.cpp
-  src/caddy/status_handler.cpp)
+  src/caddy/diver_handler.cpp)
+#  src/caddy/command_module.cpp
+#  src/caddy/status_handler.cpp)
 
 ## Declare a cpp executable
 add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)

@@ -18,7 +18,7 @@
 			<rosparam param="listener_plugins">["labust::seatrac::StatusListener",
                    "labust::seatrac::DataListener"]</rosparam>
             <!-- Serial parameters -->
-            <param name="port_name" value="/dev/usbl" />
+            <param name="port_name" value="/dev/ttyUSB0" />
             <!-- Diver modem configuration -->
             
             <!-- NavListener setup -->

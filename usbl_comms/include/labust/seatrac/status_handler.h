@@ -37,6 +37,7 @@
 
 #include <std_msgs/Int32.h>
 #include <caddy_msgs/LawnmowerReq.h>
+#include <geometry_msgs/PointStamped.h>
 #include <ros/ros.h>
 
 #include <Eigen/Dense>
@@ -56,7 +57,11 @@ namespace labust
       {
         NO_CHANGE = 0,
         LAWN_CMD = 1,
-        FAILED_CMD = 14
+        GUIDE_ME = 2,
+        GET_TOOL = 3,
+        TAKE_PHOTO = 4,
+        FAILED_CMD = 6,
+        STOP = 7
       };
       enum {n=0,e,d};
     public:
@@ -73,6 +78,8 @@ namespace labust
         std::string prefix(is_command?user + "_command_":user + "_status_");
         status_pub = nh.advertise<std_msgs::Int32>(prefix + "in", 1);
         lawncmd_pub = nh.advertise<caddy_msgs::LawnmowerReq>(prefix + "lawnmower_req", 1);
+        takephoto_pub = nh.advertise<geometry_msgs::PointStamped>(prefix + "photo_req", 1);
+        guideme_pub = nh.advertise<geometry_msgs::PointStamped>(prefix + "guide_target", 1);
         return true;
       }
 
@@ -95,22 +102,34 @@ namespace labust
           req.east_origin = message.east_origin + offset(e);
           req.header.stamp = ros::Time::now();
           lawncmd_pub.publish(req);
+        }else if ((cmd == GUIDE_ME) || (cmd == TAKE_PHOTO))
+        {
+          geometry_msgs::PointStamped req;
+          req.point.x = message.north_origin + offset(n);
+          req.point.y = message.east_origin + offset(e);
+          req.header.stamp = ros::Time::now();
+          if (cmd == GUIDE_ME) guideme_pub.publish(req);
+          if (cmd == TAKE_PHOTO) takephoto_pub.publish(req);
         }
       }
 
     protected:
-      /// General command subscription.
+      /// General command publisher.
       ros::Publisher status_pub;
-      /// Lawn-mower command subscription.
+      /// Lawn-mower command publisher.
       ros::Publisher lawncmd_pub;
+      /// Take photo publisher
+      ros::Publisher takephoto_pub;
+      /// Take
+      ros::Publisher guideme_pub;
       /// The status/command topic switcher
       bool is_command;
       /// The user topic swithcer.
       std::string user;
     };
 
-    template <>
-    void StatusHandler::operator()<BuddyReport>(const BuddyReport& message, const Eigen::Vector3d& offset);
+    //template <>
+    //void StatusHandler::operator()<BuddyReport>(const BuddyReport& message, const Eigen::Vector3d& offset);
 
   }
 }

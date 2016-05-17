@@ -58,7 +58,7 @@ namespace labust
 			  enum {n=0,e,d};
 			public:
 				///Main constructor
-				SurfaceHandler():command("surface", true){};
+				SurfaceHandler():command("surface", true), chat("surface"){};
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 

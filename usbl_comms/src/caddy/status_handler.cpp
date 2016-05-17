@@ -36,14 +36,15 @@
 
 using labust::seatrac::StatusHandler;
 
+/*
 template<>
 void StatusHandler::operator()<BuddyReport>(const BuddyReport& message, const Eigen::Vector3d& offset)
 {
   std_msgs::Int32 cmdout;
-  cmdout.data = message.mission_status;
+  cmdout.data = message.command;
   status_pub.publish(cmdout);
 
-  int cmd = message.mission_status;
+  int cmd = message.command;
   if (cmd == LAWN_CMD)
   {
     caddy_msgs::LawnmowerReq req;
@@ -55,3 +56,4 @@ void StatusHandler::operator()<BuddyReport>(const BuddyReport& message, const Ei
     lawncmd_pub.publish(req);
   }
 }
+*/

@@ -20,7 +20,7 @@ public:
   double diver_east;
   uint8_t battery_status;
   uint8_t leak_info;
-  uint8_t mission_status;
+  uint8_t command;
   double north_origin;
   double east_origin;
   double lawn_width;
@@ -70,19 +70,17 @@ public:
   double avg_flipper_rate;
   double hearth_rate;
   uint8_t optional_data;
-  double breathing_rate;
-  double motion_rate;
-  double pad_space;
   uint8_t alarms;
+  uint8_t predefined_chat;
   uint8_t command;
   double north_origin;
   double east_origin;
   double lawn_width;
   double lawn_length;
-  double target_north;
-  double target_east;
-  uint8_t predefined_chat;
   std::vector< uint8_t > chat;
+  double breathing_rate;
+  double motion_rate;
+  double pad_space;
 
 };
 

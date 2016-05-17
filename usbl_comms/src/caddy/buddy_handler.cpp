@@ -81,6 +81,7 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
   if (message.inited)
   {
     ROS_INFO("Message flags: %d %d", message.has_position, message.has_diver);
+    ROS_INFO("Message info: %f %f", message.north, message.east);
     auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
     nav->header.stamp = ros::Time::now();
     nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);

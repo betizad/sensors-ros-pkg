@@ -8,19 +8,20 @@
 using namespace labust::comms::caddy;
 int main(int argc, char* argv[])
 {
-  SurfaceReport report;
+  DiverReport report;
 
-  report.is_master = false;
-  report.inited = true;
-  //report.has_position = true;
+  //report.is_master = false;
+  /*report.inited = true;
+  report.has_position = true;
   report.origin_lat = 0;
   report.origin_lon = 0;
-  report.north = 0;
-  report.east = 0;
-  //report.depth = 2.2;
-  //report.altitude = 3;
-  report.course = 0;
-  report.speed = 0;
+  report.north = 10;
+  report.east = 12;*/
+  report.depth = 0;
+  report.heading = 0;
+  /*report.altitude = 3;
+  report.course = 100;
+  report.speed = 0.2;*/
 
   std::vector<char> buf;
   labust::tools::encodePackable(report,&buf);
@@ -31,17 +32,18 @@ int main(int argc, char* argv[])
     std::cout << std::hex << uint16_t(buf[i]) << " ";
   std::cout<<"\n";
 
-  labust::tools::decodePackable(buf, &report);
+  DiverReport report2;
+  labust::tools::decodePackable(buf, &report2);
 
   std::cout << "Report:\n";
-  std::cout<<"\t inited:"<<int(report.inited)<<std::endl;
-  //std::cout<<"\t has_position:"<<int(report.has_position)<<std::endl;
-  std::cout<<"\t north:"<<report.north<<std::endl;
-  std::cout<<"\t east:"<<report.east<<std::endl;
-  //std::cout<<"\t depth:"<<report.depth<<std::endl;
-  //std::cout<<"\t altitude:"<<report.altitude<<std::endl;
-  std::cout<<"\t course:"<<report.course<<std::endl;
-  std::cout<<"\t speed:"<<report.speed<<std::endl;
+  //std::cout<<"\t inited:"<<int(report2.inited)<<std::endl;
+  //std::cout<<"\t has_position:"<<int(report2.has_position)<<std::endl;
+  //std::cout<<"\t north:"<<report2.north<<std::endl;
+  //std::cout<<"\t east:"<<report2.east<<std::endl;
+  std::cout<<"\t depth:"<<report2.depth<<std::endl;
+  //std::cout<<"\t altitude:"<<report2.altitude<<std::endl;
+  //std::cout<<"\t course:"<<report2.course<<std::endl;
+  //std::cout<<"\t speed:"<<report2.speed<<std::endl;
 
 
   return 0;

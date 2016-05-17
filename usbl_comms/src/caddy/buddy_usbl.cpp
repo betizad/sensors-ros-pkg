@@ -190,7 +190,7 @@ void BuddyUSBL::run()
       {
         // Confirm message sending
         if ((unconfirmed_cmd[idx] != 0) &&
-            (unconfirmed_cmd[idx] == report.mission_status))
+            (unconfirmed_cmd[idx] == report.command))
         {
           status.setConfirmation(true);
           unconfirmed_cmd[idx] = 0;

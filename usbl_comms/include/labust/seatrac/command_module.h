@@ -37,6 +37,7 @@
 
 #include <std_msgs/Int32.h>
 #include <caddy_msgs/LawnmowerReq.h>
+#include <geometry_msgs/PointStamped.h>
 #include <ros/ros.h>
 
 #include <Eigen/Dense>
@@ -63,7 +64,11 @@ namespace labust
       {
         NO_CHANGE = 0,
         LAWN_CMD = 1,
-        FAILED_CMD = 14
+        GUIDE_ME = 2,
+        GET_TOOL = 3,
+        TAKE_PHOTO = 4,
+        FAILED_CMD = 6,
+        STOP = 7
       };
       enum {n=0,e,d};
     public:
@@ -77,6 +82,10 @@ namespace labust
       {
         cmd_sub = nh.subscribe("command_outgoing", 1, &CommandModule::onCmd, this);
         lawncmd_sub = nh.subscribe("lawnmower_req", 1, &CommandModule::onLawnCmd, this);
+        takephoto_sub = nh.subscribe<geometry_msgs::PointStamped>("photo_req", 1,
+            boost::bind(&CommandModule::onPointCmd, this, TAKE_PHOTO, _1));
+        guideme_sub = nh.subscribe<geometry_msgs::PointStamped>("guide_target", 1,
+            boost::bind(&CommandModule::onPointCmd, this, GUIDE_ME, _1));
         return true;
       }
 
@@ -139,6 +148,22 @@ namespace labust
         }
       }
 
+      void onPointCmd(int cmd, const geometry_msgs::PointStamped::ConstPtr& msg)
+      {
+        PayloadData candidate;
+        candidate.north = msg->point.x;
+        candidate.east = msg->point.y;
+        candidate.length = 0;
+        candidate.width = 0;
+
+        if (last_cmd != cmd)
+        {
+          last_cmd = cmd;
+          data = candidate;
+          confirmed = false;
+        }
+      }
+
       //Checks if supplied data is identical
       bool isIdentical(const PayloadData& candidate)
       {
@@ -152,7 +177,11 @@ namespace labust
       ros::Subscriber cmd_sub;
       /// Lawn-mower command subscription.
       ros::Subscriber lawncmd_sub;
-      /// Save lasst command
+      /// Take a photo command subscription.
+      ros::Subscriber takephoto_sub;
+      /// Guide to Point command subscription.
+      ros::Subscriber guideme_sub;
+      /// Save last command
       int last_cmd;
       /// Lawn command payload
       PayloadData data;
@@ -160,8 +189,8 @@ namespace labust
       bool confirmed;
     };
 
-    template <>
-    void CommandModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vector3d& offset);
+    //template <>
+    //void CommandModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vector3d& offset);
   }
 }
 

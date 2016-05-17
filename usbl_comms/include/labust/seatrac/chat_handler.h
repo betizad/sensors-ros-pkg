@@ -50,15 +50,15 @@ namespace labust
 		{
 		public:
 			///Main constructor
-		    ChatHandler(){};
+		    ChatHandler(const std::string& prefix):prefix(prefix){};
 			///Default destructor
 			~ChatHandler(){};
 
 			///Listener configuration.
 			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 			{
-			  text_pub = nh.advertise<std_msgs::String>("chat_text_in", 1);
-			  predefined_pub = nh.advertise<std_msgs::Int32>("chat_predefined_in", 1);
+			  text_pub = nh.advertise<std_msgs::String>(prefix + "_chat_text_in", 1);
+			  predefined_pub = nh.advertise<std_msgs::Int32>(prefix + "_chat_predefined_in", 1);
 			  return true;
 			}
 
@@ -81,6 +81,8 @@ namespace labust
 			ros::Publisher text_pub;
 			/// Subscription to predefined messages
 			ros::Publisher predefined_pub;
+			/// The owner prefix
+			std::string prefix;
 		};
 	}
 }
