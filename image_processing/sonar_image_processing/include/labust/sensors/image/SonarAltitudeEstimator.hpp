@@ -101,7 +101,7 @@ namespace labust {
             for (int i=0; i<image.cols; ++i) {
               cv::circle(image, cv::Point(i, (res[i] - sonar_info.window_start) / sonar_info.window_length * image.rows), 3, 255, -1);
             }
-            cv::imshow("img", image); cv::waitKey(100);
+            //cv::imshow("img", image); cv::waitKey(100);
             return res;
           }
 
