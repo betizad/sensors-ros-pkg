@@ -82,7 +82,8 @@ namespace labust
 			 * Configure the diver net device
 			 */
 			void configureNet();
-			/**
+			void loadJointConstraints();
+      /**
 			 * Publish joint states.
 			 */
 			void publishTransformAndJoints(const std_msgs::Float64MultiArrayPtr &rpy);
@@ -91,6 +92,7 @@ namespace labust
 			 */
 			ros::Publisher jointsPub;
       ros::Subscriber quaternion_sub;
+      ros::NodeHandle nh_, ph_;
 			/**
 			 * The transform broadcaster.
 			 */
@@ -106,13 +108,9 @@ namespace labust
 			/**
 			 * The number of nodes.
 			 */
-			int nodeCount;
-			/**
-			 * The calibration and zero state values.
-			 */
-			Eigen::MatrixXd zeroState;
-			std::vector<Eigen::Quaternion<double> > zeroStateQ, currentMeasQ, offsetQ;
-      bool isCalibrated;
+			int node_count_;
+      bool constrain_joints_;
+      Eigen::MatrixXd joint_constraints_zyx_;
       /**
 			 * Joint names connected to IMU numbers.
 			 * \todo Consider if a map is better option ?
