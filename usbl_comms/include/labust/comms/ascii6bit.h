@@ -34,54 +34,71 @@
  *  Author: Dula Nad
  *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_DIVER_HANDLER_H
-#define USBL_COMMS_DIVER_HANDLER_H
-#include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/chat_handler.h>
-#include <labust/seatrac/status_handler.h>
+#ifndef USBL_COMMS_ASCII6BIT_H
+#define USBL_COMMS_ASCII6BIT_H
 
-#include <ros/ros.h>
-
-#include <Eigen/Dense>
-
+#include <string>
+#include <vector>
 #include <cstdint>
 
 namespace labust
 {
   namespace comms
   {
-    namespace caddy
+    ///\todo Add stream operators.
+    struct Ascii6Bit
     {
-      ///Class for handling Diver acoustic messages and publish them to ROS.
-      class DiverHandler
+      enum {digit_diff=48, alpha_diff=55};
+      enum {alpha_limit_int=36, digit_limit_int=10};
+      enum {char_size = 6};
+      enum {point=36,
+        comma,
+        question_mark,
+        exclamation_mark,
+        space,
+        newline = 62,
+        zero_char};
+      /**
+       * Convert char from ascii to internal encoding.
+       */
+      static char to6Bit(char c)
       {
-      public:
-        ///Main constructor
-        DiverHandler():command("diver", true), chat("diver"){};
+        if (isalpha(c)) return (toupper(c)-alpha_diff);
+        if (isdigit(c)) return (c-digit_diff);
+        if (c == '.') return (point);
+        if (c == ',') return (comma);
+        if (c == '?') return (question_mark);
+        if (c == '!') return (exclamation_mark);
+        if (c == ' ') return (space);
+        if (c == '\n') return (newline);
+        return zero_char;
+      }
+      /**
+       * Conver char from internal endoascii to e
+       */
+      static char from6Bit(char c)
+      {
+        if (c<digit_limit_int) return (c+digit_diff);
+        if (c<alpha_limit_int) return (c+alpha_diff);
+        if (c == point) return '.';
+        if (c == comma) return ',';
+        if (c == question_mark) return '?';
+        if (c == exclamation_mark) return '!';
+        if (c == space) return ' ';
+        if (c == newline) return '\n';
+        return 0;
+      }
 
-        bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
-
-        void operator()(const DiverReport& message, const Eigen::Vector3d& offset);
-
-      protected:
-        // Method for handling the navigation part.
-        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset);
-        // Method for handling the navigation part.
-        void payloadHandler(const DiverReport& message);
-
-        //Diver navigation data publisher
-        ros::Publisher nav_pub;
-        //Diver bio-info publisher
-        ros::Publisher payload_pub;
-        // The common chat handler
-        labust::seatrac::ChatHandler chat;
-        // The common command handler
-        labust::seatrac::StatusHandler command;
-      };
-    }
-  }
+      static std::string charToString(const std::vector<uint8_t>& msg)
+      {
+        std::string retVal(msg.size(),'\0');
+        for (int i=0; i<msg.size(); ++i) retVal[i] = from6Bit(msg[i]);
+        return retVal;
+      }
+    };
+  };
 }
-/* USBL_COMMS_DIVER_HANDLER_H */
+/* USBL_COMMS_ASCII6BIT_H */
 #endif
 
 

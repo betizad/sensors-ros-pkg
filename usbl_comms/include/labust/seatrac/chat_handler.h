@@ -31,80 +31,61 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *********************************************************************/
-#ifndef USBL_COMMS_DIVER_MODEM_H
-#define USBL_COMMS_DIVER_MODEM_H
-#include <labust/seatrac/device_controller.h>
-#include <labust/comms/caddy/ac_handler.h>
-#include <labust/seatrac/seatrac_messages.h>
+#ifndef USBL_COMMS_CHAT_HANDLER_H
+#define USBL_COMMS_CHAT_HANDLER_H
 #include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/nav_module.h>
-#include <labust/seatrac/command_module.h>
-#include <labust/seatrac/chat_module.h>
-#include <labust/seatrac/init_module.h>
-#include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/surface_handler.h>
 
-#include <auv_msgs/NavSts.h>
-#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Int32.h>
 #include <ros/ros.h>
-
-#include <boost/thread/mutex.hpp>
-
-using labust::comms::caddy::BuddyHandler;
-using labust::comms::caddy::SurfaceHandler;
 
 namespace labust
 {
 	namespace seatrac
 	{
 		/**
-		 * The class implements the status publisher and decoder.
+		 * The class implements the chat handling module.
 		 */
-		class DiverModem : virtual public DeviceController
+		class ChatHandler
 		{
-		    typedef boost::function<void(const std::vector<uint8_t>& msg)> Functor;
-		    typedef std::map<int, Functor > HandlerMap;
-
-			enum {TIMEOUT=4, BUDDY_ID=3, SURFACE_ID=1};
 		public:
 			///Main constructor
-			DiverModem();
+		    ChatHandler(const std::string& prefix):prefix(prefix){};
 			///Default destructor
-			~DiverModem();
+			~ChatHandler(){};
 
 			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+			{
+			  text_pub = nh.advertise<std_msgs::String>(prefix + "_chat_text_in", 1);
+			  predefined_pub = nh.advertise<std_msgs::Int32>(prefix + "_chat_predefined_in", 1);
+			  return true;
+			}
 
-		private:
-			///Helper method for message assembly.
-			void assembleMessage();
-			///Handles incoming acoustic data.
-			void onData(const labust::seatrac::DatReceive& data);
-            ///Handles the Buddy data
-            void onBuddyData(const std::vector<uint8_t>& data);
-            ///Handles the Surface data
-            void onSurfaceData(const std::vector<uint8_t>& data);
+			///Pull the newest data in the report message the offset is the acoustic frame location
+			template <class ReportMessage>
+			void operator()(ReportMessage& message)
+			{
+			  // Determine if it has chat messages
+			  std_msgs::Int32 outpc;
+			  outpc.data = message.predefined_chat;
+			  predefined_pub.publish(outpc);
 
-			///Handlers for acoustic messages
-			HandlerMap handlers;
+			  std_msgs::String outstr;
+			  outstr.data.assign(message.chat.begin(), message.chat.end());
+			  text_pub.publish(outstr);
+			}
 
-            /// The initialization module.
-            InitModule init;
-            /// The navigation data module.
-            NavModule nav;
-            /// The command handler.
-            CommandModule command;
-            /// The chat transmission module.
-            ChatModule chat;
-
-            /// The Buddy data handler.
-            BuddyHandler buddyhandler;
-            /// The surface data handler.
-            SurfaceHandler surfacehandler;
+		protected:
+			/// Subscription to textual messages.
+			ros::Publisher text_pub;
+			/// Subscription to predefined messages
+			ros::Publisher predefined_pub;
+			/// The owner prefix
+			std::string prefix;
 		};
 	}
 }
 
-/* USBL_COMMS_DIVER_MODEM_H */
+/* USBL_COMMS_CHAT_HANDLER_H */
 #endif

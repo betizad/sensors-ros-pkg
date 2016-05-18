@@ -84,7 +84,7 @@ bool Pinger::send(const SeatracMessage::ConstPtr& msg, double timeout, bool wait
 		}
 	}
 
-	return true;
+	return !is_error;
 }
 
 void Pinger::unlock()

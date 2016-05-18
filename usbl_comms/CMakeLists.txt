@@ -10,7 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
     auv_msgs 
     snippets 
     seatrac
-    misc_msgs)
+    misc_msgs
+    message_filters)
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system serialization thread)
@@ -79,19 +80,23 @@ add_library(uros_comms src/uros/uros_messages.cpp
     src/uros/uros_modem_controller.cpp
     src/uros/uros_usbl_controller.cpp)
 
-add_library(caddy_comms src/caddy/caddy_messages.cpp 
-	src/caddy/surface_usbl.cpp
-	src/caddy/surface_handler.cpp
-	src/caddy/diver_modem.cpp
-	src/caddy/diver_handler.cpp
-    src/caddy/buddy_usbl.cpp
-    src/caddy/buddy_handler.cpp)
+add_library(caddy_comms src/caddy/caddy_messages.cpp
+  src/caddy/buddy_usbl.cpp 
+  src/caddy/surface_usbl.cpp
+  src/caddy/diver_modem.cpp
+  src/caddy/nav_module.cpp
+  src/caddy/buddy_handler.cpp
+  src/caddy/surface_handler.cpp
+  src/caddy/diver_handler.cpp)
+#  src/caddy/command_module.cpp
+#  src/caddy/status_handler.cpp)
 
 ## Declare a cpp executable
 add_executable(divermsg_test src/test/divermsg_test.cpp src/DiverMsg.cpp)
 add_executable(encoding_test src/test/bitencoding.cpp src/DiverMsg.cpp)
 add_executable(uros_modem src/uros/UROSModem.cpp src/DiverMsg.cpp)
 add_executable(encoding_v2_test src/test/encoding_v2.cpp)
+add_executable(encoding_v3_test src/test/encoding_v3.cpp)
 add_executable(packer_test src/test/packer_test.cpp)
 
 ## Add cmake target dependencies of the executable/library
@@ -106,11 +111,16 @@ if (DEFINED catkin_EXPORTED_TARGETS)
  add_dependencies(divermsg_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(encoding_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(encoding_v2_test ${catkin_EXPORTED_TARGETS})
+ add_dependencies(encoding_v3_test ${catkin_EXPORTED_TARGETS})
  add_dependencies(packer_test ${catkin_EXPORTED_TARGETS})
 endif()
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(usbl_comms
+   ${catkin_LIBRARIES}
+)
+
+target_link_libraries(caddy_comms
    ${catkin_LIBRARIES}
 )
 
@@ -126,6 +136,13 @@ target_link_libraries(packer_test
    ${catkin_LIBRARIES} 
    ${Boost_SERIALIZATION_LIBRARIES}
 )
+
+target_link_libraries(encoding_v3_test
+   caddy_comms
+   ${catkin_LIBRARIES} 
+   ${Boost_SERIALIZATION_LIBRARIES}
+)
+
 
 #############
 ## Install ##

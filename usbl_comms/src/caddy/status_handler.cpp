@@ -30,59 +30,30 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
- *  Author: Dula Nad
- *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_DIVER_HANDLER_H
-#define USBL_COMMS_DIVER_HANDLER_H
-#include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/chat_handler.h>
 #include <labust/seatrac/status_handler.h>
+#include <labust/math/NumberManipulation.hpp>
 
-#include <ros/ros.h>
+using labust::seatrac::StatusHandler;
 
-#include <Eigen/Dense>
-
-#include <cstdint>
-
-namespace labust
+/*
+template<>
+void StatusHandler::operator()<BuddyReport>(const BuddyReport& message, const Eigen::Vector3d& offset)
 {
-  namespace comms
+  std_msgs::Int32 cmdout;
+  cmdout.data = message.command;
+  status_pub.publish(cmdout);
+
+  int cmd = message.command;
+  if (cmd == LAWN_CMD)
   {
-    namespace caddy
-    {
-      ///Class for handling Diver acoustic messages and publish them to ROS.
-      class DiverHandler
-      {
-      public:
-        ///Main constructor
-        DiverHandler():command("diver", true), chat("diver"){};
-
-        bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
-
-        void operator()(const DiverReport& message, const Eigen::Vector3d& offset);
-
-      protected:
-        // Method for handling the navigation part.
-        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset);
-        // Method for handling the navigation part.
-        void payloadHandler(const DiverReport& message);
-
-        //Diver navigation data publisher
-        ros::Publisher nav_pub;
-        //Diver bio-info publisher
-        ros::Publisher payload_pub;
-        // The common chat handler
-        labust::seatrac::ChatHandler chat;
-        // The common command handler
-        labust::seatrac::StatusHandler command;
-      };
-    }
+    caddy_msgs::LawnmowerReq req;
+    req.length = message.lawn_length;
+    req.width = message.lawn_width;
+    req.north_origin = message.north_origin + offset(n);
+    req.east_origin = message.east_origin + offset(e);
+    req.header.stamp = ros::Time::now();
+    lawncmd_pub.publish(req);
   }
 }
-/* USBL_COMMS_DIVER_HANDLER_H */
-#endif
-
-
-
+*/

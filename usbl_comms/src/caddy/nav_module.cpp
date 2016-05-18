@@ -30,59 +30,51 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
- *
- *  Author: Dula Nad
- *  Created: 05.03.2015.
  *********************************************************************/
-#ifndef USBL_COMMS_DIVER_HANDLER_H
-#define USBL_COMMS_DIVER_HANDLER_H
-#include <labust/comms/caddy/caddy_messages.h>
-#include <labust/seatrac/chat_handler.h>
-#include <labust/seatrac/status_handler.h>
+#include <labust/seatrac/nav_module.h>
+#include <labust/math/NumberManipulation.hpp>
 
-#include <ros/ros.h>
+using labust::seatrac::NavModule;
 
-#include <Eigen/Dense>
-
-#include <cstdint>
-
-namespace labust
+template<>
+void NavModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vector3d& offset)
 {
-  namespace comms
-  {
-    namespace caddy
-    {
-      ///Class for handling Diver acoustic messages and publish them to ROS.
-      class DiverHandler
-      {
-      public:
-        ///Main constructor
-        DiverHandler():command("diver", true), chat("diver"){};
+  boost::mutex::scoped_lock l(data_mux);
+  message.origin_lat = navdata.origin.latitude;
+  message.origin_lon = navdata.origin.longitude;
+  ROS_INFO("Packing data: %f - %f", navdata.position.north - offset(n));
+  message.north = navdata.position.north - offset(n);
+  message.east = navdata.position.east - offset(e);
+  message.depth = navdata.position.depth - offset(d);
+  message.altitude = navdata.altitude + offset(d);
+  getSpeedCourse(message);
 
-        bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+  message.has_diver = has_diver;
+  message.diver_north = diverdata.position.north - offset(n);
+  message.diver_east = diverdata.position.east - offset(e);
 
-        void operator()(const DiverReport& message, const Eigen::Vector3d& offset);
-
-      protected:
-        // Method for handling the navigation part.
-        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset);
-        // Method for handling the navigation part.
-        void payloadHandler(const DiverReport& message);
-
-        //Diver navigation data publisher
-        ros::Publisher nav_pub;
-        //Diver bio-info publisher
-        ros::Publisher payload_pub;
-        // The common chat handler
-        labust::seatrac::ChatHandler chat;
-        // The common command handler
-        labust::seatrac::StatusHandler command;
-      };
-    }
-  }
+  has_diver = false;
 }
-/* USBL_COMMS_DIVER_HANDLER_H */
-#endif
 
+template<>
+void NavModule::updateReport<SurfaceReport>(SurfaceReport& message, const Eigen::Vector3d& offset)
+{
+  boost::mutex::scoped_lock l(data_mux);
+  message.north = navdata.position.north - offset(n);
+  message.east = navdata.position.east - offset(e);
+  getSpeedCourse(message);
 
+  message.has_diver = has_diver;
+  message.diver_north = diverdata.position.north - offset(n);
+  message.diver_east = diverdata.position.east - offset(e);
 
+  has_diver = false;
+}
+
+template <>
+void NavModule::updateReport<DiverReport>(DiverReport& message, const Eigen::Vector3d& offset)
+{
+  boost::mutex::scoped_lock l(data_mux);
+  message.heading = labust::math::wrapRad(navdata.orientation.yaw)*180/M_PI;
+  message.depth = navdata.position.depth - offset(d);
+}
