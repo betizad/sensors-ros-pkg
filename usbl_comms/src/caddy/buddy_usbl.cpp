@@ -194,6 +194,11 @@ void BuddyUSBL::run()
         {
           status.setConfirmation(true);
           unconfirmed_cmd[idx] = 0;
+	  if (report.command == CommandModule::GET_TOOL) 
+	  {
+		ROS_INFO("Going to get the tool. Stopping pinging.");
+		is_master = false;
+	  }
         }
       }
       else
@@ -249,7 +254,7 @@ void BuddyUSBL::onDiverData(const std::vector<uint8_t>& data)
   }
 
   diverhandler(message, init.offset());
-  if (message.command) unconfirmed_cmd[SURFACE] = message.command;
+  if (message.command) unconfirmed_cmd[DIVER] = message.command;
 }
 
 bool BuddyUSBL::sendPosition(int agent)
