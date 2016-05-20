@@ -21,7 +21,11 @@ DiverNetFilterNode::DiverNetFilterNode():
     rpy_raw_(new std_msgs::Float64MultiArray()),
     rpy_filtered_(new std_msgs::Float64MultiArray()), 
     quaternion_filtered_(new std_msgs::Float64MultiArray()),
-    filters_(20) {
+    filters_(20),
+    data_buffer_(2),
+    hp_filtered_buffer_(2),
+    magnitude_buffer_(2),
+    magnitude_filtered_(2) {
   this->onInit();
 }
 
@@ -36,7 +40,8 @@ void DiverNetFilterNode::onInit() {
   raw_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_raw", 1);
   filtered_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_filtered", 1);
   filtered_quaternion_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("quaternion_filtered", 1);
-  
+  motion_rate_pub_ = nh_.advertise<std_msgs::Float64>("motion_rate", 1);
+
   rpy_raw_->data.resize(node_count_ * 3);
   rpy_filtered_->data.resize(node_count_ * 3);
   quaternion_filtered_->data.resize(node_count_ * 4);
@@ -48,11 +53,20 @@ void DiverNetFilterNode::onInit() {
   loadMagnetometerCalibration();
 
   for (int i=0; i<node_count_; ++i) {
-    filters_[i].setAlgorithmGain(0.15);
-    filters_[i].setDriftBiasGain(0.01);
+    filters_[i].setAlgorithmGain(0.1);
+    filters_[i].setDriftBiasGain(0.03);
   }
 
   raw_data_ = nh_.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
+
+  Eigen::MatrixXd z = Eigen::MatrixXd::Zero(20,9);
+  Eigen::MatrixXd zz = Eigen::MatrixXd::Zero(20,3);
+  for (int i = 0; i<2; ++i) {
+    data_buffer_.push_back(z);
+    hp_filtered_buffer_.push_back(z);
+    magnitude_buffer_.push_back(zz);
+    magnitude_filtered_.push_back(zz);
+  }
 }
 
 void DiverNetFilterNode::loadModelAxesPermutation() {
@@ -139,7 +153,7 @@ void DiverNetFilterNode::calculateGyroMean(
     const std_msgs::Bool::ConstPtr& calculate_gyro_mean) {
   if (calculate_gyro_mean->data) {
     ROS_WARN("Gyro mean calculation in progress. Keep the nodes as still as possible.");
-    gyro_bias_ = Eigen::MatrixXd::Zero(20,3);
+    gyro_bias_ = Eigen::MatrixXd::Zero(20,9);
     gyro_mean_calculation_frames_left_ = gyro_mean_num_frames_;
   }
 }
@@ -169,6 +183,53 @@ void DiverNetFilterNode::calibratePose(const std::vector<Eigen::Quaternion<doubl
   }
 }
 
+void DiverNetFilterNode::calculateMotionRate() {
+  Eigen::MatrixXd z = Eigen::MatrixXd::Zero(20,9);
+  Eigen::MatrixXd z_m = Eigen::MatrixXd::Zero(20,3);
+  Eigen::MatrixXd z_m_filtered = Eigen::MatrixXd::Zero(20,3);
+  std::vector<double> b_hp, a_hp;
+  std::vector<double> b_lp, a_lp;
+  b_hp.push_back(0.9695);
+  b_hp.push_back(-0.9695);
+  a_hp.push_back(0);
+  a_hp.push_back(-0.9391);
+  a_lp.push_back(0);
+  a_lp.push_back(-0.95);
+  b_lp.push_back(0.05);
+  for (int i=0; i<node_count_; ++i) {
+    for (int j=0; j<9; ++j) {
+      for (int k=0; k<b_hp.size(); ++k) {
+        z(i,j) += b_hp[k] * data_buffer_[data_buffer_.size()-1-k](i,j);
+      }
+      for (int k=1; k<a_hp.size(); ++k) {
+        z(i,j) += -a_hp[k] * hp_filtered_buffer_[hp_filtered_buffer_.size()-k](i,j);
+      }
+      z_m(i,j/3) += z(i,j) * z(i,j);
+    }
+    for (int s=0; s<3; ++s) {
+      z_m(i,s) = std::sqrt(z_m(i,s));
+      z_m_filtered(i,s) = b_lp[0] * z_m(i,s) - a_lp[1] * magnitude_filtered_[magnitude_filtered_.size()-1](i,s); 
+    }
+  }
+  hp_filtered_buffer_.push_back(z);
+  magnitude_buffer_.push_back(z_m);
+  magnitude_filtered_.push_back(z_m_filtered);
+
+  std::vector<int> motion_rate_sensors;
+  motion_rate_sensors.push_back(3);
+  motion_rate_sensors.push_back(4);
+  motion_rate_sensors.push_back(8);
+  motion_rate_sensors.push_back(11);
+  motion_rate_sensors.push_back(18);
+  double motion_rate = 0;
+  for (int i=0; i<motion_rate_sensors.size(); ++i) {
+    motion_rate = std::max(motion_rate, magnitude_filtered_[magnitude_filtered_.size()-1](motion_rate_sensors[i],0) + magnitude_filtered_[magnitude_filtered_.size()-1](motion_rate_sensors[i],2));
+  }
+  std_msgs::Float64 mr;
+  mr.data = motion_rate;
+  motion_rate_pub_.publish(mr);
+}
+
 void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_data) {
   const int elem_count(9);
     
@@ -179,6 +240,10 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
       raw(i,e) = raw_data->data[i*elem_count + e];
       raw(i,e) /= (1<<15);
     }
+    // Normalize acceleration data to g
+    raw(i,0) *= 16;
+    raw(i,1) *= 16;
+    raw(i,2) *= 16;
     // Normalize gyro data to rad/s
     raw(i,6) *= 2000.0 * M_PI/180;
     raw(i,7) *= 2000.0 * M_PI/180;
@@ -207,15 +272,19 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
     raw.block<1,3>(i,3) = raw.block<1,3>(i,3) * axes_permutation_[i];
     raw.block<1,3>(i,6) = raw.block<1,3>(i,6) * axes_permutation_[i];
   }
+
+  // Motion rate
+  data_buffer_.push_back(raw);
+  calculateMotionRate();
   
   if (gyro_mean_calculation_frames_left_ > 0) {
     if (gyro_mean_calculation_frames_left_ == 1) {
       gyro_bias_ /= gyro_mean_num_frames_;
       for (int i=0; i<node_count_; ++i) {
         filters_[i].reset();
-        double zeta = (gyro_bias_(i,0) + gyro_bias_(i,1) + gyro_bias_(i,2))/3/10;
+        double zeta = (gyro_bias_(i,0) + gyro_bias_(i,1) + gyro_bias_(i,2))/3;
         std::cerr << zeta << std::endl;
-        filters_[i].setDriftBiasGain((gyro_bias_(i,0) + gyro_bias_(i,1) + gyro_bias_(i,2))/3/10);
+        //filters_[i].setDriftBiasGain(-zeta);
       }
       std::cerr << gyro_bias_ << std::endl;
       ROS_INFO("Gyro mean calculation complete.");
@@ -286,6 +355,13 @@ void DiverNetFilterNode::calculateRawAngles(const Eigen::MatrixXd raw) {
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "diver_net_filter_node");
   DiverNetFilterNode node;
+  boost::circular_buffer<int> p(3);
+  p.push_back(1);
+  p.push_back(2);
+  p.push_back(3);
+  std::cerr << p[0] << " " << p[1] << " " << p[2] << std::endl;
+  p.push_back(4);
+  std::cerr << p[0] << " " << p[1] << " " << p[2] << std::endl;
   ros::spin();
   return 0;
 }

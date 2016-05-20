@@ -5,6 +5,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <boost/circular_buffer.hpp>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
@@ -72,7 +73,8 @@ namespace labust
          * when calibration request is received.
          */
         void calibratePose(const std::vector<Eigen::Quaternion<double> >& q);
-        
+        void calculateMotionRate();
+
         ros::NodeHandle ph_, nh_;
         // ROS subscribers for data, calibration request and gyro mean calculation request.
         ros::Subscriber raw_data_, calibrate_sub_, gyro_mean_sub_;
@@ -99,6 +101,10 @@ namespace labust
         int gyro_mean_calculation_frames_left_;
         // Stores request for pose calibration.
         bool should_calibrate_pose_;
+
+        ros::Publisher motion_rate_pub_;
+        boost::circular_buffer<Eigen::MatrixXd> data_buffer_, hp_filtered_buffer_, magnitude_buffer_, magnitude_filtered_;
+        std::vector<int> motion_rate_nodes_;
     };
   }
 }
