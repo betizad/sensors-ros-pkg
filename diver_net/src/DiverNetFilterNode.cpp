@@ -184,15 +184,8 @@ void DiverNetFilterNode::calibratePose(const std::vector<Eigen::Quaternion<doubl
 }
 
 void DiverNetFilterNode::calculateMotionRate() {
-  std::vector<double> b_hp, a_hp;
-  std::vector<double> b_lp, a_lp;
-  b_hp.push_back(0.9695);
-  b_hp.push_back(-0.9695);
-  a_hp.push_back(1.0);
-  a_hp.push_back(-0.9391);
-  a_lp.push_back(1.0);
-  a_lp.push_back(-0.95);
-  b_lp.push_back(0.05);
+  std::vector<double> b_hp{0.9695, -0.9695}, a_hp{1.0, -0.9391};
+  std::vector<double> b_lp{0.05}, a_lp{1.0, -0.95};
   for (int i=0; i<node_count_; ++i) {
     std::vector<double> mb(3,0);
     for (int j=0; j<9; ++j) {
@@ -213,12 +206,7 @@ void DiverNetFilterNode::calculateMotionRate() {
     }
   }
 
-  std::vector<int> mrs;
-  mrs.push_back(3);
-  mrs.push_back(4);
-  mrs.push_back(8);
-  mrs.push_back(11);
-  mrs.push_back(18);
+  std::vector<int> mrs{3,4,8,11,18};
   double motion_rate = 0;
   for (int i=0; i<mrs.size(); ++i) {
     motion_rate = std::max(motion_rate, 
