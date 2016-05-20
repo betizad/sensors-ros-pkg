@@ -60,6 +60,8 @@ namespace labust
         double width;
         double length;
       };
+      enum {n=0,e,d};
+    public:
       enum
       {
         NO_CHANGE = 0,
@@ -69,9 +71,7 @@ namespace labust
         TAKE_PHOTO = 4,
         FAILED_CMD = 6,
         STOP = 7
-      };
-      enum {n=0,e,d};
-    public:
+       };
       ///Main constructor
       CommandModule():last_cmd(0),confirmed(false){};
       ///Default destructor
@@ -126,8 +126,11 @@ namespace labust
       void onCmd(const std_msgs::Int32::ConstPtr& msg)
       {
         ROS_INFO("RECEIVED command: %d", msg->data);
-        last_cmd = msg->data;
-        confirmed = false;
+	if (last_cmd != msg->data)
+	{	
+        	last_cmd = msg->data;
+	        confirmed = false;
+	}
       }
 
       ///Handle the lawn mower command.
@@ -140,12 +143,12 @@ namespace labust
         candidate.width = msg->width;
 
         // Check if not identical command
-        if (last_cmd != LAWN_CMD)
-        {
+        //if (last_cmd != LAWN_CMD)
+        //{
           last_cmd = LAWN_CMD;
           data = candidate;
           confirmed = false;
-        }
+        //}
       }
 
       void onPointCmd(int cmd, const geometry_msgs::PointStamped::ConstPtr& msg)
@@ -156,12 +159,12 @@ namespace labust
         candidate.length = 0;
         candidate.width = 0;
 
-        if (last_cmd != cmd)
-        {
+        //if (last_cmd != cmd)
+        //{
           last_cmd = cmd;
           data = candidate;
           confirmed = false;
-        }
+        //}
       }
 
       //Checks if supplied data is identical
