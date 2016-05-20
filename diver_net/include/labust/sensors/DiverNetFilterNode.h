@@ -101,9 +101,12 @@ namespace labust
         int gyro_mean_calculation_frames_left_;
         // Stores request for pose calibration.
         bool should_calibrate_pose_;
-
+        // Motion rate
         ros::Publisher motion_rate_pub_;
-        boost::circular_buffer<Eigen::MatrixXd> data_buffer_, hp_filtered_buffer_, magnitude_buffer_, magnitude_filtered_;
+        boost::circular_buffer<double> data_buffer_[20][9], 
+          hp_data_buffer_[20][9], 
+          hp_magnitude_buffer_[20][3], 
+          hp_lp_magnitude_buffer_[20][3];
         std::vector<int> motion_rate_nodes_;
     };
   }
