@@ -145,14 +145,12 @@ void DiverNetReadNode::onData(const boost::system::error_code& e,
 			std::cout << "CRC ok."<<std::endl;
 			std_msgs::Int16MultiArrayPtr out(new std_msgs::Int16MultiArray());
 			out->data.resize((nodeCount * dataPerNode)/2);
-			Eigen::MatrixXd raw(nodeCount,9);
 
 			int elemCount = 9;
 			for (int i=0; i<nodeCount; ++i) {
 				for (int e=0; e<elemCount; ++e) {
-					raw(i,e) = out->data[i*elemCount + e] = rawBuffer[2*e*nodeCount + i] +
+					out->data[i*elemCount + e] = rawBuffer[2*e*nodeCount + i] +
 							256*rawBuffer[(2*e+1)*nodeCount + i];
-					raw(i,e) /= (1 << 15);
 				}
 			}
       std_msgs::Float32Ptr pressure_ptr(new std_msgs::Float32());
