@@ -34,8 +34,8 @@
  *  Created: 23.05.2016.
  *  Author: Ivor Rendulic
  *********************************************************************/
-#ifndef ELLIPSOIDFIT_HPP_
-#define ELLIPSOIDFIT_HPP_
+#ifndef MAGNETOMETERCALIBRATION_HPP_
+#define MAGNETOMETERCALIBRATION_HPP_
 
 #include <Eigen/Dense>
 
@@ -47,9 +47,9 @@ namespace labust {
      * http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit
      */
     void ellipsoidFit(const Eigen::MatrixXd& data,
-        Eigen::VectorXd& center,
-        Eigen::VectorXcd& evals,
-        Eigen::MatrixXcd& evecs) {
+        Eigen::Vector3d& center,
+        Eigen::Vector3cd& evals,
+        Eigen::Matrix3cd& evecs) {
       Eigen::MatrixXd D = Eigen::MatrixXd::Zero(data.rows(), 9);
       Eigen::VectorXd x = data.col(0);
       Eigen::VectorXd y = data.col(1);
@@ -94,20 +94,28 @@ namespace labust {
       evecs = es.eigenvectors();
     }
 
-    Eigen::MatrixXd magneticCalibration(const Eigen::MatrixXd& data) {
-      Eigen::VectorXd center;
-      Eigen::VectorXcd evals;
-      Eigen::MatrixXcd evecs;
+
+    struct MagnetometerCalibrationData {
+      Eigen::Vector3d center;
+      Eigen::Vector3d sqrevals;
+      Eigen::Matrix3d revecs;
+      double scale;
+    };
+
+    MagnetometerCalibrationData getMagnetometerCalibrationData(const Eigen::MatrixXd& data) {
+      Eigen::Vector3d center;
+      Eigen::Vector3cd evals;
+      Eigen::Matrix3cd evecs;
       ellipsoidFit(data, center, evals, evecs);
 
-      Eigen::VectorXd revals = evals.real();
-      Eigen::MatrixXd revecs = evecs.real();
+      Eigen::Vector3d revals = evals.real();
+      Eigen::Matrix3d revecs = evecs.real();
      
-      Eigen::VectorXd sqrevals(revals.rows());
+      Eigen::Vector3d sqrevals;
       for (int i=0; i<sqrevals.rows(); ++i) {
         sqrevals(i) = std::sqrt(revals(i));
       }
-      Eigen::VectorXd radii(revals.rows());
+      Eigen::Vector3d radii;
       for (int i=0; i<radii.rows(); ++i) {
         radii(i) = std::sqrt(1.0 / std::abs(revals(i)));
         if (revals(i) < 0) radii(i) *= -1;
@@ -115,16 +123,25 @@ namespace labust {
 
       double scale = std::pow(radii(0) * radii(1) * radii(2), 1.0/3);
 
-      Eigen::MatrixXd res(data.rows(), data.cols());
-      for (int i=0; i<data.rows(); ++i) {
-        res.row(i) = data.row(i) - center.transpose();
-      }
-      res = (revecs * sqrevals.asDiagonal() * revecs.inverse() * res.transpose()).transpose();
-      res *= scale;
+      MagnetometerCalibrationData mcd;
+      mcd.center = center;
+      mcd.sqrevals = sqrevals;
+      mcd.revecs = revecs;
+      mcd.scale = scale;
+
+      return mcd;
+    }
+
+    Eigen::Vector3d calibrateMagnetometer(const Eigen::Vector3d& data, 
+        const MagnetometerCalibrationData& mcd) {
+      Eigen::Vector3d res = data - mcd.center;
+      res = (mcd.revecs * mcd.sqrevals.asDiagonal() * mcd.revecs.inverse() * res);
+      res *= mcd.scale;
+      return res;
     }
 
   }
 }
 
-/* ELLIPSOIDFIT_HPP_ */
+/* MAGNETOMETERCALIBRATION_HPP_ */
 #endif
