@@ -39,10 +39,8 @@
 
 #include <Eigen/Dense>
 
-namespace labust
-{
-	namespace sensors
-	{
+namespace labust {
+  namespace sensors {
 
     /**
      * Ellipsoid fit, based on Yury Petrov's Matlab script.
@@ -125,7 +123,7 @@ namespace labust
       res *= scale;
     }
 
-	}
+  }
 }
 
 /* ELLIPSOIDFIT_HPP_ */
