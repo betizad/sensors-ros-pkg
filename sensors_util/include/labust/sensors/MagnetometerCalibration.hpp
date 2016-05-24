@@ -94,11 +94,11 @@ namespace labust {
       evecs = es.eigenvectors();
     }
 
-
     struct MagnetometerCalibrationData {
       Eigen::Vector3d center;
-      Eigen::Vector3d sqrevals;
+      Eigen::Matrix3d sqrevals;
       Eigen::Matrix3d revecs;
+      Eigen::Matrix3d revecs_inv;
       double scale;
     };
 
@@ -125,8 +125,9 @@ namespace labust {
 
       MagnetometerCalibrationData mcd;
       mcd.center = center;
-      mcd.sqrevals = sqrevals;
+      mcd.sqrevals = sqrevals.asDiagonal();
       mcd.revecs = revecs;
+      mcd.revecs_inv = revecs.inverse();
       mcd.scale = scale;
 
       return mcd;
@@ -135,7 +136,7 @@ namespace labust {
     Eigen::Vector3d calibrateMagnetometer(const Eigen::Vector3d& data, 
         const MagnetometerCalibrationData& mcd) {
       Eigen::Vector3d res = data - mcd.center;
-      res = (mcd.revecs * mcd.sqrevals.asDiagonal() * mcd.revecs.inverse() * res);
+      res = (mcd.revecs * mcd.sqrevals * mcd.revecs_inv * res);
       res *= mcd.scale;
       return res;
     }
