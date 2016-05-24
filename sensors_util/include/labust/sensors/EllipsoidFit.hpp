@@ -48,7 +48,10 @@ namespace labust
      * Ellipsoid fit, based on Yury Petrov's Matlab script.
      * http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit
      */
-    void ellipsoidFit(const Eigen::MatrixXd& data) {
+    void ellipsoidFit(const Eigen::MatrixXd& data,
+        Eigen::VectorXd& center,
+        Eigen::VectorXcd& evals,
+        Eigen::MatrixXcd& evecs) {
       Eigen::MatrixXd D = Eigen::MatrixXd::Zero(data.rows(), 9);
       Eigen::VectorXd x = data.col(0);
       Eigen::VectorXd y = data.col(1);
@@ -80,14 +83,46 @@ namespace labust
            v(3), v(1), v(5), v(7),
            v(4), v(5), v(2), v(8),
            v(6), v(7), v(8), v(9);
-      Eigen::VectorXd center = -A.block<3,3>(0,0).colPivHouseholderQr().solve(v.segment(6,3));
+      center = -A.block<3,3>(0,0).colPivHouseholderQr().solve(v.segment(6,3));
 
       Eigen::MatrixXd T = Eigen::MatrixXd::Identity(4,4);
       T.row(3).segment(0,3) = center;
 
       Eigen::MatrixXd R = T * A * T.transpose();
-    
-      
+      Eigen::EigenSolver<Eigen::MatrixXd> es;
+      es.compute(R.block<3,3>(0,0) / -R(3,3));
+
+      evals = es.eigenvalues();
+      evecs = es.eigenvectors();
+    }
+
+    Eigen::MatrixXd magneticCalibration(const Eigen::MatrixXd& data) {
+      Eigen::VectorXd center;
+      Eigen::VectorXcd evals;
+      Eigen::MatrixXcd evecs;
+      ellipsoidFit(data, center, evals, evecs);
+
+      Eigen::VectorXd revals = evals.real();
+      Eigen::MatrixXd revecs = evecs.real();
+     
+      Eigen::VectorXd sqrevals(revals.rows());
+      for (int i=0; i<sqrevals.rows(); ++i) {
+        sqrevals(i) = std::sqrt(revals(i));
+      }
+      Eigen::VectorXd radii(revals.rows());
+      for (int i=0; i<radii.rows(); ++i) {
+        radii(i) = std::sqrt(1.0 / std::abs(revals(i)));
+        if (revals(i) < 0) radii(i) *= -1;
+      }
+
+      double scale = std::pow(radii(0) * radii(1) * radii(2), 1.0/3);
+
+      Eigen::MatrixXd res(data.rows(), data.cols());
+      for (int i=0; i<data.rows(); ++i) {
+        res.row(i) = data.row(i) - center.transpose();
+      }
+      res = (revecs * sqrevals.asDiagonal() * revecs.inverse() * res.transpose()).transpose();
+      res *= scale;
     }
 
 	}
