@@ -49,26 +49,45 @@ namespace labust
      * http://www.mathworks.com/matlabcentral/fileexchange/24693-ellipsoid-fit
      */
     void ellipsoidFit(const Eigen::MatrixXd& data) {
-      Eigen::MatrixXd D = Eigen::MatrixXd::Zero(9, data.cols());
-      Eigen::MatrixXd x = data.row(0);
-      Eigen::MatrixXd y = data.row(1);
-      Eigen::MatrixXd z = data.row(2);
-      Eigen::MatrixXd xx = x.cwiseProduct(x);
-      Eigen::MatrixXd yy = y.cwiseProduct(y);
-      Eigen::MatrixXd zz = z.cwiseProduct(z);
+      Eigen::MatrixXd D = Eigen::MatrixXd::Zero(data.rows(), 9);
+      Eigen::VectorXd x = data.col(0);
+      Eigen::VectorXd y = data.col(1);
+      Eigen::VectorXd z = data.col(2);
+      Eigen::VectorXd xx = x.cwiseProduct(x);
+      Eigen::VectorXd yy = y.cwiseProduct(y);
+      Eigen::VectorXd zz = z.cwiseProduct(z);
 
-      D.row(0) = xx + yy - 2 * zz;
-      D.row(1) = xx + zz - 2 * yy;
-      D.row(2) = 2 * x.cwiseProduct(y);
-      D.row(3) = 2 * x.cwiseProduct(z);
-      D.row(4) = 2 * y.cwiseProduct(z);
-      D.row(5) = 2 * x;
-      D.row(6) = 2 * y;
-      D.row(7) = 2 * z;
-      D.row(8) = Eigen::MatrixXd::Constant(1, x.cols(), 1.0);
+      D.col(0) = xx + yy - 2 * zz;
+      D.col(1) = xx + zz - 2 * yy;
+      D.col(2) = 2 * x.cwiseProduct(y);
+      D.col(3) = 2 * x.cwiseProduct(z);
+      D.col(4) = 2 * y.cwiseProduct(z);
+      D.col(5) = 2 * x;
+      D.col(6) = 2 * y;
+      D.col(7) = 2 * z;
+      D.col(8) = Eigen::VectorXd::Constant(x.rows(), 1.0);
+      Eigen::VectorXd d2 = xx + yy + zz;
+      Eigen::VectorXd u = (D.transpose() * D).colPivHouseholderQr().solve(D.transpose() * d2);
+      Eigen::VectorXd v(u.rows()+1);
+      v(0) = u(0) + u(1) - 1;
+      v(1) = u(0) - 2 * u(1) - 1;
+      v(2) = u(1) - 2 * u(0) - 1;
+      v.segment(3,7) = u.segment(2,7);
 
-      Eigen::MatrixXd d2 = xx + yy + zz;
-      Eigen::MatrixXd u = (D.transpose() * D).colPivHouseholderQr().solve(D.transpose() * d2);
+      v = v.transpose();
+      Eigen::MatrixXd A(4,4);
+      A << v(0), v(3), v(4), v(6),
+           v(3), v(1), v(5), v(7),
+           v(4), v(5), v(2), v(8),
+           v(6), v(7), v(8), v(9);
+      Eigen::VectorXd center = -A.block<3,3>(0,0).colPivHouseholderQr().solve(v.segment(6,3));
+
+      Eigen::MatrixXd T = Eigen::MatrixXd::Identity(4,4);
+      T.row(3).segment(0,3) = center;
+
+      Eigen::MatrixXd R = T * A * T.transpose();
+    
+      
     }
 
 	}
