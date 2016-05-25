@@ -100,6 +100,7 @@ namespace labust {
       Eigen::Matrix3d revecs;
       Eigen::Matrix3d revecs_inv;
       double scale;
+      double avg_sqerror;
     };
 
     MagnetometerCalibrationData getMagnetometerCalibrationData(const Eigen::MatrixXd& data) {
@@ -116,12 +117,32 @@ namespace labust {
         sqrevals(i) = std::sqrt(revals(i));
       }
       Eigen::Vector3d radii;
+      Eigen::Vector3d sgns;
       for (int i=0; i<radii.rows(); ++i) {
         radii(i) = std::sqrt(1.0 / std::abs(revals(i)));
-        if (revals(i) < 0) radii(i) *= -1;
+        if (revals(i) < 0) {
+          radii(i) *= -1;
+          sgns(i) = -1;
+        } else {
+          sgns(i) = 1;
+        }
       }
 
       double scale = std::pow(radii(0) * radii(1) * radii(2), 1.0/3);
+
+      // Calculating average squared error across all samples
+      Eigen::MatrixXd d(data.rows(), data.cols());
+      for (int i=0; i<data.rows(); ++i) {
+        d.row(i) = data.row(i) - center.transpose();
+      }
+
+      d = d * revecs;
+      double chi2 = 0.0;
+      for (int i=0; i<d.rows(); ++i) {
+        d.row(i) = d.row(i).cwiseQuotient(radii.transpose());
+        d.row(i) = d.row(i).cwiseProduct(d.row(i));
+        chi2 += std::abs(1 - d.row(i).dot(sgns)); 
+      }
 
       MagnetometerCalibrationData mcd;
       mcd.center = center;
@@ -129,6 +150,7 @@ namespace labust {
       mcd.revecs = revecs;
       mcd.revecs_inv = revecs.inverse();
       mcd.scale = scale;
+      mcd.avg_sqerror = chi2 / data.rows();
 
       return mcd;
     }
@@ -136,7 +158,7 @@ namespace labust {
     Eigen::Vector3d calibrateMagnetometer(const Eigen::Vector3d& data, 
         const MagnetometerCalibrationData& mcd) {
       Eigen::Vector3d res = data - mcd.center;
-      res = (mcd.revecs * mcd.sqrevals * mcd.revecs_inv * res);
+      res = mcd.revecs * mcd.sqrevals * mcd.revecs_inv * res;
       res *= mcd.scale;
       return res;
     }
