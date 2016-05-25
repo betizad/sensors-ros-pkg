@@ -118,8 +118,8 @@ namespace labust {
       }
       Eigen::Vector3d radii;
       Eigen::Vector3d sgns;
+      radii = revals.cwiseAbs().cwiseInverse().cwiseSqrt();
       for (int i=0; i<radii.rows(); ++i) {
-        radii(i) = std::sqrt(1.0 / std::abs(revals(i)));
         if (revals(i) < 0) {
           radii(i) *= -1;
           sgns(i) = -1;
@@ -130,7 +130,6 @@ namespace labust {
 
       double scale = std::pow(radii(0) * radii(1) * radii(2), 1.0/3);
 
-      // Calculating average squared error across all samples
       Eigen::MatrixXd d(data.rows(), data.cols());
       for (int i=0; i<data.rows(); ++i) {
         d.row(i) = data.row(i) - center.transpose();
