@@ -42,7 +42,7 @@ void NavHandler::updateReport<BuddyReport>(const BuddyReport& message, const Eig
   if (message.inited)
   {
     auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
-    nav->header.stamp = ros::Time::now();
+    nav->header.stamp = ros::Time::now() - pos_delay;
     nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
     nav->gbody_velocity.x = message.speed;
 
@@ -91,7 +91,7 @@ void NavHandler::updateReport<SurfaceReport>(const SurfaceReport& message, const
   nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
   nav->gbody_velocity.x = message.speed;
 
-  nav->header.stamp = ros::Time::now();
+  nav->header.stamp = ros::Time::now() - pos_delay;
   navall_pub.publish(nav);
 
   if (message.is_master && message.has_diver)

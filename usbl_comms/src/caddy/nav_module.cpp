@@ -42,7 +42,7 @@ void NavModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vec
   boost::mutex::scoped_lock l(data_mux);
   message.origin_lat = navdata.origin.latitude;
   message.origin_lon = navdata.origin.longitude;
-  ROS_INFO("Packing data: %f - %f", navdata.position.north - offset(n));
+  ROS_INFO("Packing data: %f", navdata.position.north - offset(n));
   message.north = navdata.position.north - offset(n);
   message.east = navdata.position.east - offset(e);
   message.depth = navdata.position.depth - offset(d);

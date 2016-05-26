@@ -89,7 +89,6 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
 
     if (message.has_position)
     {
-
       nav->position.north = message.north + offset(n);
       nav->position.east = message.east + offset(e);
       nav->position.depth = message.depth + offset(d);

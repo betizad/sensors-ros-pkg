@@ -62,13 +62,14 @@ namespace labust
       public:
         enum {SURFACE=0, DIVER, BUDDY};
         ///Main constructor
-        NavHandler(){};
+        NavHandler():pos_delay(1.5){};
         ///Default destructor
         ~NavHandler(){};
 
         ///Listener configuration.
         bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
         {
+          ph.param("position_delay", pos_delay, pos_delay);
           diverpos_pub = nh.advertise<auv_msgs::NavSts>("other_agent_diver_position_in", 1);
           divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_position_in", 1);
           navall_pub = nh.advertise<auv_msgs::NavSts>("other_agent_position_in", 1);
@@ -92,6 +93,9 @@ namespace labust
         ros::Publisher divernav_pub;
         /// The initialization position publisher
         ros::Publisher init_pub;
+
+        /// The time compensation
+        double pos_delay;
       };
 
       ///Buddy specialization
