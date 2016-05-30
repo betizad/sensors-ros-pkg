@@ -24,7 +24,7 @@
     if="has_position == 1" />
 
    <!-- Dead-reckoning data : 13 bit -->
-   <var type="double" name="course" bits="9" min="-180" max="180" />
+   <var type="double" name="course" bits="9" min="-180" max="179.296875" />
    <var type="double" name="speed" bits="4" min="0" max="1" />
 
    <!-- Diver data -->
@@ -58,9 +58,9 @@
     if="(command == 1) || (command == 2) || (command == 4)" />
    <var type="double" name="east_origin" bits="6" min="-32" max="31"
     if="(command == 1) || (command == 2) || (command == 4)" />
-   <var type="double" name="lawn_width" bits="3" min="1" max="9"
+   <var type="double" name="lawn_width" bits="3" min="1" max="8"
     if="command == 1" />
-   <var type="double" name="lawn_length" bits="3" min="1" max="9"
+   <var type="double" name="lawn_length" bits="3" min="1" max="8"
     if="command == 1" />
   </group>
  </struct>
@@ -100,7 +100,7 @@
   <!-- Slave operation (with Buddy master) -->
   <group if="is_master == 0">
    <!-- Position data - required -->
-   <var type="double" name="course" bits="9" min="-180" max="180" />
+   <var type="double" name="course" bits="9" min="-180" max="179.296875" />
    <var type="double" name="speed" bits="4" min="0" max="1.0" />
 
    <!-- Mission command -->
@@ -125,9 +125,9 @@
     if="(command == 1) || (command == 2) || (command == 4)" />
    <var type="double" name="east_origin" bits="6" min="-32" max="31"
     if="(command == 1) || (command == 2) || (command == 4)" />
-   <var type="double" name="lawn_width" bits="3" min="1" max="9"
+   <var type="double" name="lawn_width" bits="3" min="1" max="8"
     if="command == 1" />
-   <var type="double" name="lawn_length" bits="3" min="1" max="9"
+   <var type="double" name="lawn_length" bits="3" min="1" max="8"
     if="command == 1" />
   </group>
 
@@ -142,7 +142,7 @@
  <struct name="DiverReport" serialization="primitive_type"
   bitfield3="TRUE">
   <!-- Navigation data : 16 bit -->
-  <var type="double" name="heading" bits="9" min="-180" max="180" />
+  <var type="double" name="heading" bits="9" min="-180" max="179.296875" />
   <var type="double" name="depth" bits="7" min="0" max="63.5" />
 
   <!-- Diver payload data required : 13 bit -->
@@ -183,9 +183,9 @@
     if="(command == 1) || (command == 2) || (command == 4)" />
    <var type="double" name="east_origin" bits="6" min="-32" max="31"
     if="(command == 1) || (command == 2) || (command == 4)" />
-   <var type="double" name="lawn_width" bits="3" min="1" max="9"
+   <var type="double" name="lawn_width" bits="3" min="1" max="8"
     if="command == 1" />
-   <var type="double" name="lawn_length" bits="3" min="1" max="9"
+   <var type="double" name="lawn_length" bits="3" min="1" max="8"
     if="command == 1" />
 
   <!-- Variable chat data -->

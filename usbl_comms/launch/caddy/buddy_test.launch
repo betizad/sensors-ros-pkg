@@ -19,7 +19,7 @@
                    "labust::seatrac::NavListener",
                    "labust::seatrac::DataListener"]</rosparam>
             <!-- Serial parameters -->
-            <param name="port_name" value="/dev/ttyUSB1" />
+            <param name="port_name" value="/dev/ttyUSB0" />
             <!-- Buddy USBL configuration -->
             <param name="is_master" value="true" />
             <param name="ping_rate" value="0" />

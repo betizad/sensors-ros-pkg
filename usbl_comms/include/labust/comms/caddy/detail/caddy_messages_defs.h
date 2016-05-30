@@ -70,6 +70,9 @@ public:
   double avg_flipper_rate;
   double hearth_rate;
   uint8_t optional_data;
+  double breathing_rate;
+  double motion_rate;
+  double pad_space;
   uint8_t alarms;
   uint8_t predefined_chat;
   uint8_t command;
@@ -78,9 +81,6 @@ public:
   double lawn_width;
   double lawn_length;
   std::vector< uint8_t > chat;
-  double breathing_rate;
-  double motion_rate;
-  double pad_space;
 
 };
 
