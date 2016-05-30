@@ -96,9 +96,10 @@ namespace labust {
 
     struct MagnetometerCalibrationData {
       Eigen::Vector3d center;
-      Eigen::Matrix3d sqrevals;
-      Eigen::Matrix3d revecs;
-      Eigen::Matrix3d revecs_inv;
+      Eigen::Vector3d radii;
+      Eigen::Vector3cd evals;
+      Eigen::Matrix3cd evecs;
+      Eigen::Matrix3d calib_matrix;
       double scale;
       double avg_sqerror;
     };
@@ -135,6 +136,7 @@ namespace labust {
         d.row(i) = data.row(i) - center.transpose();
       }
 
+      // Calculate total squared error chi2
       d = d * revecs;
       double chi2 = 0.0;
       for (int i=0; i<d.rows(); ++i) {
@@ -143,12 +145,14 @@ namespace labust {
         chi2 += std::abs(1 - d.row(i).dot(sgns)); 
       }
 
+      // Calculate coverage of the sphere
+
       MagnetometerCalibrationData mcd;
       mcd.center = center;
-      mcd.sqrevals = sqrevals.asDiagonal();
-      mcd.revecs = revecs;
-      mcd.revecs_inv = revecs.inverse();
-      mcd.scale = scale;
+      mcd.radii = radii;
+      mcd.evals = evals;
+      mcd.evecs = evecs;
+      mcd.calib_matrix = revecs * sqrevals.asDiagonal() * revecs.inverse() * scale;
       mcd.avg_sqerror = chi2 / data.rows();
 
       return mcd;
@@ -157,9 +161,7 @@ namespace labust {
     Eigen::Vector3d calibrateMagnetometer(const Eigen::Vector3d& data, 
         const MagnetometerCalibrationData& mcd) {
       Eigen::Vector3d res = data - mcd.center;
-      res = mcd.revecs * mcd.sqrevals * mcd.revecs_inv * res;
-      res *= mcd.scale;
-      return res;
+      return mcd.calib_matrix * res;
     }
 
   }
