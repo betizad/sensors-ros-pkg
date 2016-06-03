@@ -102,6 +102,7 @@ namespace labust {
       Eigen::Matrix3d calib_matrix;
       double scale;
       double avg_sqerror;
+      double sphere_coverage;
     };
 
     MagnetometerCalibrationData getMagnetometerCalibrationData(const Eigen::MatrixXd& data) {
@@ -146,6 +147,20 @@ namespace labust {
       }
 
       // Calculate coverage of the sphere
+      std::set<std::pair<int,int> > sphere_coverage;
+      const int theta_quant_size = 18;
+      const int phi_quant_size = 9;
+      for (int i=0; i<data.rows(); ++i) {
+        double x = data.row(i)(0);
+        double y = data.row(i)(1);
+        double z = data.row(i)(2);
+        double r = std::sqrt(x*x + y*y + z*z);
+        double theta = std::atan2(y,x) * 180 / M_PI;
+        double phi = std::acos(z/r) * 180 / M_PI;
+        int theta_quant = std::round(theta * theta_quant_size / 360);
+        int phi_quant = std::round(phi * phi_quant_size / 180);
+        sphere_coverage.insert(std::make_pair(theta_quant, phi_quant));
+      }
 
       MagnetometerCalibrationData mcd;
       mcd.center = center;
@@ -154,6 +169,8 @@ namespace labust {
       mcd.evecs = evecs;
       mcd.calib_matrix = revecs * sqrevals.asDiagonal() * revecs.inverse() * scale;
       mcd.avg_sqerror = chi2 / data.rows();
+      mcd.sphere_coverage = static_cast<double>(sphere_coverage.size()) / 
+        (theta_quant_size * phi_quant_size);
 
       return mcd;
     }
