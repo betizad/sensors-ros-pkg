@@ -1,38 +1,38 @@
 #include <labust/sensors/DiverNetFilterNode.h>
 #include <labust/tools/conversions.hpp>
-#include <std_msgs/Int16MultiArray.h>
-#include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Float64.h>
-#include <labust/sensors/ImuFilter.h>
 #include <labust/sensors/DspUtils.hpp>
 #include <fstream>
 
 using namespace labust::sensors;
 
 DiverNetFilterNode::DiverNetFilterNode():
-    node_count_(20),
     ph_("~"),
+    node_count_(20),
+    filters_(20),
     gyro_bias_(20,3),
-    magnetometer_ellipsoid_center_(20,3),
-    magnetometer_ellipsoid_scale_(20,3),
-    should_calibrate_pose_(false),
-    should_calibrate_magnetometer_(false),
     gyro_mean_calculation_frames_left_(0),
     gyro_mean_num_frames_(100),
+    magnetometer_buffer_(20),
+    magnetometer_buffer_points_(0),
+    magnetometer_calibration_data_(20),
+    should_calibrate_magnetometer_(false),
+    should_calibrate_pose_(false),
     rpy_raw_(new std_msgs::Float64MultiArray()),
     rpy_filtered_(new std_msgs::Float64MultiArray()), 
-    quaternion_filtered_(new std_msgs::Float64MultiArray()),
-    filters_(20) {
+    quaternion_filtered_(new std_msgs::Float64MultiArray()) {
   this->onInit();
 }
 
 void DiverNetFilterNode::onInit() {
   ros::Rate rate(1);
 
-  calibrate_sub_ = nh_.subscribe<std_msgs::Bool>(
-      "calibrate", 1, &DiverNetFilterNode::setCalibrationRequest, this);
+  pose_cal_sub_ = nh_.subscribe<std_msgs::Bool>(
+      "calibrate_pose", 1, &DiverNetFilterNode::setPoseCalibrationRequest, this);
   gyro_mean_sub_ = nh_.subscribe<std_msgs::Bool>(
       "calculate_gyro_mean", 1, &DiverNetFilterNode::calculateGyroMean, this);
+  mag_cal_sub_ = nh_.subscribe<std_msgs::Bool>(
+      "calibrate_magnetometer", 1, &DiverNetFilterNode::setMagnetometerCalibrationRequest, this);
 
   raw_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_raw", 1);
   filtered_angles_pub_ = nh_.advertise<std_msgs::Float64MultiArray>("rpy_filtered", 1);
@@ -56,6 +56,7 @@ void DiverNetFilterNode::onInit() {
 
   raw_data_ = nh_.subscribe("net_data", 1, &DiverNetFilterNode::processData, this);
 
+  // Motion rate buffers
   for (int i=0; i<node_count_; ++i) {
     for (int j=0; j<9; ++j) {
       data_buffer_[i][j].resize(2,0);
@@ -65,6 +66,11 @@ void DiverNetFilterNode::onInit() {
       hp_magnitude_buffer_[i][j].resize(2,0);
       hp_lp_magnitude_buffer_[i][j].resize(2,0);
     }
+  }
+
+  // Magnetometer buffer
+  for (int i=0; i<node_count_; ++i) {
+    magnetometer_buffer_[i] = Eigen::MatrixXd::Zero(10000, 3);
   }
 
 }
@@ -100,11 +106,9 @@ void DiverNetFilterNode::loadGyroBiasFromFile() {
     if (!ifs.good()) {
       ROS_ERROR("File %s does not exist or cannot be opened.", calibration_file.c_str());
     } else {
-      double gb;
       for (int i=0; i<node_count_; ++i) {
         for (int j=0; j<3; ++j) {
-          ifs >> gb;
-          gyro_bias_(i,j) = gb;
+          ifs >> gyro_bias_(i,j);
         }
       }
       ifs.close();
@@ -127,12 +131,16 @@ void DiverNetFilterNode::loadMagnetometerCalibration() {
       ROS_ERROR("File %s does not exist or cannot be opened.", calibration_file.c_str());
     } else {
       for (int i=0; i<node_count_; ++i) {
+        Eigen::Vector3d center;
         for (int j=0; j<3; ++j) {
-          ifs >> magnetometer_ellipsoid_center_(i,j);
+          ifs >> center(j);
         }
-        for (int j=0; j<3; ++j) {
-          ifs >> magnetometer_ellipsoid_scale_(i,j);
+        Eigen::Matrix3d calib_matrix;
+        for (int j=0; j<9; ++j) {
+          ifs >> calib_matrix(j/3, j%3);
         }
+        magnetometer_calibration_data_[i].center = center;
+        magnetometer_calibration_data_[i].calib_matrix = calib_matrix;
       }
       ifs.close();
       ROS_INFO("Magnetometer calibration file opened successfully.");
@@ -143,8 +151,8 @@ void DiverNetFilterNode::loadMagnetometerCalibration() {
 
 DiverNetFilterNode::~DiverNetFilterNode() {}
 
-void DiverNetFilterNode::setCalibrationRequest(const std_msgs::Bool::ConstPtr& calibrate) {
-  if (calibrate->data) {
+void DiverNetFilterNode::setPoseCalibrationRequest(const std_msgs::Bool::ConstPtr& pose_cal) {
+  if (pose_cal->data) {
     should_calibrate_pose_ = true;
   }
 }
@@ -153,8 +161,45 @@ void DiverNetFilterNode::calculateGyroMean(
     const std_msgs::Bool::ConstPtr& calculate_gyro_mean) {
   if (calculate_gyro_mean->data) {
     ROS_WARN("Gyro mean calculation in progress. Keep the nodes as still as possible.");
-    gyro_bias_ = Eigen::MatrixXd::Zero(20,9);
+    gyro_bias_ = Eigen::MatrixXd::Zero(20,3);
     gyro_mean_calculation_frames_left_ = gyro_mean_num_frames_;
+  }
+}
+
+void DiverNetFilterNode::setMagnetometerCalibrationRequest(const std_msgs::Bool::ConstPtr& mag_cal) {
+  if (mag_cal->data) {
+    calculateMagnetometerCalibration();
+    should_calibrate_magnetometer_ = true;
+  }
+}
+
+void DiverNetFilterNode::calculateMagnetometerCalibration() {
+  int rows = std::min(magnetometer_buffer_points_, 
+      static_cast<int>(magnetometer_buffer_[0].rows()));
+  MagnetometerCalibrationData mcd;
+  for (int i=0; i<node_count_; ++i) {
+    if (i==10 || i==15 || i==19) {
+      mcd.center = Eigen::MatrixXd::Zero(3,1);
+      mcd.calib_matrix = Eigen::MatrixXd::Identity(3,3);
+      magnetometer_calibration_data_[i] = mcd;
+      continue;
+    }
+    mcd = getMagnetometerCalibrationData(magnetometer_buffer_[i].block(0, 0, rows, 3));
+    
+    // Test if the calibration was successful
+    if (mcd.sphere_coverage < 0.25 || mcd.avg_sqerror > 0.1) {
+      ROS_WARN("Calibration for node %d unsuccessful, sphere coverage = %f, average square error = %f.", 
+          i, mcd.sphere_coverage, mcd.avg_sqerror);
+      mcd.center = Eigen::MatrixXd::Zero(3,1);
+      mcd.calib_matrix = Eigen::MatrixXd::Identity(3,3);
+    } else {
+      ROS_INFO("Calibration for node %d completed successfully, sphere coverage = %f, average square error = %f.", 
+          i, mcd.sphere_coverage, mcd.avg_sqerror);
+    }
+    magnetometer_calibration_data_[i] = mcd;
+  }
+  for (int i=0; i<node_count_; ++i) {
+    std::cerr << magnetometer_calibration_data_[i].center << std::endl << magnetometer_calibration_data_[i].calib_matrix << std::endl;
   }
 }
 
@@ -206,6 +251,7 @@ void DiverNetFilterNode::calculateMotionRate() {
     }
   }
 
+  // Sensors used in motion rate - head and limbs
   std::vector<int> mrs{3,4,8,11,18};
   double motion_rate = 0;
   for (int i=0; i<mrs.size(); ++i) {
@@ -239,15 +285,14 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
         raw(i,e) *= 2000.0 * M_PI/180;
       }
 
+      // Filling data buffer. Currently the same data is in raw and in data buffer;
+      // raw should be removed.
       data_buffer_[i][e].push_back(raw(i,e));
     }
 
-    // Calibrate magnetometer data
-    if (should_calibrate_magnetometer_) {
-      raw(i,3) = magnetometer_ellipsoid_scale_(i,0) * (raw(i,3) - magnetometer_ellipsoid_center_(i,0));
-      raw(i,4) = magnetometer_ellipsoid_scale_(i,1) * (raw(i,4) - magnetometer_ellipsoid_center_(i,1));
-      raw(i,5) = magnetometer_ellipsoid_scale_(i,2) * (raw(i,5) - magnetometer_ellipsoid_center_(i,2));
-    }
+    // Store magnetomter data for calibration
+    int index = magnetometer_buffer_points_ % magnetometer_buffer_[i].rows();
+    magnetometer_buffer_[i].row(index) = raw.block<1,3>(i,3);
 
     // Compensate gyro bias if mean calculation is not in progress
     if (gyro_mean_calculation_frames_left_ == 0) {
@@ -268,6 +313,16 @@ void DiverNetFilterNode::processData(const std_msgs::Int16MultiArrayPtr &raw_dat
 
   // Motion rate
   calculateMotionRate();
+
+  // Magnetometer calibration
+  if (should_calibrate_magnetometer_) {
+    for (int i=0; i<node_count_; ++i) {
+      raw.block<1,3>(i,3) = calibrateMagnetometer(
+          raw.block<1,3>(i,3),
+          magnetometer_calibration_data_[i]);
+    }
+  }
+  magnetometer_buffer_points_++;
   
   if (gyro_mean_calculation_frames_left_ > 0) {
     if (gyro_mean_calculation_frames_left_ == 1) {

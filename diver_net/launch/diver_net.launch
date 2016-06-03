@@ -24,5 +24,5 @@
   <node name="diver_net_transform_and_joint_publisher" pkg="diver_net" type="diver_net_transform_and_joint_publisher_node" >
     <param name="joint_constraints_file" value="$(arg joint_constraints_file)" />
   </node>
-  <node name="rviz" pkg="rviz" type="rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />
+  <node name="rqt_rviz" pkg="rqt_rviz" type="rqt_rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />
 </launch>
