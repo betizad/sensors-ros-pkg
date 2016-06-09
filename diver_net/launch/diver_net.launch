@@ -1,28 +1,38 @@
 <launch>
+  <arg name="calibration_gui" default="false" />
   <arg name="offline" default="false" />
   <arg name="magnetometer_calibration_file" default="" />
   <arg name="gyro_bias_file" default="" />
-	<arg name="model_axes_permutation_file" default="$(find diver_net)/data/calibration/model_axes_permutation.txt" />
-	<arg name="joint_constraints_file" default="$(find diver_net)/data/calibration/joint_constraints_zyx.txt" />
-  <arg name="model" />
-	<arg name="gui" default="True" />
+  <arg name="model_axes_permutation_file" default="$(find diver_net)/data/calibration/model_axes_permutation.txt" />
+  
   <param name="robot_description" command="$(find xacro)/xacro.py '$(find diver_net)/data/models/xacro/diver_model.xacro'" />
+  
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
-	<param name="use_gui" value="$(arg gui)"/>
-  <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node> -->
+  
   <group unless="$(arg offline)">
   <node name="diver_net_read" pkg="diver_net" type="diver_net_read_node">
     <param name="PortName" value="/dev/ttyUSB0" />
     <param name="Baud" value="230400" />
   </node>
   </group>
+  
   <node name="diver_net_filter" pkg="diver_net" type="diver_net_filter_node" output="screen">
     <param name="gyro_mean_file" value="$(arg gyro_bias_file)" />
     <param name="magnetometer_calibration_file" value="$(arg magnetometer_calibration_file)"/>
     <param name="model_axes_permutation_file" value="$(arg model_axes_permutation_file)"/>
   </node>
   <node name="diver_net_transform_and_joint_publisher" pkg="diver_net" type="diver_net_transform_and_joint_publisher_node" >
-    <param name="joint_constraints_file" value="$(arg joint_constraints_file)" />
   </node>
-  <node name="rqt_rviz" pkg="rqt_rviz" type="rqt_rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />
+  <node name="rqt" pkg="rqt_gui" type="rqt_gui" args="--perspective-file '$(find diver_net)/src/diver_net_gui/DiverNet.perspective'" />
+  
+  <group ns="pose_calibration" if="$(arg calibration_gui)" >
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find diver_net)/data/models/xacro/diver_model_pose_calibration.xacro'" />
+  <node name="robot_state_publisher_pose_calibration" pkg="robot_state_publisher" type="state_publisher" >
+  </node>
+  <node name="joint_state_publisher_pose_calibration" pkg="joint_state_publisher" type="joint_state_publisher" >
+    <param name="use_gui" value="true"/>
+  </node>
+  <node name="pose_calibration_rviz" pkg="rviz" type="rviz" args="-d '$(find diver_net)/data/models/model_view_pose_calibration.rviz'" />
+  </group>
 </launch>
