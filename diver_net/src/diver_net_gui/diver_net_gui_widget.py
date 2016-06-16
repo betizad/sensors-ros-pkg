@@ -5,8 +5,10 @@ import rospkg
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
 from python_qt_binding.QtGui import QWidget
+from python_qt_binding.QtCore import *
 
 from std_msgs.msg import Bool
+from std_msgs.msg import Int16
 
 class DiverNetGUI(Plugin):
 
@@ -45,22 +47,46 @@ class DiverNetGUI(Plugin):
         # Add widget to the user interface
         context.add_widget(self._widget)
 
-        self.pubGyroMean = rospy.Publisher('calculate_gyro_mean', Bool, queue_size=1)
-        self.pubPoseCal = rospy.Publisher('calibrate_pose', Bool, queue_size=1)
-        self.pubMagCal = rospy.Publisher('calibrate_magnetometer', Bool, queue_size=1)
+        self.pubGyroMean = rospy.Publisher('calculate_gyro_mean', Int16, queue_size=1)
+        self.pubPoseCal = rospy.Publisher('calibrate_pose', Int16, queue_size=1)
+        self.pubMagCal = rospy.Publisher('calibrate_magnetometer', Int16, queue_size=1)
 
         self._widget.gyroMeanButton.clicked.connect(self.on_gyro_mean)
         self._widget.poseCalButton.clicked.connect(self.on_pose_cal)
         self._widget.magCalButton.clicked.connect(self.on_mag_cal)
+        self._widget.enableGyroMean.clicked.connect(self.on_enable_gyro_mean)
+        self._widget.enablePoseCal.clicked.connect(self.on_enable_pose_cal)
+        self._widget.enableMagCal.clicked.connect(self.on_enable_mag_cal)
 
     def on_gyro_mean(self):
-        self.pubGyroMean.publish(True)
+        self.pubGyroMean.publish(1)
+        self._widget.enableGyroMean.setCheckState(Qt.Checked)
+
+    def on_enable_gyro_mean(self):
+        if self._widget.enableGyroMean.isChecked():
+          self.pubGyroMean.publish(2)
+        else:
+          self.pubGyroMean.publish(0)
 
     def on_pose_cal(self):
-        self.pubPoseCal.publish(True)
+        self.pubPoseCal.publish(1)
+        self._widget.enablePoseCal.setCheckState(Qt.Checked)
+
+    def on_enable_pose_cal(self):
+        if self._widget.enablePoseCal.isChecked():
+          self.pubPoseCal.publish(2)
+        else:
+          self.pubPoseCal.publish(0)
 
     def on_mag_cal(self):
-        self.pubMagCal.publish(True)
+        self.pubMagCal.publish(1)
+        self._widget.enableMagCal.setCheckState(Qt.Checked)
+
+    def on_enable_mag_cal(self):
+        if self._widget.enableMagCal.isChecked():
+          self.pubMagCal.publish(2)
+        else:
+          self.pubMagCal.publish(0)
 
     def shutdown_plugin(self):
         # TODO unregister all publishers here

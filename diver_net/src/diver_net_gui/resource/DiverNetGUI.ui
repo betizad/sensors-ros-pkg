@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
+ <class>DiverNet Control GUI</class>
  <widget class="QWidget" name="DiverNet Control GUI">
   <property name="geometry">
    <rect>
@@ -50,6 +50,45 @@
    </property>
    <property name="text">
     <string>Calibrate Magnetometer</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="enableMagCal">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>100</y>
+     <width>97</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="enablePoseCal">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>60</y>
+     <width>97</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="enableGyroMean">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>20</y>
+     <width>97</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable</string>
    </property>
   </widget>
  </widget>

@@ -4,6 +4,7 @@
 #include <labust/sensors/ImuFilter.h>
 #include <labust/sensors/MagnetometerCalibration.hpp>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Int16.h>
 #include <std_msgs/Int16MultiArray.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <boost/circular_buffer.hpp>
@@ -32,6 +33,9 @@ namespace labust
         ~DiverNetFilterNode();
 
       private:
+        enum CalibrationStatus {
+          None, Off, Pending, On
+        };
         /**
          * Called from constructor. Sets variables, subscribers and publishers,
          * initial axes permutation.
@@ -56,15 +60,15 @@ namespace labust
         /**
          * Sets request for pose calibration. Callback from calibrate topic.
          */
-        void setPoseCalibrationRequest(const std_msgs::Bool::ConstPtr& pose_cal);
+        void setPoseCalibrationRequest(const std_msgs::Int16::ConstPtr& pose_cal);
         /**
          * Initializes gyro mean calculation. Next N frames (default N=150)
          * the gyro data will be summmed and the gyro_bias matrix will be 
          * populated with mean values of the gyro. Callback from
          * calculate_gyro_mean topic.
          */
-        void calculateGyroMean(const std_msgs::Bool::ConstPtr& gyro_mean);
-        void setMagnetometerCalibrationRequest(const std_msgs::Bool::ConstPtr& mag_cal);
+        void calculateGyroMean(const std_msgs::Int16::ConstPtr& gyro_mean);
+        void setMagnetometerCalibrationRequest(const std_msgs::Int16::ConstPtr& mag_cal);
         /**
          * Calculates angles just from the accelerometer data. This is the 
          * initial step for the filtering process.
@@ -88,7 +92,7 @@ namespace labust
         // Arrays holding raw and filtered rpy angles.
         std_msgs::Float64MultiArrayPtr rpy_raw_, rpy_filtered_, quaternion_filtered_;
         // Vector with axes permutation of the DiverNet.
-        std::vector<Eigen::Matrix3d> axes_permutation_;
+        std::vector<Eigen::Matrix3d> axes_permutation_, pose_cal_permutation_;
         // Holds mean gyro values.
         Eigen::MatrixXd gyro_bias_;
         std::vector<ImuFilter> filters_;
@@ -113,7 +117,8 @@ namespace labust
         std::vector<Eigen::MatrixXd> magnetometer_buffer_;
         std::vector<MagnetometerCalibrationData> magnetometer_calibration_data_;
         int magnetometer_buffer_points_;
-        bool should_calibrate_magnetometer_;
+        bool enable_mag_cal_;
+        CalibrationStatus mag_cal_status_, pose_cal_status_, gyro_mean_status_;
     };
   }
 }

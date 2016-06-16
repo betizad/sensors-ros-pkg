@@ -21,15 +21,13 @@
     <param name="magnetometer_calibration_file" value="$(arg magnetometer_calibration_file)"/>
     <param name="model_axes_permutation_file" value="$(arg model_axes_permutation_file)"/>
   </node>
-  <node name="diver_net_transform_and_joint_publisher" pkg="diver_net" type="diver_net_transform_and_joint_publisher_node" >
-  </node>
+  <node name="diver_net_transform_and_joint_publisher" pkg="diver_net" type="diver_net_transform_and_joint_publisher_node" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d '$(find diver_net)/data/models/model_view.rviz'" />
   <node name="rqt" pkg="rqt_gui" type="rqt_gui" args="--perspective-file '$(find diver_net)/src/diver_net_gui/DiverNet.perspective'" />
   
   <group ns="pose_calibration" if="$(arg calibration_gui)" >
   <param name="robot_description" command="$(find xacro)/xacro.py '$(find diver_net)/data/models/xacro/diver_model_pose_calibration.xacro'" />
-  <node name="robot_state_publisher_pose_calibration" pkg="robot_state_publisher" type="state_publisher" >
-  </node>
+  <node name="robot_state_publisher_pose_calibration" pkg="robot_state_publisher" type="state_publisher" />
   <node name="joint_state_publisher_pose_calibration" pkg="joint_state_publisher" type="joint_state_publisher" >
     <param name="use_gui" value="true"/>
   </node>
