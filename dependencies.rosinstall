@@ -8,5 +8,5 @@
     version: develop
 - git: 
     local-name: labust-ros-pkg
-    uri: 'https://github.com/labust/labust-common-msgs'
+    uri: 'https://github.com/labust/labust-ros-pkg'
     version: develop
