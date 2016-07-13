@@ -73,7 +73,6 @@ namespace labust {
         image_transport::Subscriber image_sub;
         ArisSonar aris;
         SonarDetector sonar_detector;
-        int target_size;
       };
 
     }
