@@ -234,6 +234,7 @@ void AcMediumSim::transportMessage(int node_id,
 		//{
 			ROS_WARN("Conflict in communication on acoustic node %d.", node_id);
 			it->second.stop();
+			delivery_timers.clear();
 			return;
 		//}
 	}
@@ -259,10 +260,12 @@ void AcMediumSim::receiveMessage(int node_id,
 	underwater_msgs::MediumTransmission::Ptr msgout(new underwater_msgs::MediumTransmission(*msg));
 	msgout->listener_id = node_id;
 	///TODO Check mutexing here
-	boost::mutex::scoped_lock ls(state_mux);
-	NavStsMap::const_iterator it(nodes.find(msg->sender));
-	msgout->position = it->second;
-	ls.unlock();
+	/// To myself: The position should not be given here as it is the newest avaialable
+	/// the position should be set by the remote node on time of sending and transmitted down the line
+	//boost::mutex::scoped_lock ls(state_mux);
+	//NavStsMap::const_iterator it(nodes.find(msg->sender));
+	//msgout->position = it->second;
+	//ls.unlock();
 	boost::mutex::scoped_lock l(medium_mux);
 	medium_out.publish(msgout);
 }

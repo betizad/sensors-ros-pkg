@@ -50,7 +50,7 @@ NavListener::NavListener():
 	listener(buffer),
 	use_ahrs(false),
 	inverted_cfg(true),
-	ahrs_delay(0),
+	ahrs_delay(0.5),
 	vos(0.0)
 {
     registrations[PingReq::CID].push_back(Mediator<PingReq>::makeCallback(
@@ -66,8 +66,9 @@ NavListener::NavListener():
 bool NavListener::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
 	//Configure transponder information
+    delay.configure(ph);
 	ph.param("use_ahrs", use_ahrs, use_ahrs);
-	ph.param("ahrs_delay", ahrs_delay, ahrs_delay);
+	ph.param("ahrs_delay", delay.usbl_processing_duration, delay.usbl_processing_duration);
 	ph.param("inverted_cfg", inverted_cfg, inverted_cfg);
 
 	std::vector<int> tx;
@@ -117,7 +118,7 @@ void NavListener::processAcoFix(const AcoFix& fix)
 		return;
 	}
 
-	ros::Time fix_time(ros::Time::now() - ros::Duration(ahrs_delay));
+	ros::Time fix_time(ros::Time::now() - ros::Duration(delay.usbl_processing_duration));
 	if (fix.flags.POSITION_ENHANCED) ROS_DEBUG("\t Enhanced position for "
 					"transponder: %d", fix.src);
 

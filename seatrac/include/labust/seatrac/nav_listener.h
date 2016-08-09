@@ -109,6 +109,9 @@ namespace labust
 			std::map<int, std::string> ids;
 			///The projection to ENU
 			GeographicLib::LocalCartesian proj;
+
+			/// The delay specification
+			DelaySpecification delay;
 		};
 	}
 }
