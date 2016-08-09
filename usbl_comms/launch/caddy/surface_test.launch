@@ -1,12 +1,12 @@
 <launch>
 	<arg name="is_sim" default="true"/>
 	
-	<remap from="medium_out" to="/medium_out" />
-    <remap from="medium_in" to="/medium_in" />
-    <remap from="unregister_modems" to="/unregister_modems" />
-    <remap from="register_modem" to="/register_modem" />
-    <remap from="unregister_modem" to="/unregister_modem" />
-    <remap from="registered_nodes" to="/registered_nodes" />
+	<remap from="medium_out" to="/caddy/medium_out" />
+    <remap from="medium_in" to="/caddy/medium_in" />
+    <remap from="unregister_modems" to="/caddy/unregister_modems" />
+    <remap from="register_modem" to="/caddy/register_modem" />
+    <remap from="unregister_modem" to="/caddy/unregister_modem" />
+    <remap from="registered_nodes" to="/caddy/registered_nodes" />
     	
     <!-- The surface USBL -->   
     <group ns="surface">

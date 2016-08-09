@@ -51,7 +51,8 @@
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-DiverModem::DiverModem()
+DiverModem::DiverModem():
+        surface_master(false)
 {
   registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
       boost::bind(&DiverModem::onData,this,_1)));
@@ -64,6 +65,7 @@ bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
   // Agent handler functions
   handlers[BUDDY_ID] = boost::bind(&DiverModem::onBuddyData, this, _1);
   handlers[SURFACE_ID] = boost::bind(&DiverModem::onSurfaceData, this, _1);
+  delay.configure(ph);
 
   // Incoming ROS message handlers
   init.configure(nh, ph);
@@ -104,7 +106,20 @@ void DiverModem::onBuddyData(const std::vector<uint8_t>& data)
   }
 
   init.updateInit(message);
-  buddyhandler(message, init.offset());
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if (!surface_master)
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+  buddyhandler(message, init.offset(), dt);
 
   //Confirmation for commands
   command.currentStatus(message.command);
@@ -120,7 +135,21 @@ void DiverModem::onSurfaceData(const std::vector<uint8_t>& data)
   }
 
   if (message.is_master) init.updateInit(message);
-  surfacehandler(message, init.offset());
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if ((surface_master = message.is_master))
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+
+  surfacehandler(message, init.offset(), dt);
 }
 
 

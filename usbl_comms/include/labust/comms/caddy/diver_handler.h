@@ -61,13 +61,13 @@ namespace labust
 
         bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-        void operator()(const DiverReport& message, const Eigen::Vector3d& offset);
+        void operator()(const DiverReport& message, const Eigen::Vector3d& offset, double delay);
 
       protected:
         // Method for handling the navigation part.
-        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset);
+        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset, double delay);
         // Method for handling the navigation part.
-        void payloadHandler(const DiverReport& message);
+        void payloadHandler(const DiverReport& message, double delay);
 
         //Diver navigation data publisher
         ros::Publisher nav_pub;

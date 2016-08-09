@@ -56,6 +56,7 @@ using labust::comms::Ascii6Bit;
 SurfaceUSBL::SurfaceUSBL():
     pinger(sender, registrations),
     ping_rate(0),
+    buddy_status(0),
     is_master(false),
     run_flag(false)
 {
@@ -72,6 +73,7 @@ bool SurfaceUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
   ph.param("ping_rate", ping_rate, ping_rate);
   ph.param("is_master", is_master, is_master);
+  delay.configure(ph);
 
   // Agent handler functions
   handlers[BUDDY_ID] = boost::bind(&SurfaceUSBL::onBuddyData, this, _1);
@@ -150,7 +152,7 @@ void SurfaceUSBL::run()
     //Create the report
     DatSendCmd::Ptr data(new DatSendCmd());
     data->msg_type = AMsgType::MSG_REQU;
-    data->dest = DIVER_ID;
+    data->dest = ping_diver?DIVER_ID:BUDDY_ID;
 
     boost::mutex::scoped_lock l(message_assembly);
     // Assemble the report
@@ -171,6 +173,16 @@ void SurfaceUSBL::run()
       nav.updateReport(report, init.offset());
       chat.updateReport(report);
       command.updateReport(report, init.offset());
+      // Check if Buddy went into guide_me
+      if ((idx == BUDDY) &&
+          (buddy_status == CommandModule::GUIDE_ME))
+      {
+        report.command = CommandModule::HANDOFF_PING;
+      }
+    }
+    else
+    {
+      ROS_INFO("Not inited: %d", data->dest);
     }
     // Pack the report for sending
     SeatracMessage::DataBuffer buf;
@@ -185,6 +197,12 @@ void SurfaceUSBL::run()
       if (inited[idx])
       {
         chat.setConfirmation(true);
+        if ((idx == BUDDY) &&
+            (report.command == CommandModule::HANDOFF_PING))
+        {
+          ROS_INFO("Pinging handoff successful. Stopping pinging.");
+          is_master = false;
+        }
       }
       else
       {
@@ -225,10 +243,32 @@ void SurfaceUSBL::onBuddyData(const std::vector<uint8_t>& data)
   }
 
   init.updateInit(message);
-  buddyhandler(message, init.offset());
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if (!is_master)
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+
+  buddyhandler(message, init.offset(), dt);
 
   //Confirmation for commands
   command.currentStatus(message.command);
+  buddy_status = message.command;
+
+  if (buddy_status == CommandModule::GET_TOOL)
+  {
+    ROS_INFO("Starting pinging.");
+    is_master = true;
+    this->startPinging();
+  }
 }
 
 void SurfaceUSBL::onDiverData(const std::vector<uint8_t>& data)
@@ -240,7 +280,10 @@ void SurfaceUSBL::onDiverData(const std::vector<uint8_t>& data)
     return;
   }
 
-  diverhandler(message, init.offset());
+  double dt(data.size()*delay.per_byte +
+         delay.ping_reply_duration +
+         delay.usbl_processing_duration);
+  diverhandler(message, init.offset(), dt);
 }
 
 void SurfaceUSBL::assembleMessage()

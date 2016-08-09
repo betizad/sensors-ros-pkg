@@ -132,12 +132,17 @@ namespace labust
             bool run_flag;
             ///The ping rate
             double ping_rate;
+            /// The buddy status flag
+            int buddy_status;
 
 			/// Master operation flag.
 			bool is_master;
 
             /// The initialization flags
             bool inited[AGENT_CNT];
+
+            /// The delay specification for the devices.
+            labust::seatrac::DelaySpecification delay;
 		};
 	}
 }

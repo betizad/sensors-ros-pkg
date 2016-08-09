@@ -87,7 +87,7 @@
    <var type="double" name="east" bits="10" min="-51.2" max="51.1" />
   </group>
 
-  <!-- Master operation (without Buddy) -->
+  <!-- Master operation -->
   <group if="(is_master == 1) &amp;&amp; (inited == 1)">
    <!-- Diver position - only when master -->
    <var type="uint8_t" name="has_diver" bits="1" min="0" max="1" />
@@ -97,14 +97,16 @@
     if="has_diver == 1" />
   </group>
 
-  <!-- Slave operation (with Buddy master) -->
+  <var type="uint8_t" name="command" bits="3" min="0" max="7" 
+    if="(is_master == 0) || ((is_master == 1) &amp;&amp; (inited == 1))" />
+
+  <!-- Slave operation -->
   <group if="is_master == 0">
    <!-- Position data - required -->
    <var type="double" name="course" bits="9" min="-180" max="179.296875" />
    <var type="double" name="speed" bits="4" min="0" max="1.0" />
 
    <!-- Mission command -->
-   <var type="uint8_t" name="command" bits="3" min="0" max="7" />
    <!-- Mission payloads: 
     Lawn-mower (ID=1): 
       north_origin -> north_origin 

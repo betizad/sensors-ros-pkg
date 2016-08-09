@@ -161,6 +161,11 @@ namespace labust
       int unconfirmed_cmd[AGENT_CNT];
       /// The timing flags
       ros::Time buddy_pos_update[AGENT_CNT];
+      /// The number of bytes sent with the last ping.
+      int bytes_sent;
+
+      /// The delay specification for the devices.
+      labust::seatrac::DelaySpecification delay;
     };
   }
 }

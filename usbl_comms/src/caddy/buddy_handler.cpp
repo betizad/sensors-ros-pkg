@@ -66,9 +66,9 @@ bool BuddyHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
   return true;
 }
 
-void BuddyHandler::operator()(const BuddyReport& message, const Eigen::Vector3d& offset)
+void BuddyHandler::operator()(const BuddyReport& message, const Eigen::Vector3d& offset, double delay)
 {
-  navHandler(message, offset);
+  navHandler(message, offset, delay);
   if (message.inited)
   {
     payloadHandler(message);
@@ -76,14 +76,15 @@ void BuddyHandler::operator()(const BuddyReport& message, const Eigen::Vector3d&
   }
 }
 
-void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d& offset)
+void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d& offset, double delay)
 {
+  ros::Time msg_time = ros::Time::now() - ros::Duration(delay);
   if (message.inited)
   {
     ROS_INFO("Message flags: %d %d", message.has_position, message.has_diver);
     ROS_INFO("Message info: %f %f", message.north, message.east);
     auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
-    nav->header.stamp = ros::Time::now();
+    nav->header.stamp = msg_time;
     nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
     nav->gbody_velocity.x = message.speed;
 
@@ -95,6 +96,7 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
       nav->altitude = message.altitude - offset(d);
 
       nav_pub.publish(nav);
+      partialnav_pub.publish(nav);
     }
     else
     {
@@ -107,14 +109,14 @@ void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d&
       auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
       divernav->position.north = message.diver_north;
       divernav->position.east = message.diver_east;
-      divernav->header.stamp = nav->header.stamp;
+      divernav->header.stamp = msg_time;
       divernav_pub.publish(divernav);
     }
   }
   else
   {
     geometry_msgs::PointStamped::Ptr point(new geometry_msgs::PointStamped());
-    point->header.stamp = ros::Time::now();
+    point->header.stamp = msg_time;
     point->point.x = message.origin_lat;
     point->point.y = message.origin_lon;
     point->point.z = 0;

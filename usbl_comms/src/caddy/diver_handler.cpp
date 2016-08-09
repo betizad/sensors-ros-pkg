@@ -63,37 +63,40 @@ bool DiverHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	return true;
 }
 
-void DiverHandler::operator()(const DiverReport& message, const Eigen::Vector3d& offset)
+void DiverHandler::operator()(const DiverReport& message, const Eigen::Vector3d& offset, double delay)
 {
-  navHandler(message, offset);
-  payloadHandler(message);
+  navHandler(message, offset, delay);
+  payloadHandler(message, delay);
   command(message, offset);
   chat(message);
 }
 
 // Method for handling the navigation part.
-void DiverHandler::navHandler(const DiverReport& message, const Eigen::Vector3d& offset)
+void DiverHandler::navHandler(const DiverReport& message, const Eigen::Vector3d& offset, double delay)
 {
   auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
   divernav->orientation.yaw = labust::math::wrapRad(M_PI*message.heading/180);
   divernav->position.depth = message.depth;
-  divernav->header.stamp = ros::Time::now();
+  divernav->header.stamp = ros::Time::now() - ros::Duration(delay);
   nav_pub.publish(divernav);
 }
 
-void DiverHandler::payloadHandler(const DiverReport& message)
+void DiverHandler::payloadHandler(const DiverReport& message, double delay)
 {
   caddy_msgs::DiverPayload payload;
+  payload.motion_rate = 5.0;
 
   payload.alarm = message.alarms;
   payload.average_flipper_rate = message.avg_flipper_rate;
   payload.hearth_rate = message.hearth_rate;
   if (message.optional_data == 1)
   {
+    payload.valid_optional = 1;
     payload.breathing_rate = message.breathing_rate;
     payload.motion_rate = message.motion_rate;
     payload.pad_space = message.pad_space;
   }
+  payload.header.stamp = ros::Time::now() - ros::Duration(delay);;
 
   payload_pub.publish(payload);
 }

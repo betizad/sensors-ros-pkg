@@ -63,9 +63,9 @@ bool SurfaceHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 	return true;
 }
 
-void SurfaceHandler::operator()(const SurfaceReport& message, const Eigen::Vector3d& offset)
+void SurfaceHandler::operator()(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay)
 {
-  navHandler(message, offset);
+  navHandler(message, offset, delay);
   if (!message.is_master || message.inited)
   {
     chat(message);
@@ -73,12 +73,13 @@ void SurfaceHandler::operator()(const SurfaceReport& message, const Eigen::Vecto
   }
 }
 
-void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset)
+void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay)
 {
+  ros::Time msg_time = ros::Time::now() - ros::Duration(delay);
   if (message.is_master && !message.inited)
   {
     geometry_msgs::PointStamped::Ptr point(new geometry_msgs::PointStamped());
-    point->header.stamp = ros::Time::now();
+    point->header.stamp = msg_time;
     point->point.x = message.origin_lat;
     point->point.y = message.origin_lon;
     point->point.z = 0;
@@ -93,7 +94,7 @@ void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vecto
     nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
     nav->gbody_velocity.x = message.speed;
 
-    nav->header.stamp = ros::Time::now();
+    nav->header.stamp = msg_time;
     nav_pub.publish(nav);
 
     if (message.is_master && message.has_diver)
@@ -101,7 +102,7 @@ void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vecto
       auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
       divernav->position.north = message.diver_north;
       divernav->position.east = message.diver_east;
-      divernav->header.stamp = nav->header.stamp;
+      divernav->header.stamp = msg_time;
       diverpos_pub.publish(divernav);
     }
   }

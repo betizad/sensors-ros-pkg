@@ -110,7 +110,7 @@ namespace labust
 			  double u = navdata.gbody_velocity.x;
 			  double v = navdata.gbody_velocity.y;
 			  double heading = labust::math::wrapRad(navdata.orientation.yaw)*180/M_PI;
-			  double course = atan2(u,v)*180/M_PI;
+			  double course = atan2(v,u)*180/M_PI;
 			  double U = sqrt(u*u+v*v);
 			  //For overactuated
 			  const double min_speed(0.1);

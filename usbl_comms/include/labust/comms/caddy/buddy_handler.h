@@ -62,11 +62,11 @@ namespace labust
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-				void operator()(const BuddyReport& message, const Eigen::Vector3d& offset);
+				void operator()(const BuddyReport& message, const Eigen::Vector3d& offset, double delay);
 
 			protected:
 				// Method for handling the navigation part.
-				void navHandler(const BuddyReport& message, const Eigen::Vector3d& offset);
+				void navHandler(const BuddyReport& message, const Eigen::Vector3d& offset, double delay);
                 // Method for handling the payload part.
                 void payloadHandler(const BuddyReport& message);
                 // Method for handling the payload part.

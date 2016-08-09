@@ -45,9 +45,9 @@ public:
   uint8_t has_diver;
   double diver_north;
   double diver_east;
+  uint8_t command;
   double course;
   double speed;
-  uint8_t command;
   double north_origin;
   double east_origin;
   double lawn_width;

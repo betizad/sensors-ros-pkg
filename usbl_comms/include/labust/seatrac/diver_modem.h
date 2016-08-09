@@ -102,6 +102,11 @@ namespace labust
             BuddyHandler buddyhandler;
             /// The surface data handler.
             SurfaceHandler surfacehandler;
+            /// The surface master flag
+            bool surface_master;
+
+            /// The delay specification for the devices.
+            labust::seatrac::DelaySpecification delay;
 		};
 	}
 }

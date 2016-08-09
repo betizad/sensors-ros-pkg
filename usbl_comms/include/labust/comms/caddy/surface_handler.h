@@ -62,11 +62,11 @@ namespace labust
 
 				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-				void operator()(const SurfaceReport& message, const Eigen::Vector3d& offset);
+				void operator()(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay);
 
 			protected:
                 // Method for handling the navigation part.
-                void navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset);
+                void navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay);
 
 				// Surface navigation data publisher
 				ros::Publisher nav_pub;
