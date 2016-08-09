@@ -65,7 +65,7 @@ namespace labust {
         void setHeading(const auv_msgs::NavSts& position_estimate);
         void setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg);
         void setSonarImage(const sensor_msgs::ImageConstPtr &img);
-        void processFrame();
+        void processFrame(const std::string& frame_id);
         ros::NodeHandle nh;
         ros::Subscriber sonar_info_sub, usbl_fix_sub, nav_filter_estimate_sub, position_sub;
         ros::Publisher sonar_fix_pub;

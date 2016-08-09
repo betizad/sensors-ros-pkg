@@ -62,10 +62,10 @@ void ObjectTrackerNode::onInit() {
   ros::NodeHandle ph("~");
 
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
-  nav_filter_estimate_sub = nh.subscribe("/buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
-  position_sub = nh.subscribe("/buddy/position", 1, &ObjectTrackerNode::setHeading, this);
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  nav_filter_estimate_sub = nh.subscribe("buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
+  position_sub = nh.subscribe("buddy/position", 1, &ObjectTrackerNode::setHeading, this);
+  sonar_info_sub = nh.subscribe("soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
+  image_sub = it.subscribe("soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
   sonar_fix_pub = nh.advertise<navcon_msgs::RelativePosition>("sonar_fix", 1);
   
   int target_size, max_connected_distance, min_contour_size;
@@ -93,7 +93,7 @@ void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr 
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
   if (frame->header.stamp == msg->header.stamp) {
-    processFrame();
+    processFrame(msg->header.frame_id);
   }
 }
 
@@ -101,7 +101,7 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
   underwater_msgs::SonarInfo si = aris.getSonarInfo();
   if (img->header.stamp == si.header.stamp) {
-    processFrame();
+    processFrame(si.header.frame_id);
   }
 }
 
@@ -117,7 +117,7 @@ void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl
   aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.5 * usbl_fix.range);
 }
 
-void ObjectTrackerNode::processFrame() {
+void ObjectTrackerNode::processFrame(const std::string& frame_id) {
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   cv::Point2f center;
   double area;
@@ -127,6 +127,8 @@ void ObjectTrackerNode::processFrame() {
   double range, bearing;
   sonar_detector.getMeasuredRangeAndBearing(&range, &bearing);
   navcon_msgs::RelativePosition sonar_fix;
+  sonar_fix.header.stamp = ros::Time::now();
+  sonar_fix.header.frame_id = frame_id;
   sonar_fix.range = range;
   sonar_fix.bearing = bearing;
   sonar_fix.header = aris.getSonarInfo().header;
