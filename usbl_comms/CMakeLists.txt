@@ -4,11 +4,11 @@ project(usbl_comms)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS 
-    roscpp 
-    nodelet 
-    auv_msgs 
-    snippets 
+find_package(catkin REQUIRED COMPONENTS
+    roscpp
+    nodelet
+    auv_msgs
+    snippets
     seatrac
     misc_msgs
     message_filters)
@@ -76,12 +76,12 @@ include_directories(include
 ## Declare a cpp library
 add_library(usbl_comms src/USBLManager.cpp src/DiverMsg.cpp)
 
-add_library(uros_comms src/uros/uros_messages.cpp 
+add_library(uros_comms src/uros/uros_messages.cpp
     src/uros/uros_modem_controller.cpp
     src/uros/uros_usbl_controller.cpp)
 
 add_library(caddy_comms src/caddy/caddy_messages.cpp
-  src/caddy/buddy_usbl.cpp 
+  src/caddy/buddy_usbl.cpp
   src/caddy/surface_usbl.cpp
   src/caddy/diver_modem.cpp
   src/caddy/nav_module.cpp
@@ -133,13 +133,13 @@ target_link_libraries(uros_modem
 )
 
 target_link_libraries(packer_test
-   ${catkin_LIBRARIES} 
+   ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARIES}
 )
 
 target_link_libraries(encoding_v3_test
    caddy_comms
-   ${catkin_LIBRARIES} 
+   ${catkin_LIBRARIES}
    ${Boost_SERIALIZATION_LIBRARIES}
 )
 
@@ -184,10 +184,13 @@ target_link_libraries(encoding_v3_test
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_usbl_comms.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+catkin_add_gtest(${PROJECT_NAME}-structures-test
+  src/caddy/caddy_messages.cpp
+  test/test_caddy_comms_structures.cpp
+  test/test_comms_structures.cpp)
+if(TARGET ${PROJECT_NAME}-structures-test)
+   target_link_libraries(${PROJECT_NAME}-structures-test ${Boost_SERIALIZATION_LIBRARIES})
+endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
