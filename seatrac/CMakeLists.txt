@@ -73,7 +73,7 @@ find_package(Boost REQUIRED COMPONENTS system thread serialization)
 # )
 
 ## Generate dynamic reconfigurations in the 'cfg' folder
-generate_dynamic_reconfigure_options( 
+generate_dynamic_reconfigure_options(
   cfg/USBLControllerCfg.cfg
 )
 
@@ -134,7 +134,7 @@ add_executable(seatrac_factory_tester src/test/factory_tester.cpp)
 add_executable(bitfield_encoding_test src/test/bitfield_encodings.cpp)
 add_executable(ac_medium_sim src/ac_medium/ac_medium_sim.cpp)
 add_executable(seatrac_core src/seatrac_node/seatrac_core.cpp)
-    
+
 add_executable(static_beacon src/static_beacon/static_beacon.cpp)
 
 if (DEFINED catkin_EXPORTED_TARGETS)
