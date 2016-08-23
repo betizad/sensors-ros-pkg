@@ -38,18 +38,18 @@
    <var type="uint8_t" name="battery_status" bits="3" min="0" max="100" />
    <var type="uint8_t" name="leak_info" bits="1" min="0" max="1" />
    <var type="uint8_t" name="command" bits="3" min="0" max="7" />
-   <!-- Mission payloads: 
-    Lawn-mower (ID=1): 
-      north_origin -> north_origin 
-      east_origin -> east_origin 
-      lawn_width -> lawn_width 
-      lawn_height -> lawn_height 
-    Guide-to-point(ID=2): 
-      target_north -> north_origin 
-      target_east -> east_origin 
+   <!-- Mission payloads:
+    Lawn-mower (ID=1):
+      north_origin -> north_origin
+      east_origin -> east_origin
+      lawn_width -> lawn_width
+      lawn_height -> lawn_height
+    Guide-to-point(ID=2):
+      target_north -> north_origin
+      target_east -> east_origin
     Get-Tool (ID=3): no payload
     Take-Photo (ID=4):
-      target_north -> north_origin 
+      target_north -> north_origin
       target_east -> east_origin
     Failed-Cmd (ID=6): no payload
     Stopped (ID=7): no payload
@@ -82,7 +82,7 @@
 
   <!-- Position data - required (sent only when inited) -->
   <group
-   if="(is_master == 0) || ((is_master == 1) &amp;&amp; (inited == 1))">
+   if="(is_master == 0) || (inited == 1)">
    <var type="double" name="north" bits="10" min="-51.2" max="51.1" />
    <var type="double" name="east" bits="10" min="-51.2" max="51.1" />
   </group>
@@ -97,7 +97,7 @@
     if="has_diver == 1" />
   </group>
 
-  <var type="uint8_t" name="command" bits="3" min="0" max="7" 
+  <var type="uint8_t" name="command" bits="3" min="0" max="7"
     if="(is_master == 0) || ((is_master == 1) &amp;&amp; (inited == 1))" />
 
   <!-- Slave operation -->
@@ -107,18 +107,18 @@
    <var type="double" name="speed" bits="4" min="0" max="1.0" />
 
    <!-- Mission command -->
-   <!-- Mission payloads: 
-    Lawn-mower (ID=1): 
-      north_origin -> north_origin 
-      east_origin -> east_origin 
-      lawn_width -> lawn_width 
-      lawn_height -> lawn_height 
-    Guide-to-point(ID=2): 
-      target_north -> north_origin 
-      target_east -> east_origin 
+   <!-- Mission payloads:
+    Lawn-mower (ID=1):
+      north_origin -> north_origin
+      east_origin -> east_origin
+      lawn_width -> lawn_width
+      lawn_height -> lawn_height
+    Guide-to-point(ID=2):
+      target_north -> north_origin
+      target_east -> east_origin
     Get-Tool (ID=3): no payload
     Take-Photo (ID=4):
-      target_north -> north_origin 
+      target_north -> north_origin
       target_east -> east_origin
     Failed-Cmd (ID=6): no payload
     Stopped (ID=7): no payload
@@ -162,21 +162,21 @@
   <!-- General data : 11 bit   -->
   <var type="uint8_t" name="alarms" bits="3" min="0" max="7" />
   <var type="uint8_t" name="predefined_chat" bits="5" min="0" max="31" />
-  
+
   <!-- Mission command payload : 0 - 18 bit -->
    <var type="uint8_t" name="command" bits="3" min="0" max="7" />
-   <!-- Mission payloads: 
-    Lawn-mower (ID=1): 
-      north_origin -> north_origin 
-      east_origin -> east_origin 
-      lawn_width -> lawn_width 
-      lawn_height -> lawn_height 
-    Guide-to-point(ID=2): 
-      target_north -> north_origin 
-      target_east -> east_origin 
+   <!-- Mission payloads:
+    Lawn-mower (ID=1):
+      north_origin -> north_origin
+      east_origin -> east_origin
+      lawn_width -> lawn_width
+      lawn_height -> lawn_height
+    Guide-to-point(ID=2):
+      target_north -> north_origin
+      target_east -> east_origin
     Get-Tool (ID=3): no payload
     Take-Photo (ID=4):
-      target_north -> north_origin 
+      target_north -> north_origin
       target_east -> east_origin
     Failed-Cmd (ID=6): no payload
     Stopped (ID=7): no payload
