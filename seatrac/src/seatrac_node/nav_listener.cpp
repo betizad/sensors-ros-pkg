@@ -165,7 +165,7 @@ void NavListener::processAcoFix(const AcoFix& fix, size_t payload_bytes)
     try
     {
       geometry_msgs::TransformStamped transformDeg;
-      transformDeg = buffer.lookupTransform("local", "usbl_frame", fix_time);
+      transformDeg = buffer.lookupTransform("base_pose", "usbl_frame", fix_time);
       // Correct the relative measurement with the local AHRS if needed
       if (use_ahrs)
       {
