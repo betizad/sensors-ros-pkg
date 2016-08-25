@@ -51,56 +51,128 @@
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-DiverModem::DiverModem()
+DiverModem::DiverModem():
+        surface_master(false)
 {
-	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&DiverModem::onData,this,_1)));
+  registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
+      boost::bind(&DiverModem::onData,this,_1)));
 }
 
 DiverModem::~DiverModem(){}
 
 bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	handlers[BUDDY_ID].reset(new BuddyHandler());
-  handlers[SURFACE_ID].reset(new SurfaceHandler());
-	handlers[BUDDY_ID]->configure(nh,ph);
-	handlers[SURFACE_ID]->configure(nh,ph);
+  // Agent handler functions
+  handlers[BUDDY_ID] = boost::bind(&DiverModem::onBuddyData, this, _1);
+  handlers[SURFACE_ID] = boost::bind(&DiverModem::onSurfaceData, this, _1);
+  delay.configure(ph);
 
-	state_sub = nh.subscribe("position",	1, &DiverModem::onNavSts, this);
+  // Incoming ROS message handlers
+  init.configure(nh, ph);
+  nav.configure(nh, ph);
+  command.configure(nh, ph);
+  chat.configure(nh, ph);
 
-	return true;
-}
+  // Incoming ACOUSTIC message handlers
+  buddyhandler.configure(nh, ph);
+  surfacehandler.configure(nh, ph);
 
-void DiverModem::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
-{
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
-	DiverReport diver;
-  diver.heading = 180*msg->orientation.yaw/M_PI;;
-  diver.depth = msg->position.depth;
-	labust::tools::encodePackable(diver, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
+  // Register trigger for message assembly
+  nav.registerTrigger(boost::bind(&DiverModem::assembleMessage, this));
 
-	if (!sender.empty())
-	{
-		sender(clr);
-		sender(cmd);
-	}
+  return true;
 }
 
 void DiverModem::onData(const labust::seatrac::DatReceive& msg)
 {
-	HandlerMap::iterator it=handlers.find(msg.acofix.src);
-	if (it != handlers.end())
-	{
-		(*handlers[msg.acofix.src])(msg);
-	}
-	else
-	{
-		ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
-	}
+  HandlerMap::iterator it=handlers.find(msg.acofix.src);
+  if (it != handlers.end())
+  {
+    handlers[msg.acofix.src](msg.data);
+  }
+  else
+  {
+    ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
+  }
+}
+
+void DiverModem::onBuddyData(const std::vector<uint8_t>& data)
+{
+  BuddyReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("BuddyHandler: Wrong message received from modem.");
+    return;
+  }
+
+  init.updateInit(message);
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if (!surface_master)
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+  buddyhandler(message, init.offset(), dt);
+
+  //Confirmation for commands
+  command.currentStatus(message.command);
+}
+
+void DiverModem::onSurfaceData(const std::vector<uint8_t>& data)
+{
+  SurfaceReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("SurfaceHandler: Wrong message received from modem.");
+    return;
+  }
+
+  if (message.is_master) init.updateInit(message);
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if ((surface_master = message.is_master))
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+
+  surfacehandler(message, init.offset(), dt);
+}
+
+
+void DiverModem::assembleMessage()
+{
+  DiverReport report;
+  nav.updateReport(report, init.offset());
+  chat.updateReport(report);
+  command.updateReport(report, init.offset());
+
+  //TODO: Determine if chat will actually be sent
+  DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
+  DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
+  SeatracMessage::DataBuffer buf;
+  cmd->dest = labust::seatrac::BEACON_ALL;
+  labust::tools::encodePackable(report, &buf);
+  cmd->data.assign(buf.begin(), buf.end());
+
+  if (!sender.empty())
+  {
+    sender(clr);
+    sender(cmd);
+  }
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem, labust::seatrac::DeviceController)

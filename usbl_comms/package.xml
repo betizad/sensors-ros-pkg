@@ -19,11 +19,13 @@
 	<build_depend>misc_msgs</build_depend>
 	<build_depend>snippets</build_depend>
 	<build_depend>seatrac</build_depend>
+    <build_depend>message_filters</build_depend>
 
 	<run_depend>roscpp</run_depend>
 	<run_depend>nodelet</run_depend>
 	<run_depend>auv_msgs</run_depend>
 	<run_depend>seatrac</run_depend>
+    <run_depend>message_filters</run_depend>
 
 	<export>
 		<nodelet plugin="${prefix}/nodelet_plugins.xml" />

@@ -14,45 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system thread regex serialization) 
 
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
-
-#######################################
-## Declare ROS messages and services ##
-#######################################
-
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
-
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   auv_msgs
-# )
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES navquest_dvl
@@ -68,6 +29,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 ## Your package locations should be listed before other locations
 include_directories(
   include
+  src/test
   ${Boost_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
@@ -80,27 +42,63 @@ include_directories(
 ## Declare a cpp executable
 add_executable(spatial_node 
 	src/SpatialNode.cpp)
-	
-add_executable(spatial_test
-	src/test/message_test.cpp)
-
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(navquest_dvl_node navquest_dvl_generate_messages_cpp)
-if (DEFINED catkin_EXPORTED_TARGETS)
- add_dependencies(spatial_node ${catkin_EXPORTED_TARGETS})
-endif()
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(spatial_node
-   ${Boost_THREAD_LIBRARY}
- # ${Boost_REGEX_LIBRARY}
-   ${Boost_SERIALIZATION_LIBRARY}
-   ${catkin_LIBRARIES}
-)
-
-target_link_libraries(spatial_test ${catkin_LIBRARIES}
-)
+target_link_libraries(spatial_node ${Boost_THREAD_LIBRARY} ${Boost_SERIALIZATION_LIBRARY} ${catkin_LIBRARIES})
+#add_executable(rtcm_repacker src/test/rtcm_repacker.cpp)
+#add_executable(rtcm2.3_repacker src/test/rtcm2.3_repacker.cpp src/test/rtcm.c src/test/rtcm2.c src/test/rtcm3.c src/test/rtcm3e.c src/test/rtkcmn.c)
+#add_executable(rtcm2.3_repacker_clean src/test/rtcm2.3_repacker_clean.cpp)
+#add_executable(rtcm2.3_repacker_timed src/test/rtcm2.3_repacker_timed.cpp)
+#add_executable(rtcm2.3_repacker_unclean src/test/rtcm2.3_repacker_unclean.cpp src/test/rtcm.c src/test/rtcm2.c src/test/rtcm3.c src/test/rtcm3e.c src/test/rtkcmn.c)
+#add_executable(bitptr_tester src/test/bitptr_test.cpp src/test/rtcm.c src/test/rtcm2.c src/test/rtcm3.c src/test/rtcm3e.c src/test/rtkcmn.c)
+##add_executable(serial_sink src/test/serial_sink.cpp)
+#	
+#add_executable(spatial_test src/test/message_test.cpp)
+#
+#target_link_libraries(rtcm_repacker
+#   ${Boost_THREAD_LIBRARY}
+# # ${Boost_REGEX_LIBRARY}
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#)
+#
+#target_link_libraries(rtcm2.3_repacker
+#   ${Boost_THREAD_LIBRARY}
+# # ${Boost_REGEX_LIBRARY}
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#   rt
+#)
+#
+#target_link_libraries(rtcm2.3_repacker_clean
+#   ${Boost_THREAD_LIBRARY}
+# # ${Boost_REGEX_LIBRARY}
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#)
+#
+#target_link_libraries(rtcm2.3_repacker_timed
+#   ${Boost_THREAD_LIBRARY}
+# # ${Boost_REGEX_LIBRARY}
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#)
+#
+#target_link_libraries(rtcm2.3_repacker_unclean
+#   ${Boost_THREAD_LIBRARY}
+# # ${Boost_REGEX_LIBRARY}
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#   rt
+#)
+#
+#target_link_libraries(serial_sink
+#   ${Boost_SERIALIZATION_LIBRARY}
+#   ${catkin_LIBRARIES}
+#)
+#
+#target_link_libraries(bitptr_tester rt)
+#
+#target_link_libraries(spatial_test ${catkin_LIBRARIES}
+#)
 
 #############
 ## Install ##

@@ -52,8 +52,6 @@ using namespace labust::sensors::image;
 
 ObjectTrackerNode::ObjectTrackerNode() : 
     it(nh) {
-  ros::NodeHandle ph("~");
-  ph.getParam("target_size", target_size);
   this->onInit();
 };
 
@@ -61,17 +59,36 @@ ObjectTrackerNode::~ObjectTrackerNode() {};
 
 void ObjectTrackerNode::onInit() {
   ros::Rate rate(1);
+  ros::NodeHandle ph("~");
+
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
-  nav_filter_estimate_sub = nh.subscribe("/buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
-  position_sub = nh.subscribe("/buddy/position", 1, &ObjectTrackerNode::setHeading, this);
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
-  sonar_fix_pub = nh.advertise<underwater_msgs::SonarFix>("sonar_fix", 1);
+  nav_filter_estimate_sub = nh.subscribe("buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
+  position_sub = nh.subscribe("buddy/position", 1, &ObjectTrackerNode::setHeading, this);
+  sonar_info_sub = nh.subscribe("soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
+  image_sub = it.subscribe("soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  sonar_fix_pub = nh.advertise<navcon_msgs::RelativePosition>("sonar_fix", 1);
   
+  int target_size, max_connected_distance, min_contour_size;
+  int blur_size, threshold_size, threshold_offset;
+  bool enable_visualization, enable_debug_window;
+  ph.param("target_size", target_size, 1000000);
+  ph.param("max_connected_distance", max_connected_distance, 100);
+  ph.param("min_contour_size", min_contour_size, 100);
+  ph.param("blur_size", blur_size, 5);
+  ph.param("threshold_size", threshold_size, 75);
+  ph.param("threshold_offset", threshold_offset, 25);
+  ph.param("enable_visualization", enable_visualization, false);
   sonar_detector.setContourClusteringParams(
-      100 /* max connected_distance in mm */, 
-      100 /* min_contour_size in mm^2 */, 
-      target_size /* target_size (area) in mm^2 */);
+      max_connected_distance, min_contour_size); 
+  sonar_detector.setTargetSize(target_size);
+  sonar_detector.setBinarizationParams(
+      blur_size, threshold_size, threshold_offset);
+
+  if (enable_visualization)
+  {
+  	sonar_detector.setEnableVisualization(enable_visualization);
+  	sonar_detector.startDebugWindow();
+  }
 }
 
 void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg) {
@@ -79,7 +96,7 @@ void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr 
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
   if (frame == 0) return;
   if (frame->header.stamp == msg->header.stamp) {
-    processFrame();
+    processFrame(msg->header.frame_id);
   }
 }
 
@@ -87,7 +104,7 @@ void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
   aris.saveSonarImage(img);
   underwater_msgs::SonarInfo si = aris.getSonarInfo();
   if (img->header.stamp == si.header.stamp) {
-    processFrame();
+    processFrame(si.header.frame_id);
   }
 }
 
@@ -103,7 +120,7 @@ void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl
   aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.5 * usbl_fix.range);
 }
 
-void ObjectTrackerNode::processFrame() {
+void ObjectTrackerNode::processFrame(const std::string& frame_id) {
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   cv::Point2f center;
   double area;
@@ -112,7 +129,9 @@ void ObjectTrackerNode::processFrame() {
   sonar_detector.detect(cv_image_bgr->image.clone(), center, area);
   double range, bearing;
   sonar_detector.getMeasuredRangeAndBearing(&range, &bearing);
-  underwater_msgs::SonarFix sonar_fix;
+  navcon_msgs::RelativePosition sonar_fix;
+  sonar_fix.header.stamp = ros::Time::now();
+  sonar_fix.header.frame_id = frame_id;
   sonar_fix.range = range;
   sonar_fix.bearing = bearing;
   sonar_fix.header = aris.getSonarInfo().header;

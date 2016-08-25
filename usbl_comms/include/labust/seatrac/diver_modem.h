@@ -37,12 +37,22 @@
 #include <labust/comms/caddy/ac_handler.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/comms/caddy/caddy_messages.h>
+#include <labust/seatrac/nav_module.h>
+#include <labust/seatrac/command_module.h>
+#include <labust/seatrac/chat_module.h>
+#include <labust/seatrac/init_module.h>
+#include <labust/comms/caddy/buddy_handler.h>
+#include <labust/comms/caddy/surface_handler.h>
 
 #include <auv_msgs/NavSts.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
+
+using labust::comms::caddy::BuddyHandler;
+using labust::comms::caddy::SurfaceHandler;
 
 namespace labust
 {
@@ -53,7 +63,8 @@ namespace labust
 		 */
 		class DiverModem : virtual public DeviceController
 		{
-			typedef std::map<int, labust::comms::caddy::AcHandler::Ptr> HandlerMap;
+		    typedef boost::function<void(const std::vector<uint8_t>& msg)> Functor;
+		    typedef std::map<int, Functor > HandlerMap;
 
 			enum {TIMEOUT=4, BUDDY_ID=3, SURFACE_ID=1};
 		public:
@@ -66,19 +77,39 @@ namespace labust
 			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
 		private:
-			///Handles the diver position.
-			void onNavSts(const auv_msgs::NavSts::ConstPtr& msg);
+			///Helper method for message assembly.
+			void assembleMessage();
 			///Handles incoming acoustic data.
 			void onData(const labust::seatrac::DatReceive& data);
+            ///Handles the Buddy data
+            void onBuddyData(const std::vector<uint8_t>& data);
+            ///Handles the Surface data
+            void onSurfaceData(const std::vector<uint8_t>& data);
 
 			///Handlers for acoustic messages
 			HandlerMap handlers;
 
-			///The navigation state subscription.
-			ros::Subscriber state_sub;
+            /// The initialization module.
+            InitModule init;
+            /// The navigation data module.
+            NavModule nav;
+            /// The command handler.
+            CommandModule command;
+            /// The chat transmission module.
+            ChatModule chat;
+
+            /// The Buddy data handler.
+            BuddyHandler buddyhandler;
+            /// The surface data handler.
+            SurfaceHandler surfacehandler;
+            /// The surface master flag
+            bool surface_master;
+
+            /// The delay specification for the devices.
+            labust::seatrac::DelaySpecification delay;
 		};
 	}
 }
 
-/* USBL_COMMS_UROS_MODEM_CONTROLLER_H */
+/* USBL_COMMS_DIVER_MODEM_H */
 #endif

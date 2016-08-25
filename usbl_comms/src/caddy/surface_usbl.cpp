@@ -35,6 +35,7 @@
 #include <labust/comms/caddy/caddy_messages.h>
 #include <labust/comms/caddy/buddy_handler.h>
 #include <labust/comms/caddy/diver_handler.h>
+#include <labust/comms/ascii6bit.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/seatrac/mediator.h>
@@ -50,76 +51,290 @@
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
+using labust::comms::Ascii6Bit;
 
-SurfaceUSBL::SurfaceUSBL()
+SurfaceUSBL::SurfaceUSBL():
+    pinger(sender, registrations),
+    ping_rate(0),
+    buddy_status(0),
+    is_master(false),
+    run_flag(false)
 {
 	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
 			boost::bind(&SurfaceUSBL::onData,this,_1)));
 }
 
-SurfaceUSBL::~SurfaceUSBL(){}
+SurfaceUSBL::~SurfaceUSBL()
+{
+  this->startPinging(false);
+}
 
 bool SurfaceUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	//Configure defaults for the surface message
-	//The command 0 represents NOP
-	surf.mission_cmd = NOP;
-	//Lawn mower parameter 0,0
-	surf.lawn_length = 0;
-	surf.lawn_width = 0;
+  ph.param("ping_rate", ping_rate, ping_rate);
+  ph.param("is_master", is_master, is_master);
+  delay.configure(ph);
 
-	state_sub = nh.subscribe("position",	1, &SurfaceUSBL::onNavSts, this);
-	surfacecmd_sub = nh.subscribe("surface_cmd",	1, &SurfaceUSBL::onMissionCmd, this);
-	lawnmower_sub = nh.subscribe("lawnmower_req",	1, &SurfaceUSBL::onLawnMower, this);
+  // Agent handler functions
+  handlers[BUDDY_ID] = boost::bind(&SurfaceUSBL::onBuddyData, this, _1);
+  handlers[DIVER_ID] = boost::bind(&SurfaceUSBL::onDiverData, this, _1);
 
-	handlers[BUDDY_ID].reset(new BuddyHandler());
-	handlers[DIVER_ID].reset(new DiverHandler());
-	handlers[DIVER_ID]->configure(nh,ph);
-	handlers[BUDDY_ID]->configure(nh,ph);
+  // Incoming ROS message handlers
+  init.configure(nh, ph);
+  nav.configure(nh, ph);
+  command.configure(nh, ph);
+  chat.configure(nh, ph);
 
-	return true;
+  // Incoming ACOUSTIC message handlers
+  buddyhandler.configure(nh, ph);
+  diverhandler.configure(nh, ph);
+
+  // Local subscribers
+  mode_sub = nh.subscribe("master_mode", 1, &SurfaceUSBL::onModeChange, this);
+
+  // Register trigger for message assembly
+  nav.registerTrigger(boost::bind(&SurfaceUSBL::assembleMessage, this));
+
+  // Start pinging the diver
+  if (is_master) this->startPinging();
+
+  return true;
 }
 
-void SurfaceUSBL::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
+void SurfaceUSBL::startPinging(bool flag)
 {
-	static int cmdd = 0;
-	DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
-	DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
-	cmd->dest = labust::seatrac::BEACON_ALL;
-	std::vector<char> binary;
-
-	surf.offset_x = msg->position.north;
-	surf.offset_y = msg->position.east;
-	surf.course = msg->orientation.yaw*180/M_PI;
-	surf.speed = msg->gbody_velocity.x;
-	labust::tools::encodePackable(surf, &binary);
-	cmd->data.assign(binary.begin(),binary.end());
-
-	if (!sender.empty())
-	{
-		sender(clr);
-		sender(cmd);
-	}
+  if (flag)
+  {
+    run_flag = true;
+    worker = boost::thread(boost::bind(&SurfaceUSBL::run, this));
+  }
+  else
+  {
+    run_flag = false;
+    worker.join();
+  }
 }
 
-void SurfaceUSBL::onMissionCmd(const std_msgs::UInt8::ConstPtr& msg)
+void SurfaceUSBL::resetInit()
 {
-	surf.mission_cmd = msg->data;
+  // Reset the init
+  for (int i=0; i<AGENT_CNT; ++i) inited[i] = false;
 }
 
-void SurfaceUSBL::onLawnMower(const caddy_msgs::LawnmowerReq::ConstPtr& msg)
+void SurfaceUSBL::onModeChange(const std_msgs::Bool::ConstPtr& msg)
 {
-	surf.lawn_width = msg->width;
-	surf.lawn_length = msg->length;
-	surf.mission_cmd = LAWN_MOWER;
+  if (msg->data == is_master) return;
+
+  if (msg->data)
+  {
+    //Was slave but should become master
+    is_master = true;
+    this->startPinging();
+  }
+  else
+  {
+    //Was master but should become slave
+    is_master = false;
+    this->startPinging(false);
+  }
 }
 
+void SurfaceUSBL::run()
+{
+  ros::Rate rate((ping_rate==0)?1:ping_rate);
+
+  bool ping_diver=true;
+
+  while(ros::ok() && run_flag && is_master)
+  {
+    int idx = DIVER;
+
+    //Create the report
+    DatSendCmd::Ptr data(new DatSendCmd());
+    data->msg_type = AMsgType::MSG_REQU;
+    data->dest = ping_diver?DIVER_ID:BUDDY_ID;
+
+    boost::mutex::scoped_lock l(message_assembly);
+    // Assemble the report
+    SurfaceReport report;
+    // Inform that we are in master mode
+    report.is_master = true;
+
+    // Setup init
+    if (init.isNewInit()) this->resetInit();
+    report.origin_lat = init.llh()(0);
+    report.origin_lon = init.llh()(1);
+    // Test if init needs to be sent
+    report.inited = inited[idx];
+
+    // Setup reports
+    if (report.inited)
+    {
+      nav.updateReport(report, init.offset());
+      chat.updateReport(report);
+      command.updateReport(report, init.offset());
+      // Check if Buddy went into guide_me
+      if ((idx == BUDDY) &&
+          (buddy_status == CommandModule::GUIDE_ME))
+      {
+        report.command = CommandModule::HANDOFF_PING;
+      }
+    }
+    else
+    {
+      ROS_INFO("Not inited: %d", data->dest);
+    }
+    // Pack the report for sending
+    SeatracMessage::DataBuffer buf;
+    labust::tools::encodePackable(report,&buf);
+    data->data.assign(buf.begin(),buf.end());
+    l.unlock();
+
+    ROS_INFO("Pinging: %d", data->dest);
+    if (pinger.send(boost::dynamic_pointer_cast<SeatracMessage>(data), TIMEOUT))
+    {
+      //  If initialized allow confirmations
+      if (inited[idx])
+      {
+        chat.setConfirmation(true);
+        if ((idx == BUDDY) &&
+            (report.command == CommandModule::HANDOFF_PING))
+        {
+          ROS_INFO("Pinging handoff successful. Stopping pinging.");
+          is_master = false;
+        }
+      }
+      else
+      {
+        // Last message was initialization and reception is validated
+        inited[idx] = true;
+      }
+    }
+    else
+    {
+      ROS_ERROR("SurfaceUSBL: Message sending failed.");
+    }
+
+    if (ping_rate) rate.sleep();
+    ping_diver = !ping_diver;
+  }
+}
+
+void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
+{
+  HandlerMap::iterator it=handlers.find(msg.acofix.src);
+  if (it != handlers.end())
+  {
+    handlers[msg.acofix.src](msg.data);
+  }
+  else
+  {
+    ROS_WARN("No acoustic data handler found in BuddyUSBL for ID=%d.",msg.acofix.src);
+  }
+}
+
+void SurfaceUSBL::onBuddyData(const std::vector<uint8_t>& data)
+{
+  BuddyReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("BuddyHandler: Wrong message received from modem.");
+    return;
+  }
+
+  init.updateInit(message);
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if (!is_master)
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+
+  buddyhandler(message, init.offset(), dt);
+
+  //Confirmation for commands
+  command.currentStatus(message.command);
+  buddy_status = message.command;
+
+  if (buddy_status == CommandModule::GET_TOOL)
+  {
+    ROS_INFO("Starting pinging.");
+    is_master = true;
+    this->startPinging();
+  }
+}
+
+void SurfaceUSBL::onDiverData(const std::vector<uint8_t>& data)
+{
+  DiverReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("DiverHandler: Wrong message received from modem.");
+    return;
+  }
+
+  double dt(data.size()*delay.per_byte +
+         delay.ping_reply_duration +
+         delay.usbl_processing_duration);
+  diverhandler(message, init.offset(), dt);
+}
+
+void SurfaceUSBL::assembleMessage()
+{
+  //Use triggered message assembly only if slave
+  if (is_master) return;
+
+  // TODO: Check if inited (do not encode stuff before inited)
+
+  boost::mutex::scoped_lock l(message_assembly);
+  // Assemble the report
+  SurfaceReport report;
+  // Inform that we are in master mode
+  report.is_master = 0;
+  report.inited = 1;
+
+  nav.updateReport(report, init.offset());
+  chat.updateReport(report);
+  command.updateReport(report, init.offset());
+
+  //TODO: Determine if chat will actually be sent
+
+  // Pack and send
+  DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
+  DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
+  SeatracMessage::DataBuffer buf;
+  cmd->dest = labust::seatrac::BEACON_ALL;
+  labust::tools::encodePackable(report, &buf);
+  cmd->data.assign(buf.begin(), buf.end());
+  l.unlock();
+
+  if (!sender.empty())
+  {
+    sender(clr);
+    sender(cmd);
+  }
+}
+
+/*
 void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 {
 	HandlerMap::iterator it=handlers.find(msg.acofix.src);
 	if (it != handlers.end())
 	{
+	    enum {TIME_GUARD = 1};
 		(*handlers[msg.acofix.src])(msg);
+		//Assume chat payload was pulled if the aggregate was NOP and reset aggregate.
+		has_next = !((sent_cmd == NOP) && ((ros::Time::now() - last_chat).toSec() > TIME_GUARD));
+		sent_cmd = 0;
+		//Assume that the mission was transmitted
+		this->updateChat();
 	}
 	else
 	{
@@ -127,4 +342,34 @@ void SurfaceUSBL::onData(const labust::seatrac::DatReceive& msg)
 	}
 }
 
+
+void SurfaceUSBL::onChat(const std_msgs::String::ConstPtr& msg)
+{
+  for(int i=0; i<msg->data.size(); ++i) chat_buf.push(Ascii6Bit::to6Bit(msg->data[i]));
+  ROS_INFO("Added to chat: %s",msg->data.c_str());
+  this->updateChat();
+}
+
+void SurfaceUSBL::updateChat()
+{
+  ///TODO(dnad): extract chat handling into a class (diver, surface to have the same)
+  if (!has_next)
+  {
+    surf.chat.clear();
+
+    enum {MAX_CHAT_BYTES=6};
+    int nbytes = chat_buf.size();
+    if (nbytes > MAX_CHAT_BYTES) nbytes = MAX_CHAT_BYTES;
+
+    ROS_INFO("Adding: %d",nbytes);
+
+    for(int i=0; i<nbytes; ++i){
+      surf.chat.push_back(chat_buf.front());
+      chat_buf.pop();
+    }
+    has_next = true;
+    last_chat = ros::Time::now();
+  }
+}
+*/
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::SurfaceUSBL, labust::seatrac::DeviceController)

@@ -115,6 +115,7 @@ add_executable(opencv_camera_driver_node src/OpenCvCameraDriver.cpp)
 add_executable(curl_camera_driver_node src/CurlCameraDriver.cpp)
 add_executable(object_detector_node src/ObjectDetectorNode.cpp)
 add_executable(xb3_splitter src/xb3_splitter.cpp)
+add_executable(docking_processing_node src/DockingProcessingNode.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -135,6 +136,10 @@ target_link_libraries(object_detector_node
   ${OpenCV_LIBRARIES}
 )
 target_link_libraries(xb3_splitter
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+target_link_libraries(docking_processing_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )

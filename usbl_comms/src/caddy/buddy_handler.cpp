@@ -32,7 +32,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 #include <labust/comms/caddy/buddy_handler.h>
-#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/seatrac/seatrac_messages.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/math/NumberManipulation.hpp>
@@ -44,6 +43,7 @@
 #include <std_msgs/Int32.h>
 #include <std_msgs/UInt8.h>
 #include <std_msgs/Bool.h>
+#include <geometry_msgs/PointStamped.h>
 
 #include <string>
 
@@ -52,54 +52,88 @@ using namespace labust::comms::caddy;
 
 bool BuddyHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	divernav_pub = nh.advertise<auv_msgs::NavSts>("diver_pos", 1);
-	buddynav_pub = nh.advertise<auv_msgs::NavSts>("buddy_nav",	1);
-	mission_pub = nh.advertise<std_msgs::Int32>("buddy_mission_status",	1);
-	leak_pub = nh.advertise<std_msgs::Bool>("buddy_leak",	1);
-	battery_pub = nh.advertise<std_msgs::UInt8>("buddy_battery_status",	1);
-	return true;
+  // Navigation publishers
+  divernav_pub = nh.advertise<auv_msgs::NavSts>("buddy_diver_pos", 1);
+  nav_pub = nh.advertise<auv_msgs::NavSts>("buddy_pos", 1);
+  partialnav_pub = nh.advertise<auv_msgs::NavSts>("buddy_partial_pos", 1);
+  init_pub = nh.advertise<geometry_msgs::PointStamped>("buddy_acoustic_origin_in", 1, true);
+
+  // Status handler
+  status.configure(nh, ph);
+  // Leak publishers
+  leak_pub = nh.advertise<std_msgs::Bool>("buddy_leak", 1);
+  battery_pub = nh.advertise<std_msgs::UInt8>("buddy_battery_status", 1);
+  return true;
 }
 
-void BuddyHandler::operator()(const labust::seatrac::DatReceive& msg)
+void BuddyHandler::operator()(const BuddyReport& message, const Eigen::Vector3d& offset, double delay)
 {
-	///TODO: add handling of messages based on message ID
-	///TODO: create acofix processor similar to pinger class
-	/// in order to process position in-place and fuse with
-	/// payload information
-	BuddyReport buddy;
-	if (!labust::tools::decodePackable(msg.data, &buddy))
-	{
-		ROS_WARN("BuddyHandler: Wrong message received from modem.");
-		return;
-	}
+  navHandler(message, offset, delay);
+  if (message.inited)
+  {
+    payloadHandler(message);
+    status(message, offset);
+  }
+}
 
-	auv_msgs::NavSts::Ptr buddynav(new auv_msgs::NavSts());
-	buddynav->position.north = buddy.offset_x;
-	buddynav->position.east = buddy.offset_y;
-	buddynav->position.depth = buddy.depth;
-	buddynav->altitude = buddy.altitude;
-	buddynav->orientation.yaw = labust::math::wrapRad(M_PI*buddy.course/180);
-  buddynav->gbody_velocity.x = buddy.speed;
-	buddynav->header.stamp = ros::Time::now();
-	buddynav_pub.publish(buddynav);
+void BuddyHandler::navHandler(const BuddyReport& message, const Eigen::Vector3d& offset, double delay)
+{
+  ros::Time msg_time = ros::Time::now() - ros::Duration(delay);
+  if (message.inited)
+  {
+    ROS_INFO("Message flags: %d %d", message.has_position, message.has_diver);
+    ROS_INFO("Message info: %f %f", message.north, message.east);
+    auv_msgs::NavSts::Ptr nav(new auv_msgs::NavSts());
+    nav->header.stamp = msg_time;
+    nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
+    nav->gbody_velocity.x = message.speed;
 
-	//Handle mission status, leak and battery info
-	std_msgs::Int32 ms;
-	ms.data = buddy.mission_status;
-	mission_pub.publish(ms);
+    if (message.has_position)
+    {
+      nav->position.north = message.north + offset(n);
+      nav->position.east = message.east + offset(e);
+      nav->position.depth = message.depth + offset(d);
+      nav->altitude = message.altitude - offset(d);
 
-	std_msgs::Bool leak;
-	leak.data = buddy.leak_info;
-	leak_pub.publish(leak);
+      nav_pub.publish(nav);
+      partialnav_pub.publish(nav);
+    }
+    else
+    {
+      partialnav_pub.publish(nav);
+    }
 
-	std_msgs::UInt8 battery;
-	battery.data = buddy.battery_info;
-	battery_pub.publish(battery);
+    //Handle diver position
+    if (message.has_diver)
+    {
+      auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
+      divernav->position.north = message.diver_north;
+      divernav->position.east = message.diver_east;
+      divernav->header.stamp = msg_time;
+      divernav_pub.publish(divernav);
+    }
+  }
+  else
+  {
+    geometry_msgs::PointStamped::Ptr point(new geometry_msgs::PointStamped());
+    point->header.stamp = msg_time;
+    point->point.x = message.origin_lat;
+    point->point.y = message.origin_lon;
+    point->point.z = 0;
+    init_pub.publish(point);
+  }
+}
 
-	//Handle diver position
-	auv_msgs::NavSts::Ptr divernav(new auv_msgs::NavSts());
-  divernav->position.north = buddy.diver_offset_x;
-  divernav->position.east = buddy.diver_offset_y;
-  divernav->header.stamp = buddynav->header.stamp;
-  divernav_pub.publish(divernav);
+void BuddyHandler::payloadHandler(const BuddyReport& message)
+{
+  if (message.inited)
+  {
+    std_msgs::Bool leak;
+    leak.data = message.leak_info;
+    leak_pub.publish(leak);
+
+    std_msgs::UInt8 battery;
+    battery.data = message.battery_status;
+    battery_pub.publish(battery);
+  }
 }

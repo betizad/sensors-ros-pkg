@@ -1,0 +1,183 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="diver2">
+  <link name="local" />
+
+	<xacro:macro name="Joint3d"
+		params="node parent *origin *geometry *origin_joint">
+		<link name="${node}_2" />
+		<link name="${node}_1" />
+		<link name="${node}">
+			<visual>
+				<xacro:insert_block name="origin" />
+				<geometry>
+					<xacro:insert_block name="geometry" />
+				</geometry>
+			</visual>
+		</link>
+
+		<joint name="${node}_z" type="continuous">
+			<xacro:insert_block name="origin_joint" />
+			<axis xyz="0 0 1" />
+			<parent link="${parent}" />
+			<child link="${node}_2" />
+		</joint>
+
+		<joint name="${node}_y" type="continuous">
+			<axis xyz="0 1 0" />
+			<parent link="${node}_2" />
+			<child link="${node}_1" />
+		</joint>
+
+		<joint name="${node}_x" type="continuous">
+			<axis xyz="1 0 0" />
+			<parent link="${node}_1" />
+			<child link="${node}" />
+		</joint>
+	</xacro:macro>
+
+  <xacro:macro name="OldJoint"
+		params="node parent *origin *geometry *color *origin_joint">
+		<link name="${node}_2" />
+		<link name="${node}_1" />
+		<link name="${node}">
+			<visual>
+				<xacro:insert_block name="origin" />
+				<geometry>
+					<xacro:insert_block name="geometry" />
+				</geometry>
+			</visual>
+		</link>
+
+		<joint name="${node}_z" type="continuous">
+			<xacro:insert_block name="origin_joint" />
+			<axis xyz="0 0 1" />
+			<parent link="${parent}" />
+			<child link="${node}_2" />
+		</joint>
+
+		<joint name="${node}_y" type="continuous">
+			<axis xyz="0 1 0" />
+			<parent link="${node}_2" />
+			<child link="${node}_1" />
+		</joint>
+
+		<joint name="${node}_x" type="continuous">
+			<axis xyz="1 0 0" />
+			<parent link="${node}_1" />
+			<child link="${node}" />
+		</joint>
+	</xacro:macro>
+	
+	<!-- <xacro:OldJoint node="pose_calibration/lower_back" parent="pose_calibration/local">
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <box size="0.1 0.2 0.05"/>
+    <color rgba="1 0 0 1" />
+    <origin xyz="0 0 0"/>
+	</xacro:OldJoint> -->
+
+  <xacro:OldJoint node="pose_calibration/lower_back" parent="local">
+		<origin xyz="0 0 0" rpy="0 0 0" />
+    <box size="0.1 0.2 0.05"/>
+    <color rgba="1 0 0 1" />
+    <origin xyz="0 0 0"/>
+	</xacro:OldJoint> 
+
+	<xacro:Joint3d node="pose_calibration/upper_body" parent="pose_calibration/lower_back">
+    <origin xyz="0 0 0.35" rpy="0 0 0" />
+		<mesh filename="package://diver_net/data/mesh/dae/torso.dae" />
+		<origin xyz="0 0 0" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/head" parent="pose_calibration/upper_body">
+		<origin xyz="0.05 0 0.1" rpy="0 0 0" />
+    <mesh filename="package://diver_net/data/mesh/dae/head.dae" />
+		<origin xyz="0 0 0.5" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/left_thigh" parent="pose_calibration/lower_back">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_thigh.dae" />
+    <origin xyz="0 0.1 0" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/right_thigh" parent="pose_calibration/lower_back">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+    <mesh filename="package://diver_net/data/mesh/dae/right_thigh.dae" />
+		<origin xyz="0 -0.1 0" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/right_calf" parent="pose_calibration/right_thigh">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<mesh filename="package://diver_net/data/mesh/dae/right_leg.dae" />
+		<origin xyz="0 0 -0.4" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/left_calf" parent="pose_calibration/left_thigh">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_leg.dae" />
+		<origin xyz="0 0 -0.4" />
+	</xacro:Joint3d>
+
+	<xacro:Joint3d node="pose_calibration/right_foot" parent="pose_calibration/right_calf">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<mesh filename="package://diver_net/data/mesh/dae/right_flipper.dae" />
+    <origin xyz="0 0 -0.45" />	
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/left_foot" parent="pose_calibration/left_calf">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_flipper.dae" />
+    <origin xyz="0 0 -0.45" />	
+	</xacro:Joint3d>
+	
+	<xacro:OldJoint node="pose_calibration/left_shoulder" parent="pose_calibration/upper_body">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<box size="0.1 0.1 0.1" />
+		<color rgba="0 1 1 1" />
+		<origin xyz="0 0.15 0.5" />
+	</xacro:OldJoint>
+	
+		<xacro:OldJoint node="pose_calibration/right_shoulder" parent="pose_calibration/upper_body">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<box size="0.1 0.1 0.1" />
+		<color rgba="0 1 0 1" />
+	  <origin xyz="0 -0.15 0.5" />
+  </xacro:OldJoint>
+		
+	<xacro:Joint3d node="pose_calibration/left_upper_arm" parent="pose_calibration/upper_body">
+		<origin xyz="0 0 0" rpy="0 0 -1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_biceps.dae" />
+	  <origin xyz="0 0.2 0.5" />
+  </xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/right_upper_arm" parent="pose_calibration/upper_body">
+		<origin xyz="0 0 0" rpy="0 0 1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/right_biceps.dae" />
+	  <origin xyz="0 -0.2 0.5" />
+  </xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/left_forearm" parent="pose_calibration/left_upper_arm">
+		<origin xyz="0 0 0" rpy="0 0 -1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_forearm.dae" />
+	  <origin xyz="0.3 0 0" />
+  </xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/right_forearm" parent="pose_calibration/right_upper_arm">
+		<origin xyz="0 0 0" rpy="0 0 1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/right_forearm.dae" />
+	  <origin xyz="0.3 0 0" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/left_hand" parent="pose_calibration/left_forearm">
+		<origin xyz="0 0 0" rpy="0 1.57 -1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/left_hand.dae" />
+		<origin xyz="0.25 0 0" />
+	</xacro:Joint3d>
+	
+	<xacro:Joint3d node="pose_calibration/right_hand" parent="pose_calibration/right_forearm">
+		<origin xyz="0 0 0" rpy="0 1.57 1.57"/>
+		<mesh filename="package://diver_net/data/mesh/dae/right_hand.dae" />
+		<origin xyz="0.25 0 0" />
+	</xacro:Joint3d>
+
+</robot>

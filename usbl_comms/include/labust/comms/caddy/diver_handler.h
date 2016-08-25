@@ -36,36 +36,50 @@
  *********************************************************************/
 #ifndef USBL_COMMS_DIVER_HANDLER_H
 #define USBL_COMMS_DIVER_HANDLER_H
-#include <labust/comms/caddy/ac_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
+#include <labust/seatrac/chat_handler.h>
+#include <labust/seatrac/status_handler.h>
 
 #include <ros/ros.h>
+
+#include <Eigen/Dense>
+
 #include <cstdint>
 
 namespace labust
 {
-	namespace comms
-	{
-		namespace caddy
-		{
-			///Class for handling Diver acoustic messages and publish them to ROS.
-			class DiverHandler : public virtual AcHandler
-			{
-			public:
-				///Main constructor
-				DiverHandler(){};
+  namespace comms
+  {
+    namespace caddy
+    {
+      ///Class for handling Diver acoustic messages and publish them to ROS.
+      class DiverHandler
+      {
+      public:
+        ///Main constructor
+        DiverHandler():command("diver", true), chat("diver"){};
 
-				bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+        bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-				void operator()(const labust::seatrac::DatReceive& msg);
+        void operator()(const DiverReport& message, const Eigen::Vector3d& offset, double delay);
 
-			protected:
-				//Diver navigation data publisher
-				ros::Publisher divernav_pub;
-                //Lawnmower size scaling
-                double lm_scale;
-			};
-		}
-	}
+      protected:
+        // Method for handling the navigation part.
+        void navHandler(const DiverReport& message, const Eigen::Vector3d& offset, double delay);
+        // Method for handling the navigation part.
+        void payloadHandler(const DiverReport& message, double delay);
+
+        //Diver navigation data publisher
+        ros::Publisher nav_pub;
+        //Diver bio-info publisher
+        ros::Publisher payload_pub;
+        // The common chat handler
+        labust::seatrac::ChatHandler chat;
+        // The common command handler
+        labust::seatrac::StatusHandler command;
+      };
+    }
+  }
 }
 /* USBL_COMMS_DIVER_HANDLER_H */
 #endif

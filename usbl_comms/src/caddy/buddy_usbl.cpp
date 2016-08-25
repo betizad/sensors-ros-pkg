@@ -39,6 +39,7 @@
 #include <labust/seatrac/mediator.h>
 #include <labust/math/NumberManipulation.hpp>
 #include <labust/tools/packer.h>
+#include <labust/tools/conversions.hpp>
 
 #include <pluginlib/class_list_macros.h>
 
@@ -48,99 +49,259 @@ using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
 BuddyUSBL::BuddyUSBL():
-		pinger(sender, registrations),
-		ping_rate(0)
+        pinger(sender, registrations),
+        ping_rate(0),
+        is_master(false),
+        run_flag(false),
+        bytes_sent(0)
 {
-	registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-			boost::bind(&BuddyUSBL::onData,this,_1)));
+  registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
+      boost::bind(&BuddyUSBL::onData,this,_1)));
+
+  //Initialize arrays
+  this->resetInit();
+  for (int i=0; i<AGENT_CNT; ++i) unconfirmed_cmd[i] = 0;
 }
 
 BuddyUSBL::~BuddyUSBL()
 {
-	run_flag = false;
-	worker.join();
+  this->startPinging(false);
 }
 
 bool BuddyUSBL::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	ph.param("ping_rate", ping_rate, ping_rate);
+  ph.param("ping_rate", ping_rate, ping_rate);
+  ph.param("is_master", is_master, is_master);
+  delay.configure(ph);
 
-	handlers[SURFACE_ID].reset(new SurfaceHandler());
-	handlers[DIVER_ID].reset(new DiverHandler());
-	handlers[DIVER_ID]->configure(nh,ph);
-	handlers[SURFACE_ID]->configure(nh,ph);
+  handlers[SURFACE_ID] = boost::bind(&BuddyUSBL::onSurfaceData, this, _1);
+  handlers[DIVER_ID] = boost::bind(&BuddyUSBL::onDiverData, this, _1);
 
-	nav_sub = nh.subscribe("position", 1, &BuddyUSBL::onEstimatedPos, this);
-	leak_sub = nh.subscribe("leak", 1, &BuddyUSBL::onLeak, this);
-	battery_sub = nh.subscribe("battery_status", 1, &BuddyUSBL::onBatteryInfo, this);
-	mission_sub = nh.subscribe("mission_status", 1, &BuddyUSBL::onMissionStatus, this);
+  // Incoming ROS message handlers
+  init.configure(nh, ph);
+  nav.configure(nh, ph);
+  payload.configure(nh, ph);
+  status.configure(nh, ph);
 
-	run_flag = true;
-	worker = boost::thread(boost::bind(&BuddyUSBL::run, this));
+  // Incoming ACOUSTIC message handlers
+  surfacehandler.configure(nh, ph);
+  diverhandler.configure(nh, ph);
 
-	return true;
+  // Local subscribers
+  mode_sub = nh.subscribe("master_mode", 1, &BuddyUSBL::onModeChange, this);
+
+  if (is_master) this->startPinging();
+
+  return true;
 }
 
-void BuddyUSBL::onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
+void BuddyUSBL::startPinging(bool flag)
 {
-	boost::mutex::scoped_lock lock(message_mux);
-	///TODO add substraction from init point and init point broadcast
-  message.offset_x = msg->position.north;
-  message.offset_y = msg->position.east;
-  message.course = labust::math::wrapRad(msg->orientation.yaw)*180/M_PI;
-  message.speed = msg->gbody_velocity.x;
-  message.depth = msg->position.depth;
-  message.altitude = msg->altitude;
+  if (flag)
+  {
+    run_flag = true;
+    worker = boost::thread(boost::bind(&BuddyUSBL::run, this));
+  }
+  else
+  {
+    run_flag = false;
+    worker.join();
+  }
+}
+
+void BuddyUSBL::resetInit()
+{
+  // Reset the init
+  for (int i=0; i<AGENT_CNT; ++i) inited[i] = false;
+}
+
+void BuddyUSBL::onModeChange(const std_msgs::Bool::ConstPtr& msg)
+{
+  if (msg->data == is_master) return;
+
+  if (msg->data)
+  {
+    //Was slave but should become master
+    is_master = true;
+    //Allow external init determination
+    this->startPinging();
+  }
+  else
+  {
+    //Was master but should become slave
+    is_master = false;
+    this->startPinging(false);
+  }
 }
 
 void BuddyUSBL::run()
 {
-	ros::Rate rate((ping_rate==0)?1:ping_rate);
+  ros::Rate rate((ping_rate==0)?1:ping_rate);
 
-	bool ping_diver=true;
+  bool ping_diver=true;
 
-	while(ros::ok() && run_flag)
-	{
-		//Create the report
-		DatSendCmd::Ptr data(new DatSendCmd());
-		data->dest = ping_diver?DIVER_ID:SURFACE_ID;
-		data->msg_type = AMsgType::MSG_REQU;
+  while(ros::ok() && run_flag && is_master)
+  {
+    int idx = ping_diver?DIVER:SURFACE;
 
-		//TODO: The diver position will be updated after the ping to the diver
-		//However, the surface ping with diver position will probably contain
-		//the position from quite a previous interrogation (maybe assuring the new
-		//diver position update happens if a ping i successful would be better)
-		boost::mutex::scoped_lock lock(message_mux);
-		SeatracMessage::DataBuffer buf;
-		labust::tools::encodePackable(message,&buf);
-		data->data.assign(buf.begin(),buf.end());
-		lock.unlock();
+    //Create the report
+    DatSendCmd::Ptr data(new DatSendCmd());
+    data->msg_type = AMsgType::MSG_REQU;
+    data->dest = ping_diver?DIVER_ID:SURFACE_ID;
 
-		ROS_INFO("Pinging: %d", data->dest);
-		if (!pinger.send(boost::dynamic_pointer_cast<SeatracMessage>(data), TIMEOUT))
-		{
-			ROS_ERROR("BuddyUSBL: Message sending failed.");
-		}
+    boost::mutex::scoped_lock l(message_assembly);
+    // Assemble the report
+    BuddyReport report;
 
-		//Reset the update if no reply was received
-		//if (pinger.isError()){	}
+    // Setup init
+    if (init.isNewInit()) this->resetInit();
+    report.origin_lat = init.llh()(0);
+    report.origin_lon = init.llh()(1);
+    report.inited = inited[idx];
 
-		if (ping_rate) rate.sleep();
-		ping_diver = !ping_diver;
-	}
+    // Setup reports
+    if (report.inited)
+    {
+      nav.updateReport(report, init.offset());
+      payload.updateReport(report);
+      status.updateReport(report, init.offset());
+
+      // Send Buddy position depending on agent and time
+      report.has_position = 1;
+      if (idx == SURFACE)
+      {
+        report.has_position = this->sendPosition(idx);
+      }
+    }
+    else
+    {
+      ROS_INFO("Not inited: %d", data->dest);
+    }
+    // Pack the report for sending
+    SeatracMessage::DataBuffer buf;
+    labust::tools::encodePackable(report,&buf);
+    data->data.assign(buf.begin(),buf.end());
+    this->bytes_sent = buf.size();
+    l.unlock();
+
+    // Update handler delay for next ping.
+
+
+
+    ROS_INFO("Pinging: %d", data->dest);
+    if (pinger.send(boost::dynamic_pointer_cast<SeatracMessage>(data), TIMEOUT))
+    {
+      //  If initialized allow confirmations
+      if (inited[idx])
+      {
+        // Confirm message sending
+        if ((unconfirmed_cmd[idx] != 0) &&
+            (unconfirmed_cmd[idx] == report.command))
+        {
+          status.setConfirmation(true);
+          unconfirmed_cmd[idx] = 0;
+        }
+
+        if (report.command == CommandModule::GET_TOOL)
+        {
+          ROS_INFO("Going to get the tool. Stopping pinging.");
+          is_master = false;
+        }
+      }
+      else
+      {
+        // Last message was initialization and reception is validated
+        inited[idx] = true;
+      }
+    }
+    else
+    {
+      ROS_ERROR("BuddyUSBL: Message delivery failed.");
+    }
+
+    if (ping_rate) rate.sleep();
+    ping_diver = !ping_diver;
+  }
 }
 
 void BuddyUSBL::onData(const labust::seatrac::DatReceive& msg)
 {
-	HandlerMap::iterator it=handlers.find(msg.acofix.src);
-	if (it != handlers.end())
-	{
-		(*handlers[msg.acofix.src])(msg);
-	}
-	else
-	{
-		ROS_WARN("No acoustic data handler found in BuddyUSBL for ID=%d.",msg.acofix.src);
-	}
+  HandlerMap::iterator it=handlers.find(msg.acofix.src);
+  if (it != handlers.end())
+  {
+    handlers[msg.acofix.src](msg.data);
+  }
+  else
+  {
+    ROS_WARN("No acoustic data handler found in BuddyUSBL for ID=%d.",msg.acofix.src);
+  }
+}
+
+void BuddyUSBL::onSurfaceData(const std::vector<uint8_t>& data)
+{
+  SurfaceReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("SurfaceHandler: Wrong message received from modem.");
+    return;
+  }
+
+  init.updateInit(message);
+
+  double dt(data.size()*delay.per_byte);
+  // Specify the data time delay for this message
+  if (message.is_master)
+  {
+      // For master operation the ping overhead is added
+      dt += delay.ping_duration;
+  }
+  else
+  {
+      // For slave operation the ping reply overhead and the usbl processing
+      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+  }
+
+  surfacehandler(message, init.offset(), dt);
+
+  if (message.command) unconfirmed_cmd[SURFACE] = message.command;
+
+  if (message.command == CommandModule::HANDOFF_PING)
+  {
+    ROS_INFO("Pinging hand-off received. Starting to ping.");
+    is_master = true;
+    this->startPinging();
+  }
+}
+
+void BuddyUSBL::onDiverData(const std::vector<uint8_t>& data)
+{
+  DiverReport message;
+  if (!labust::tools::decodePackable(data, &message))
+  {
+    ROS_WARN("DiverHandler: Wrong message received from modem.");
+    return;
+  }
+  double dt(data.size()*delay.per_byte +
+         delay.ping_reply_duration +
+         delay.usbl_processing_duration);
+
+  diverhandler(message, init.offset(), dt);
+  if (message.command) unconfirmed_cmd[DIVER] = message.command;
+}
+
+bool BuddyUSBL::sendPosition(int agent)
+{
+  //Agents should get buddy position updates atleast every dTmax sec.
+  const double dTmax(10.0);
+
+  double dT = (ros::Time::now() - buddy_pos_update[agent]).toSec();
+  if (dT > dTmax)
+  {
+    buddy_pos_update[agent] = ros::Time::now();
+    return true;
+  }
+
+  return false;
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::BuddyUSBL, labust::seatrac::DeviceController)

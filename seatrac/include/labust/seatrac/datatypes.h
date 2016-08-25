@@ -38,12 +38,43 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 
+#include <ros/ros.h>
 
 namespace labust
 {
 	namespace seatrac
 	{
 		#include <labust/seatrac/detail/datatype_defs.h>
+
+	    struct DelaySpecification
+	    {
+	        DelaySpecification():
+	            per_byte(0.08),
+	            ping_duration(0.5),
+	            ping_reply_duration(0.5),
+	            usbl_processing_duration(0.5){};
+
+	        void configure(ros::NodeHandle& ph)
+	        {
+	            ph.param("byte_delay", per_byte, per_byte);
+	            ph.param("ping_duration", ping_duration, ping_duration);
+	            ph.param("ping_reply_duration", ping_reply_duration, ping_reply_duration);
+	            ph.param("usbl_processing_duration", usbl_processing_duration, usbl_processing_duration);
+	        }
+
+            void configureSim(ros::NodeHandle& ph)
+            {
+                ph.param("sim_byte_delay", per_byte, per_byte);
+                ph.param("sim_ping_duration", ping_duration, ping_duration);
+                ph.param("sim_ping_reply_duration", ping_reply_duration, ping_reply_duration);
+                ph.param("sim_usbl_processing_duration", usbl_processing_duration, usbl_processing_duration);
+            }
+
+	        double per_byte;
+	        double ping_duration;
+	        double ping_reply_duration;
+	        double usbl_processing_duration;
+	    };
 	}
 }
 

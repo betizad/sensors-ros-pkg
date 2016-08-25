@@ -38,9 +38,11 @@
 #include <labust/seatrac/seatrac_factory.h>
 #include <labust/seatrac/seatrac_definitions.h>
 #include <labust/math/NumberManipulation.hpp>
+#include <labust/tools/conversions.hpp>
 #include <pluginlib/class_list_macros.h>
 
 #include <underwater_msgs/AcSimRegister.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <labust/tools/StringUtilities.hpp>
 
@@ -50,7 +52,6 @@ SeatracSim::SeatracSim():
     state(IDLE),
     expected_id(0),
     node_id(1),
-    ping_duration(0.65),
     max_distance(500.0),
     vos(1500),
     time_overhead(0.1),
@@ -58,18 +59,21 @@ SeatracSim::SeatracSim():
     bps(100),
     registered(false),
     max_data_duration(1.5),
-    internal_ahrs(false)
+    internal_ahrs(false),
+    surface_depth(-1.0),
+    listener(buffer)
 {}
 
 SeatracSim::~SeatracSim()
 {
   sleeper.stop();
+  unregisterModem();
 }
 
 bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
+  delay.configureSim(ph);
   ph.param("sim_node_id", node_id, node_id);
-  ph.param("sim_ping_duration", ping_duration, ping_duration);
   ph.param("sim_max_distance", max_distance, max_distance);
   ph.param("sim_vos", vos, vos);
   ph.param("sim_time_overhead", time_overhead, time_overhead);
@@ -77,6 +81,18 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
   ph.param("sim_max_data_duration", max_data_duration, max_data_duration);
   ph.param("sim_bps", bps, bps);
   ph.param("use_ahrs", internal_ahrs, internal_ahrs);
+  ph.param("sim_surface_depth", surface_depth, surface_depth);
+  std::string key;
+  if (nh.searchParam("tf_prefix", key)) nh.getParam(key, tf_prefix);
+
+  std::vector<double> offset(3,0), orot(3,0);
+  ph.param("sim_offset", offset, offset);
+  ph.param("sim_orot", orot, orot);
+  this->offset << offset[0],offset[1],offset[2];
+  labust::tools::quaternionFromEulerZYX(M_PI*orot[0]/180,
+            M_PI*orot[1]/180,
+            M_PI*orot[2]/180,
+            this->orot);
 
   navsts = nh.subscribe<auv_msgs::NavSts>("navsts", 1,
       &SeatracSim::onNavSts, this);
@@ -89,7 +105,7 @@ bool SeatracSim::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
       &SeatracSim::onRegisteredNodes, this);
 
   // Create timer
-  sleeper = nh.createTimer(ros::Duration(ping_duration),
+  sleeper = nh.createTimer(ros::Duration(delay.ping_duration),
       &SeatracSim::onUSBLTimeout, this,
       true, false);
 
@@ -109,7 +125,7 @@ void SeatracSim::registerModem()
   ros::NodeHandle nh;
   ros::ServiceClient reg = nh.serviceClient<underwater_msgs::AcSimRegister>("register_modem");
 
-  if (reg.waitForExistence(ros::Duration(1.0)))
+  if (reg.waitForExistence(ros::Duration(5.0)))
   {
     underwater_msgs::AcSimRegister srv;
     srv.request.node_id = node_id;
@@ -125,14 +141,12 @@ void SeatracSim::registerModem()
 
 void SeatracSim::unregisterModem()
 {
-  if (!registered) return;
-
   ROS_INFO("SeatracSim: deregistering modem from medium.");
 
   ros::NodeHandle nh;
   ros::ServiceClient reg = nh.serviceClient<underwater_msgs::AcSimRegister>("unregister_modem");
 
-  if (reg.waitForExistence(ros::Duration(1.0)))
+  if (reg.waitForExistence(ros::Duration(5.0)))
   {
     underwater_msgs::AcSimRegister srv;
     srv.request.node_id = node_id;
@@ -162,6 +176,7 @@ bool SeatracSim::nodeExists(int node_id)
 void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 {
   boost::shared_ptr<StatusResp> resp(new StatusResp());
+
   // \todo switch to USBL frame to incorporate offsets
   // Setup flags
   resp->status.status_output.ACC_CAL = 0;
@@ -175,10 +190,68 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
   resp->status.attitude[Status::PITCH] = msg->orientation.pitch*Status::ATT_SC;
   resp->status.attitude[Status::YAW] = msg->orientation.yaw*Status::ATT_SC;
 
+
+  Eigen::Vector3d offset_ned(0,0,0);
+  try
+  {
+      geometry_msgs::TransformStamped transformLocal = buffer.lookupTransform(
+              msg->header.frame_id,
+              tf_prefix + "base_link_sim",
+              ros::Time(0));
+      Eigen::Quaterniond rot(
+              transformLocal.transform.rotation.w,
+              transformLocal.transform.rotation.x,
+              transformLocal.transform.rotation.y,
+              transformLocal.transform.rotation.z);
+
+      offset_ned = rot.matrix()*offset;
+  }
+  catch (tf2::TransformException& ex)
+  {
+      ROS_WARN("%s",ex.what());
+  }
+
   // Set the current node state
   boost::mutex::scoped_lock ls(position_mux);
   navstate = *msg;
+  // TODO: apply also rotation in future
+  navstate.position.north += offset_ned(0);
+  navstate.position.east += offset_ned(1);
+  navstate.position.depth += offset_ned(2);
+  navstate_delayed = navstate;
   ls.unlock();
+
+  try
+  {
+      geometry_msgs::TransformStamped transformLocal = buffer.lookupTransform(
+              msg->header.frame_id,
+              tf_prefix + "base_link_sim",
+              ros::Time(msg->header.stamp - ros::Duration(delay.usbl_processing_duration)));
+      Eigen::Quaterniond rot(
+              transformLocal.transform.rotation.w,
+              transformLocal.transform.rotation.x,
+              transformLocal.transform.rotation.y,
+              transformLocal.transform.rotation.z);
+
+      offset_ned = rot.matrix()*offset;
+
+      ls.lock();
+      // TODO: apply also rotation in future
+      navstate_delayed.position.north = transformLocal.transform.translation.x + offset_ned(0);
+      navstate_delayed.position.east = transformLocal.transform.translation.y + offset_ned(1);
+      navstate_delayed.position.depth = transformLocal.transform.translation.z + offset_ned(2);
+      double roll, pitch, yaw;
+      labust::tools::eulerZYXFromQuaternion(transformLocal.transform.rotation,
+              roll, pitch, yaw);
+      navstate_delayed.orientation.roll = roll;
+      navstate_delayed.orientation.pitch = pitch;
+      navstate_delayed.orientation.yaw = yaw;
+      ls.unlock();
+  }
+  catch (tf2::TransformException& ex)
+  {
+      ROS_WARN("%s",ex.what());
+  }
 
   this->sendMessage(boost::dynamic_pointer_cast<SeatracMessage const>(resp));
 }
@@ -187,7 +260,11 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
 {
   // Try registering before sending
   this->registerModem();
-  if (!registered) return false;
+  if (!registered)
+  {
+      this->unregisterModem();
+      return false;
+  }
 
   if (getState() != IDLE)
   {
@@ -197,17 +274,25 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
     return true;
   }
 
+  // Inhibit sending if above surface depth
+  if (this->navstate.position.depth < surface_depth)
+  {
+      ROS_WARN("Modem is on surface so it can not be heard by anyone.");
+      return true;
+  }
+
   underwater_msgs::MediumTransmission::Ptr tomedium(new underwater_msgs::MediumTransmission());
   tomedium->header.stamp = ros::Time::now();
   tomedium->sender = this->node_id;
+  tomedium->position = navstate;
   // Broadcast by default
   tomedium->receiver = 0;
   // Minimum duration is ping
-  tomedium->duration = ping_duration;
+  tomedium->duration = delay.ping_duration;
   // Minimum data duration is 0
   double data_duration(0);
   // Total timeout for ping
-  double total_timeout(ping_duration);
+  double total_timeout(delay.ping_duration);
 
   if (msg->getCid() == PingSendCmd::CID)
   {
@@ -215,7 +300,9 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
     tomedium->receiver = cmd->dest;
     expected_id = cmd->dest;
     // Check timeout
-    if (this->nodeExists(tomedium->receiver)) total_timeout += ping_duration;
+    if (this->nodeExists(tomedium->receiver))
+        total_timeout += delay.ping_reply_duration + delay.usbl_processing_duration;
+
     ROS_DEBUG("SeatracSim: Sending ping (%d->%d).", node_id, expected_id);
     this->setState(WAIT_PING_REPLY);
   }
@@ -233,7 +320,10 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
       // The 2*ping payload + data sent + the maximum amount of data that can be returned
       total_timeout += 8*cmd->data.size()/bps;
       // Add the maximum return data time if node exists
-      if (this->nodeExists(tomedium->receiver)) total_timeout += ping_duration + max_data_duration;
+      if (this->nodeExists(tomedium->receiver))
+          total_timeout += delay.ping_reply_duration +
+              delay.usbl_processing_duration +
+              max_data_duration;
     }
     else
     {
@@ -302,14 +392,17 @@ bool SeatracSim::resend()
 void SeatracSim::onMediumTransmission(const
 underwater_msgs::MediumTransmission::ConstPtr& msg)
 {
-  // Try registering before sending
-  this->registerModem();
-  if (!registered) return;
-
   // Ignore self-messages - there should be no messages
   if (msg->sender == node_id) return;
   // Ignore message not meant to be heard by this node
   if (msg->listener_id != node_id) return;
+  // Inhibit sending if above surface depth
+  if (this->navstate.position.depth < surface_depth)
+  {
+      ROS_WARN("Modem is on surface so it can not hear anything.");
+      return;
+  }
+
   // Test if it is possible to hear the message
 
   // Throw dice if we will have a CRC error
@@ -352,7 +445,10 @@ void SeatracSim::processPingCmd(const underwater_msgs::MediumTransmission::Const
       underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
       rep->sender = node_id;
       rep->receiver = msg->sender;
-      rep->duration = ping_duration;
+      rep->duration = delay.ping_reply_duration;
+      // Add the paket processing duration
+      rep->duration += delay.usbl_processing_duration;
+      rep->position = navstate;
       PingSendCmd::Ptr repcmd(new PingSendCmd());
       SeatracFactory::encodePacket(repcmd, &rep->message);
       this->sendToMedium(rep);
@@ -431,9 +527,17 @@ void SeatracSim::fillPosReply(MsgType& resp, const underwater_msgs::MediumTransm
   // \todo Set only range for modems
   this->fillAcoFix(resp->acofix);
   boost::mutex::scoped_lock l(position_mux);
-  double dn = msg->position.position.north - navstate.position.north;
-  double de = msg->position.position.east - navstate.position.east;
-  double dd = msg->position.position.depth - navstate.position.depth;
+  double dn = msg->position.position.north - navstate_delayed.position.north;
+  double de = msg->position.position.east - navstate_delayed.position.east;
+  double dd = msg->position.position.depth - navstate_delayed.position.depth;
+//  ROS_ERROR("Position other: %f %f %f",
+//    msg->position.position.north,
+//    msg->position.position.east,
+//    msg->position.position.depth);
+//  ROS_ERROR("Position : %f %f %f",
+//    navstate.position.north,
+//    navstate.position.east,
+//    navstate.position.depth);
   l.unlock();
 
   // resp->acofix.dest = node_id;
@@ -452,7 +556,7 @@ void SeatracSim::fillPosReply(MsgType& resp, const underwater_msgs::MediumTransm
     double el(0);
     if (rh == 0) el = 90 * (dd >= 0?1:-1); else  el = 180*atan(dd/rh)/M_PI;
     double az = atan2(de, dn);
-    if (internal_ahrs) az -= navstate.orientation.yaw;
+    if (internal_ahrs) az -= navstate_delayed.orientation.yaw;
     az = 180*labust::math::wrapRad(az)/M_PI;
     if (az < 0) az += 360;
     resp->acofix.usbl.azimuth = az*AcoFix::ANGLE_SC;
@@ -465,7 +569,7 @@ void SeatracSim::fillPosReply(MsgType& resp, const underwater_msgs::MediumTransm
     }
   }
 
-  resp->acofix.vos = vos;
+  resp->acofix.vos = vos*AcoFix::RANGE_SC;
 }
 
 void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::ConstPtr& msg, const DatSendCmd& incoming)
@@ -480,13 +584,17 @@ void SeatracSim::processDataCmd(const underwater_msgs::MediumTransmission::Const
     // Look into data command
     if (msg->receiver == node_id)
     {
+
       ROS_INFO("SeatracSim: Reply on DatCmd (%d->%d).", msg->sender, node_id);
       if ((incoming.msg_type == AMsgType::MSG_REQU) || (incoming.msg_type == AMsgType::MSG_REQX))
       {
         underwater_msgs::MediumTransmission::Ptr rep(new underwater_msgs::MediumTransmission());
         rep->sender = node_id;
         rep->receiver = msg->sender;
-        rep->duration = ping_duration;
+        rep->duration = delay.ping_reply_duration;
+        // Add the paket processing duration
+        rep->duration += delay.usbl_processing_duration;
+        rep->position = navstate;
 
         // If nothing to reply, return only the pinging part of data
         DatSendCmd::Ptr repcmd(new DatSendCmd());

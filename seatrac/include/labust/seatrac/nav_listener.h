@@ -38,79 +38,88 @@
 
 #include <auv_msgs/NavSts.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <tf2_ros/transform_listener.h>
 #include <ros/ros.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/LocalCartesian.hpp>
 
 #include <Eigen/Dense>
 
-#include <vector>
-#include <string>
 #include <map>
+#include <string>
+#include <vector>
 
 namespace labust
 {
-	namespace seatrac
-	{
-		/**
-		 * The class implements the status publisher and decoder.
-		 */
-		class NavListener : virtual public MessageListener
-		{
-			typedef std::map<int, ros::Publisher> PublisherMap;
-		public:
-			///Main constructor
-			NavListener();
+namespace seatrac
+{
+/**
+ * The class implements the status publisher and decoder.
+ */
+class NavListener : virtual public MessageListener
+{
+  typedef std::map<int, ros::Publisher> PublisherMap;
 
-			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+public:
+  /// Main constructor
+  NavListener();
 
-		private:
-			///Handle any response with an acofix message.
-			template<class Type>
-			void onAcoFixMessage(const Type& resp)
-			{
-				this->processAcoFix(resp.acofix);
-			}
+  /// Listener configuration.
+  bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
 
-			///AcoFix message processor
-			void processAcoFix(const AcoFix& fix);
-			///Status processor
-			void onStatus(const StatusResp& resp);
-			///Calculate the full navigation solution
-			void calculateNavSts(auv_msgs::NavSts& nav,	const Eigen::Vector3d& pos,
-							const geometry_msgs::TransformStamped& trans);
+private:
+  /// Handle any response with an acofix message.
+  template <class Type>
+  void onAcoFixMessage(const Type& resp)
+  {
+    this->processAcoFix(resp.acofix);
+  }
 
-			///Transponder fix publishers
-			PublisherMap fix_pub;
-			///Transponder fix publishers
-			PublisherMap navsts_pub;
-			///Transponder relative position publishers
-			PublisherMap point_pub;
+  void onAcoFixMessageData(const DatReceive& resp)
+  {
+    this->processAcoFix(resp.acofix, resp.data.size());
+  }
 
-			///Internal status data
-			double vos;
+  /// AcoFix message processor
+  void processAcoFix(const AcoFix& fix, size_t payload_bytes = 0);
+  /// Status processor
+  void onStatus(const StatusResp& resp);
+  /// Calculate the full navigation solution
+  void calculateNavSts(auv_msgs::NavSts& nav, const Eigen::Vector3d& pos,
+                       const geometry_msgs::TransformStamped& trans);
 
-			///Internal AHRS compensation
-			bool use_ahrs;
+  /// Transponder fix publishers
+  PublisherMap fix_pub;
+  /// Transponder fix publishers
+  PublisherMap navsts_pub;
+  /// Transponder relative position publishers
+  PublisherMap point_pub;
 
-			///Inverted USBL configuration
-			bool inverted_cfg;
+  /// Internal status data
+  double vos;
 
-			///Assumed time delay to use for AHRS compensation
-			double ahrs_delay;
-			///TF broadcast listener buffer
-			tf2_ros::Buffer buffer;
-			///TF broadcast listener
-			tf2_ros::TransformListener listener;
-			///Transponder map
-			std::map<int, std::string> ids;
-			///The projection to ENU
-			GeographicLib::LocalCartesian proj;
-		};
-	}
+  /// Internal AHRS compensation
+  bool use_ahrs;
+
+  /// Inverted USBL configuration
+  bool inverted_cfg;
+
+  /// Assumed time delay to use for AHRS compensation
+  double ahrs_delay;
+  /// TF broadcast listener buffer
+  tf2_ros::Buffer buffer;
+  /// TF broadcast listener
+  tf2_ros::TransformListener listener;
+  /// Transponder map
+  std::map<int, std::string> ids;
+  /// The projection to ENU
+  GeographicLib::LocalCartesian proj;
+
+  /// The delay specification
+  DelaySpecification delay;
+};
+}
 }
 
 /* SEATRAC_NAVLISTENER_H */

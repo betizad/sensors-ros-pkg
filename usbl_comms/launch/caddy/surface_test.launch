@@ -1,14 +1,13 @@
 <launch>
 	<arg name="is_sim" default="true"/>
 	
-	<remap from="medium_out" to="/medium_out" />
-    <remap from="medium_in" to="/medium_in" />
-    <remap from="unregister_modems" to="/unregister_modems" />
-    <remap from="register_modem" to="/register_modem" />
-    <remap from="unregister_modem" to="/unregister_modem" />
-    <remap from="registered_nodes" to="/registered_nodes" />
-    
-	
+	<remap from="medium_out" to="/caddy/medium_out" />
+    <remap from="medium_in" to="/caddy/medium_in" />
+    <remap from="unregister_modems" to="/caddy/unregister_modems" />
+    <remap from="register_modem" to="/caddy/register_modem" />
+    <remap from="unregister_modem" to="/caddy/unregister_modem" />
+    <remap from="registered_nodes" to="/caddy/registered_nodes" />
+    	
     <!-- The surface USBL -->   
     <group ns="surface">
     	<node pkg="seatrac" type="seatrac_core" name="surface_sim" output="screen">
@@ -20,23 +19,64 @@
                    "labust::seatrac::NavListener",
                    "labust::seatrac::DataListener"]</rosparam>
             <!-- Serial parameters -->
-            <param name="port_name" value="/dev/usbl" />
-            <!-- USBLController configuration -->
-            <param name="auto_mode" value="false" />
-            <param name="timeout" value="4.0" />
+            <param name="port_name" value="/dev/ttyUSB0" />
+            <!-- Surface USBL configuration -->
+            <param name="is_master" value="false" />
+            <param name="ping_rate" value="0" />
+            <!-- NavListener setup -->
             <rosparam param="transponders">[2,3]</rosparam>
             <param name="use_ahrs" value="true" />
-			<!-- NavListener setup -->
 			<rosparam param="transponder_names">["diver","buddy"]</rosparam>
-			
 			<!-- Simulation parameters -->
 			<param name="sim_node_id" value="1" />
 			<param name="sim_is_modem" value="false" />
 			
+            <!-- Module and handler remappings -->
+            <!-- InitModule -->
+            <remap from="acoustic_origin_ned" to="acoustic_origin_ned" />
+            <remap from="acoustic_origin_llh" to="acoustic_origin_llh" />
+            <!-- NavModule -->
+            <remap from="agent_position_out" to="position" />
+            <remap from="diver_position_out" to="diver/position" />
+            <!-- CommandModule -->
+            <remap from="command_outgoing" to="command" />
+            <remap from="lawnmower_req" to="lawnmower_req" />
+            <remap from="photo_req" to="photo_req" />
+            <remap from="guide_target" to="guide_target" />
+            <!-- ChatModule -->
+            <remap from="chat_text" to="chat_text" />
+            <remap from="chat_predefined" to="chat_predefined" />
+            
+            <!-- BuddyHandler/Nav -->
+            <remap from="buddy_diver_pos" to="buddy/diver/position" />
+            <remap from="buddy_pos" to="buddy/position" />
+            <remap from="buddy_partial_pos" to="buddy/position_partial" />
+            <remap from="buddy_acoustic_origin_in" to="acoustic_origin_in" />
+            <!-- BuddyHandler/Status -->
+            <remap from="buddy_status_in" to="buddy/status" />
+            <remap from="buddy_status_lawnmower_req" to="buddy/lawnmower_req" />
+            <!-- BuddyHandler/Payload -->
+            <remap from="buddy_leak" to="buddy/leak" />
+            <remap from="buddy_battery_status" to="buddy/battery_status" />
+            <!-- BuddyHandler/Payload -->
+            
+            <!-- DiverHandler/Nav -->
+            <remap from="diver_pos" to="diver/position_partial" />
+            <!-- DiverHandler/Payload -->
+            <remap from="diver_payload" to="diver/payload" />
+            <!-- DiverHandler/Chat -->
+            <remap from="diver_chat_text_in" to="diver/chat_text" />
+            <remap from="diver_chat_predefined_in" to="diver/chat_predefined" />
+            <!-- DiverHandler/Command -->
+            <remap from="diver_command_in" to="diver/command" />
+            <remap from="diver_command_lawnmower_req" to="diver/lawnmower_req" />
+            <remap from="diver_command_photo_req" to="diver/photo_req" />
+            <remap from="diver_command_guide_target" to="diver/guide_target" />  
+           
+            <!-- Acoustic Simulator -->
 			<remap from="navsts" to="position" />
 		</node>
 		
-		<node pkg="ist_util" type="ramp_pub.py" name="surface_pos" />
 		<!-- <node pkg="seatrac" type="static_beacon" name="surface_pos">
 			<rosparam param="position">[1.234,4.44,0.0]</rosparam>
 			<rosparam param="orientation">[0.0,0.0,1.0]</rosparam>

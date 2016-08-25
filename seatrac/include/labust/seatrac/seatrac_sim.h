@@ -39,9 +39,13 @@
 #include <std_msgs/Bool.h>
 #include <underwater_msgs/MediumTransmission.h>
 #include <std_msgs/Int32MultiArray.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <ros/ros.h>
 
 #include <boost/thread/mutex.hpp>
+
+#include <Eigen/Dense>
 
 #include <queue>
 #include <set>
@@ -214,8 +218,8 @@ namespace labust
 			int expected_id;
 			///The simulated node ID (default: 1)
 			int node_id;
-			///The simulated ping duration (default: 0.65)
-			double ping_duration;
+			///The device delay specifications.
+			DelaySpecification delay;
 			///The maximum distance (default: 500)
 			double max_distance;
 			///The speed of sound (default: 1500)
@@ -228,12 +232,27 @@ namespace labust
 			double bps;
 			///The node position and attitude
 			auv_msgs::NavSts navstate;
+			/// The delayed node position for USBL fix calculations
+			auv_msgs::NavSts navstate_delayed;
 			///Modem registration flag
 			bool registered;
 			///Max data transmission duration
 			double max_data_duration;
 			///Flag for use of internal
 			bool internal_ahrs;
+			/// The depth at which the modem surfaces
+			double surface_depth;
+			/// The translation offset to base_link.
+			Eigen::Vector3d offset;
+			/// The rotation offset to base_link.
+			Eigen::Quaterniond orot;
+			/// Buffer for frame transformations.
+		    tf2_ros::Buffer buffer;
+		    /// Listener for transformation.
+		    tf2_ros::TransformListener listener;
+		    /// Transformation frame prefixes.
+		    std::string tf_prefix;
+
 
 			///The internal message queue
 			std::queue<DatSendCmd::Ptr> reply_queue;

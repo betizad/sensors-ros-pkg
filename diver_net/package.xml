@@ -7,6 +7,10 @@
       measure diver kinematics. 
   </description>
 
+  <export>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+
   <maintainer email="ivor.rendulic@gmail.com">Ivor Rendulic</maintainer>
   <license>BSD</license>
   <!-- <url type="website">http://wiki.ros.org/diver_net</url> -->
@@ -25,5 +29,7 @@
   <run_depend>sensor_msgs</run_depend>
   <run_depend>sensors_util</run_depend>
   <run_depend>xacro</run_depend>
+  <run_depend>rqt_gui</run_depend>
+  <run_depend>rqt_gui_py</run_depend>
 
 </package>
