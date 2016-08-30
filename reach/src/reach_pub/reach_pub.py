@@ -83,9 +83,9 @@ class IMUUDPClient:
                 #rospy.loginfo("Receveid: {0}".format(raw_data))
             
                 imud = Imu()
-                imud.linear_acceleration.x = raw_data[0]*9.8065
-                imud.linear_acceleration.y = raw_data[1]*9.8065
-                imud.linear_acceleration.z = raw_data[2]*9.8065
+                imud.linear_acceleration.x = -raw_data[0]*9.8065
+                imud.linear_acceleration.y = -raw_data[1]*9.8065
+                imud.linear_acceleration.z = -raw_data[2]*9.8065
                 imud.angular_velocity.x = raw_data[3]/180*math.pi
                 imud.angular_velocity.y = raw_data[4]/180*math.pi
                 imud.angular_velocity.z = raw_data[5]/180*math.pi

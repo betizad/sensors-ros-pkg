@@ -14,7 +14,7 @@ class NMEAClient:
         self.nmea_string = rospy.Subscriber("gps_sentences", String, self.on_sentences, queue_size=20)
         
     def on_sentences(self, data):
-        if "RMC" in data.data:
+        if "GGA" in data.data:
             out = Sentence()
             out.header.stamp = rospy.Time.now()
             out.header.frame_id = "gps_frame"

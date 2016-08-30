@@ -84,8 +84,11 @@ void ObjectTrackerNode::onInit() {
   sonar_detector.setBinarizationParams(
       blur_size, threshold_size, threshold_offset);
 
-  sonar_detector.setEnableVisualization(true);
-  sonar_detector.startDebugWindow();
+  if (enable_visualization)
+  {
+  	sonar_detector.setEnableVisualization(enable_visualization);
+  	sonar_detector.startDebugWindow();
+  }
 }
 
 void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg) {
