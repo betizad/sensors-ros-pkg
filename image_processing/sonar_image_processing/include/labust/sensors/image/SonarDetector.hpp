@@ -64,7 +64,12 @@ namespace labust {
               threshold_offset_(DEFAULT_BINARIZATION_THRESHOLD_OFFSET),
               frames_without_measurement(0),
               is_detector_initialized(false),
-              enable_visualization_(false) {}
+              enable_visualization_(false),
+			  roi_size_gain(3.0){
+
+        	  ros::NodeHandle ph("~");
+        	  ph.param("roi_size_gain",roi_size_gain,roi_size_gain);
+          }
          
           ~SonarDetector() {}
         
@@ -172,8 +177,8 @@ namespace labust {
           void adjustROIFromFilterEstimate(const navcon_msgs::RelativePosition& filter_estimate) {
             // x-y inverted compared to filter; TODO: SonarDetector works in NED x-y system
             cv::Point roi_center(filter_estimate.y * 1000, filter_estimate.x * 1000);
-            cv::Size roi_size(sqrt(target_size) + 3*1000 * sqrt(filter_estimate.y_variance),
-                              sqrt(target_size) + 3*1000 * sqrt(filter_estimate.x_variance));
+            cv::Size roi_size(sqrt(target_size) + roi_size_gain*1000 * sqrt(filter_estimate.y_variance),
+                              sqrt(target_size) + roi_size_gain*1000 * sqrt(filter_estimate.x_variance));
             //cv::Size roi_test_size(2000, 2000);
             roi = cv::Rect(roi_center, roi_size);
             roi = moveRect(roi, roi.tl());
@@ -361,6 +366,7 @@ namespace labust {
           double measurement_range, measurement_bearing;
           double estimated_range, estimated_bearing;
           double heading, delta_heading;
+          double roi_size_gain;
           int blur_size_, threshold_size_, threshold_offset_;
           int frames_without_measurement;
           int max_connected_distance, min_contour_size;
