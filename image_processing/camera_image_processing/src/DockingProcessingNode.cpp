@@ -28,19 +28,21 @@ int main(int argc, char** argv)
       
   init(argc, argv, "docking_processing_node");
   NodeHandle nh;
-  std_msgs::Float32 vertical, horizontal;
+  std_msgs::Float32 vertical, horizontal, boxsize;
   Publisher pub_v=nh.advertise<std_msgs::Float32>("docking_vertical",1); //center of image is zero, -> +, ^ +
   Publisher pub_h=nh.advertise<std_msgs::Float32>("docking_horizontal",1);  
+  Publisher pub_s=nh.advertise<std_msgs::Float32>("size",1);
+
   
   time_t start,end;
 	
 	int iLowH=0;
 	int iHighH=10;
 		
-	int iLowS=80;
+	int iLowS=50;
 	int iHighS=255;
 		
-	int iLowV=40;
+	int iLowV=50;
 	int iHighV=255;
 	
 	time(&start);
@@ -92,7 +94,7 @@ int main(int argc, char** argv)
 							   }
    
          }
-		
+		boxsize.data=largest_area;
 		time(&end);
 		++counter;
 		double sec=difftime(end,start);
@@ -113,14 +115,15 @@ int main(int argc, char** argv)
 		{
 			pub_v.publish(vertical);
 			pub_h.publish(horizontal);
+			pub_s.publish(boxsize);
 		}
 				
-		ostringstream str;
-		str << "FPS: " << fps;
+		//ostringstream str;
+		//str << "FPS: " << fps;
 		
-		putText(imgThresholded, str.str(), cvPoint(30,30), CV_FONT_HERSHEY_DUPLEX, 1, cvScalar(255, 255, 0), 1, CV_AA);
+		//putText(imgThresholded, str.str(), cvPoint(30,30), CV_FONT_HERSHEY_DUPLEX, 1, cvScalar(255, 255, 0), 1, CV_AA);
 		rectangle(imgOriginal, bounding_rect,  Scalar(0,255,0),1, 8,0);  
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
 		imshow("Original", imgOriginal); //show the original image
 		cv::waitKey(3);
 		
