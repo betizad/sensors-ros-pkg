@@ -65,10 +65,12 @@ namespace labust {
               frames_without_measurement(0),
               is_detector_initialized(false),
               enable_visualization_(false),
-			  roi_size_gain(3.0){
-
-        	  ros::NodeHandle ph("~");
-        	  ph.param("roi_size_gain",roi_size_gain,roi_size_gain);
+              reject_multiple_targets_(false),
+              range_only_distance_(false),
+              target_distance_threshold_(1000),
+              roi_size_gain(3.0) {
+            ros::NodeHandle ph("~");
+            ph.param("roi_size_gain", roi_size_gain, roi_size_gain);
           }
          
           ~SonarDetector() {}
@@ -107,6 +109,18 @@ namespace labust {
            */
           void setTargetSize(int target_sz) {
             target_size = target_sz;
+          }
+
+          void setRejectMultipleTargets(bool reject_multiple_targets) {
+            reject_multiple_targets_ = reject_multiple_targets;
+          }
+
+          void setRangeOnlyDistance(bool range_only_distance) {
+            range_only_distance_ = range_only_distance;
+          }
+
+          void setTargetDistanceThreshold(int target_distance_threshold) {
+            target_distance_threshold_ = target_distance_threshold;
           }
          
           /**
@@ -297,21 +311,28 @@ namespace labust {
               frames_without_measurement -= 2;
               if (frames_without_measurement < 0) frames_without_measurement = 0;
             }
-            if (target_candidates.size() == 0) return cv::Point2f(0,0);
+            if (target_candidates.size() == 0 || 
+                (reject_multiple_targets_ && target_candidates.size() != 1)) return cv::Point2f(0,0);
             double best_value = HUGE_VAL;
-            double best_roi_variance;
             int best_roi_ind;
+            double curr_roi_dist;
             for (int i=0; i<target_candidates.size(); ++i) {
-              double area = target_candidates[i].area();
-              double curr_roi_dist = distanceBetweenPoints(rectCenter(target_candidates[i]), rectCenter(roi));
-              double curr_roi_stdev = 1 - exp(-(0.001*(area-target_size) * 0.001*(area-target_size) / (2 << 20)));
-              if (curr_roi_dist * curr_roi_stdev < best_value) {
-                best_value = curr_roi_dist * sqrt(abs(target_size - target_candidates[i].area()));
+              if (range_only_distance_) {
+                curr_roi_dist = abs(distanceBetweenPoints(rectCenter(roi), cv::Point(0,0)) -
+                                    distanceBetweenPoints(rectCenter(target_candidates[i]), cv::Point(0,0)));
+              } else {
+                curr_roi_dist = distanceBetweenPoints(rectCenter(target_candidates[i]), rectCenter(roi));
+              }
+              if (curr_roi_dist < best_value) {
+                best_value = curr_roi_dist;
                 best_roi_ind = i;
-                best_roi_variance = curr_roi_stdev * curr_roi_stdev;
               }
             }
-            return rectCenter(target_candidates[best_roi_ind]);
+            if (best_value < target_distance_threshold_) {
+              return rectCenter(target_candidates[best_roi_ind]);
+            } else {
+              return cv::Point(0,0);
+            }
           }
 
           void visualize(const cv::Mat& frame) {
@@ -371,8 +392,11 @@ namespace labust {
           int frames_without_measurement;
           int max_connected_distance, min_contour_size;
           int target_size; 
+          int target_distance_threshold_;
           bool is_detector_initialized;
           bool enable_visualization_;
+          bool reject_multiple_targets_;
+          bool range_only_distance_;
       };
     }
   }
