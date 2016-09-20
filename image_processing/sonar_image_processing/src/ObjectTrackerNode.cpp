@@ -62,10 +62,10 @@ void ObjectTrackerNode::onInit() {
   ros::NodeHandle ph("~");
 
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
-  nav_filter_estimate_sub = nh.subscribe("buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
-  position_sub = nh.subscribe("buddy/position", 1, &ObjectTrackerNode::setHeading, this);
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  nav_filter_estimate_sub = nh.subscribe("relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
+  position_sub = nh.subscribe("position", 1, &ObjectTrackerNode::setHeading, this);
+  sonar_info_sub = nh.subscribe("soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
+  image_sub = it.subscribe("soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
   sonar_fix_pub = nh.advertise<navcon_msgs::RelativePosition>("sonar_fix", 1);
   
   int target_size, max_connected_distance, min_contour_size;
