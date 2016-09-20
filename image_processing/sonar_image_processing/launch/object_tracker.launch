@@ -7,6 +7,7 @@
   <param name="reject_multiple_targets" value="true" type="bool" />
   <param name="range_only_distance" value="true" type="bool" />
   <param name="target_distance_threshold" value="1000" type="int" />
+  <param name="roi_size_gain" value="0.75"/>
   </node>
   
 </launch>
