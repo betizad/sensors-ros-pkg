@@ -75,7 +75,7 @@ public:
     GUIDE_ME = 2,
     GET_TOOL = 3,
     TAKE_PHOTO = 4,
-    HANDOFF_PING = 5,
+    ALLOW_APPROACH = 5,
     FAILED_CMD = 6,
     STOP = 7
   };

@@ -37,11 +37,15 @@ add_library(caddy_comms src/caddy/caddy_messages.cpp
   src/caddy/diver_handler.cpp)
 #  src/caddy/command_module.cpp
 #  src/caddy/status_handler.cpp)
-add_dependencies(caddy_comms auv_msgs_gencpp underwater_msgs_gencpp)
+add_dependencies(caddy_comms auv_msgs_gencpp underwater_msgs_gencpp caddy_msgs_gencpp)
+target_link_libraries(caddy_comms ${catkin_LIBRARIES})
+
+add_executable(test_diver_payload src/test/test_diver_payload.cpp)
+add_dependencies(test_diver_payload caddy_msgs_gencpp)
+target_link_libraries(test_diver_payload ${catkin_LIBRARIES})
 
 ## DEPRECATED
 # add_library(usbl_comms src/USBLManager.cpp src/DiverMsg.cpp)
-# target_link_libraries(caddy_comms ${catkin_LIBRARIES})
 
 #add_library(uros_comms src/uros/uros_messages.cpp
 #    src/uros/uros_modem_controller.cpp
