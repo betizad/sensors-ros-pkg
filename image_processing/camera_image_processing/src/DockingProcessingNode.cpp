@@ -28,20 +28,22 @@ int main(int argc, char** argv)
       
   init(argc, argv, "docking_processing_node");
   NodeHandle nh;
-  std_msgs::Float32 vertical, horizontal;
+  std_msgs::Float32 vertical, horizontal, boxsize;
   Publisher pub_v=nh.advertise<std_msgs::Float32>("docking_vertical",1); //center of image is zero, -> +, ^ +
   Publisher pub_h=nh.advertise<std_msgs::Float32>("docking_horizontal",1);  
+  Publisher pub_s=nh.advertise<std_msgs::Float32>("size",1);
+
   
   time_t start,end;
 	
-	int iLowH=0;
-	int iHighH=10;
+	int iLowH=100;
+	int iHighH=150;
 		
-	int iLowS=80;
+	int iLowS=50;
 	int iHighS=255;
 		
-	int iLowV=40;
-	int iHighV=255;
+	int iLowV=50;
+	int iHighV=200;
 	
 	time(&start);
 	int counter=0;
@@ -49,6 +51,7 @@ int main(int argc, char** argv)
 	Mat imgOriginal;
 	Mat imgHSV;
 	Mat imgThresholded;
+        Mat m1,m2;
 	vector<vector<Point> > contours;
 	int largest_area=0;
     int largest_contour_index=0;
@@ -66,10 +69,18 @@ int main(int argc, char** argv)
 		break;
 		}
 		
-		cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //convert from RGB to HSV
+		//cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //convert from RGB to HSV
+                
+                cv::Rect myROI(0, 30, 640, 370);
+		imgOriginal=imgOriginal(myROI);
 
-		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded); //threshold
-		
+		cvtColor(imgOriginal,imgHSV,COLOR_BGR2HSV); //convert from RGB to HSV  
+
+		inRange(imgHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), m1); //threshold
+		//inRange(imgHSV, Scalar(170,iLowS,iLowV), Scalar(180,iHighS,iHighV),m2);
+
+                //imgThresholded = m1 | m2;
+		imgThresholded=m1;
 		//morphological opening
 		erode(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) );
 		dilate(imgThresholded, imgThresholded, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)) ); 
@@ -92,7 +103,7 @@ int main(int argc, char** argv)
 							   }
    
          }
-		
+		boxsize.data=largest_area;
 		time(&end);
 		++counter;
 		double sec=difftime(end,start);
@@ -113,16 +124,17 @@ int main(int argc, char** argv)
 		{
 			pub_v.publish(vertical);
 			pub_h.publish(horizontal);
+			pub_s.publish(boxsize);
 		}
 				
-		ostringstream str;
-		str << "FPS: " << fps;
+		//ostringstream str;
+		//str << "FPS: " << fps;
 		
-		putText(imgThresholded, str.str(), cvPoint(30,30), CV_FONT_HERSHEY_DUPLEX, 1, cvScalar(255, 255, 0), 1, CV_AA);
-		rectangle(imgOriginal, bounding_rect,  Scalar(0,255,0),1, 8,0);  
-		imshow("Thresholded Image", imgThresholded); //show the thresholded image
-		imshow("Original", imgOriginal); //show the original image
-		cv::waitKey(3);
+		//putText(imgThresholded, str.str(), cvPoint(30,30), CV_FONT_HERSHEY_DUPLEX, 1, cvScalar(255, 255, 0), 1, CV_AA);
+		//rectangle(imgOriginal, bounding_rect,  Scalar(0,255,0),1, 8,0);  
+		//imshow("Thresholded Image", imgThresholded); //show the thresholded image
+		//imshow("Original", imgOriginal); //show the original image
+		//cv::waitKey(3);
 		
 		
 		Scalar color(255,255,255);

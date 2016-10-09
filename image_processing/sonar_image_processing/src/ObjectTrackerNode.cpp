@@ -64,13 +64,15 @@ void ObjectTrackerNode::onInit() {
   //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
   nav_filter_estimate_sub = nh.subscribe("buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
   position_sub = nh.subscribe("buddy/position", 1, &ObjectTrackerNode::setHeading, this);
-  sonar_info_sub = nh.subscribe("soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
+  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
   sonar_fix_pub = nh.advertise<navcon_msgs::RelativePosition>("sonar_fix", 1);
   
   int target_size, max_connected_distance, min_contour_size;
   int blur_size, threshold_size, threshold_offset;
+  int target_distance_threshold;
   bool enable_visualization, enable_debug_window;
+  bool range_only_distance, reject_multiple_targets;
   ph.param("target_size", target_size, 1000000);
   ph.param("max_connected_distance", max_connected_distance, 100);
   ph.param("min_contour_size", min_contour_size, 100);
@@ -78,16 +80,20 @@ void ObjectTrackerNode::onInit() {
   ph.param("threshold_size", threshold_size, 75);
   ph.param("threshold_offset", threshold_offset, 25);
   ph.param("enable_visualization", enable_visualization, false);
+  ph.param("reject_multiple_targets", reject_multiple_targets, false);
+  ph.param("range_only_distance", range_only_distance, false);
+  ph.param("target_distance_threshold", target_distance_threshold);
   sonar_detector.setContourClusteringParams(
       max_connected_distance, min_contour_size); 
   sonar_detector.setTargetSize(target_size);
   sonar_detector.setBinarizationParams(
       blur_size, threshold_size, threshold_offset);
-
-  if (enable_visualization)
-  {
-  	sonar_detector.setEnableVisualization(enable_visualization);
-  	sonar_detector.startDebugWindow();
+  sonar_detector.setRejectMultipleTargets(reject_multiple_targets);
+  sonar_detector.setRangeOnlyDistance(range_only_distance);
+  sonar_detector.setTargetDistanceThreshold(target_distance_threshold);
+  if (enable_visualization) {
+    sonar_detector.setEnableVisualization(enable_visualization);
+    sonar_detector.startDebugWindow();
   }
 }
 

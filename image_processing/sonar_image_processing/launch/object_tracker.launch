@@ -1,0 +1,20 @@
+<launch>
+  <node name="object_tracker" pkg="sonar_image_processing" type="sonar_object_tracker_node">
+  <remap from="soundmetrics_aris3000/sonar_info" to="sonar/sonar_info" />
+  <remap from="soundmetrics_aris3000/cartesian" to="sonar/image_raw/cartesian" />
+  <remap from="soundmetrics_aris3000/polar" to="sonar/image_raw" />
+  <remap from="position" to="position_filt_ekf" />
+  <remap from="sonar_fix" to="sonar/fix" />
+
+
+  <param name="target_size" value="1000000" type="int" />
+  <param name="max_connected_distance" value="100" type="int" />
+  <param name="min_contour_size" value="100" type="int" />
+  <param name="enable_visualization" value="true" type="bool" />
+  <param name="reject_multiple_targets" value="true" type="bool" />
+  <param name="range_only_distance" value="true" type="bool" />
+  <param name="target_distance_threshold" value="1000" type="int" />
+  <param name="roi_size_gain" value="0.75"/>
+  </node>
+  
+</launch>
