@@ -31,20 +31,20 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/comms/caddy/surface_handler.h>
-#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/comms/ascii6bit.h>
-#include <labust/seatrac/seatrac_messages.h>
+#include <labust/comms/caddy/caddy_messages.h>
+#include <labust/comms/caddy/surface_handler.h>
 #include <labust/seatrac/seatrac_definitions.h>
-#include <labust/math/NumberManipulation.hpp>
+#include <labust/seatrac/seatrac_messages.h>
 #include <labust/tools/packer.h>
+#include <labust/math/NumberManipulation.hpp>
 
 #include <pluginlib/class_list_macros.h>
 
 #include <auv_msgs/NavSts.h>
-#include <std_msgs/UInt8.h>
-#include <std_msgs/String.h>
 #include <geometry_msgs/PointStamped.h>
+#include <std_msgs/String.h>
+#include <std_msgs/UInt8.h>
 
 #include <string>
 
@@ -54,16 +54,18 @@ using labust::comms::Ascii6Bit;
 
 bool SurfaceHandler::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
- 	nav_pub = nh.advertise<auv_msgs::NavSts>("surface_pos",	1);
- 	diverpos_pub = nh.advertise<auv_msgs::NavSts>("surface_diver_pos", 1);
- 	init_pub = nh.advertise<geometry_msgs::PointStamped>("surface_acoustic_origin_in", 1, true);
+  nav_pub = nh.advertise<auv_msgs::NavSts>("surface_pos", 1);
+  diverpos_pub = nh.advertise<auv_msgs::NavSts>("surface_diver_pos", 1);
+  init_pub = nh.advertise<geometry_msgs::PointStamped>(
+      "surface_acoustic_origin_in", 1, true);
 
- 	chat.configure(nh, ph);
- 	command.configure(nh, ph);
-	return true;
+  chat.configure(nh, ph);
+  command.configure(nh, ph);
+  return true;
 }
 
-void SurfaceHandler::operator()(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay)
+void SurfaceHandler::operator()(const SurfaceReport& message,
+                                const Eigen::Vector3d& offset, double delay)
 {
   navHandler(message, offset, delay);
   if (!message.is_master || message.inited)
@@ -73,7 +75,8 @@ void SurfaceHandler::operator()(const SurfaceReport& message, const Eigen::Vecto
   }
 }
 
-void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vector3d& offset, double delay)
+void SurfaceHandler::navHandler(const SurfaceReport& message,
+                                const Eigen::Vector3d& offset, double delay)
 {
   ros::Time msg_time = ros::Time::now() - ros::Duration(delay);
   if (message.is_master && !message.inited)
@@ -91,7 +94,7 @@ void SurfaceHandler::navHandler(const SurfaceReport& message, const Eigen::Vecto
     nav->position.north = message.north + offset(n);
     nav->position.east = message.east + offset(e);
 
-    nav->orientation.yaw = labust::math::wrapRad(M_PI*message.course/180);
+    nav->orientation.yaw = labust::math::wrapRad(M_PI * message.course / 180);
     nav->gbody_velocity.x = message.speed;
 
     nav->header.stamp = msg_time;
