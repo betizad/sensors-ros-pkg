@@ -273,7 +273,7 @@ bool SeatracSim::send(const SeatracMessage::ConstPtr& msg)
     this->unregisterModem();
     return false;
   }
-
+  // ROS_ERROR("SENDING");
   if (getState() != IDLE)
   {
     // Reply with device busy
@@ -740,6 +740,7 @@ void SeatracSim::onUSBLTimeout(const ros::TimerEvent& e)
   ROS_WARN("SeatracSim: USBL timeout.");
 
   int state = getState();
+  this->setState(IDLE);
 
   if (state == WAIT_PING_REPLY)
   {
@@ -749,8 +750,6 @@ void SeatracSim::onUSBLTimeout(const ros::TimerEvent& e)
   {
     sendError<DatError>(CST::XCVR::RESP_TIMEOUT);
   }
-
-  this->setState(IDLE);
 }
 
 PLUGINLIB_EXPORT_CLASS(labust::seatrac::SeatracSim,

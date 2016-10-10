@@ -153,7 +153,7 @@ void SurfaceUSBL::run()
 
   while (ros::ok() && run_flag && is_master)
   {
-    int idx = DIVER;
+    int idx = ping_diver ? DIVER : BUDDY;
 
     // Create the report
     DatSendCmd::Ptr data(new DatSendCmd());
@@ -261,12 +261,12 @@ void SurfaceUSBL::onBuddyData(const std::vector<uint8_t>& data)
   command.currentStatus(message.command);
   buddy_status = message.command;
 
-  if (buddy_status == CommandModule::GET_TOOL)
-  {
-    ROS_INFO("Starting pinging.");
-    is_master = true;
-    this->startPinging();
-  }
+  // if (buddy_status == CommandModule::GET_TOOL)
+  //{
+  // ROS_INFO("Starting pinging.");
+  // is_master = true;
+  // this->startPinging();
+  //}
 }
 
 void SurfaceUSBL::onDiverData(const std::vector<uint8_t>& data)
