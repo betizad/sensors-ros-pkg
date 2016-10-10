@@ -18,7 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
+#message("Found opencv: ${OpenCV_VERSION}")
+#message("Found opencv: ${OpenCV_INCLUDE_DIRS}")
+#message("Found opencv: ${OpenCV_LIBRARIES}")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -100,7 +103,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+#  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -119,11 +122,11 @@ add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sonar_object_tracker_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 target_link_libraries(sonar_bathymetry_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 
 #############

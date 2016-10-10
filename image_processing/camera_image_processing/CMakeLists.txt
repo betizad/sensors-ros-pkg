@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
 find_package(CURL REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -102,7 +102,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+#  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -124,24 +124,24 @@ add_executable(docking_processing_node src/DockingProcessingNode.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(opencv_camera_driver_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 target_link_libraries(curl_camera_driver_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
   curl
 )
 target_link_libraries(object_detector_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 target_link_libraries(xb3_splitter
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 target_link_libraries(docking_processing_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 
 #############

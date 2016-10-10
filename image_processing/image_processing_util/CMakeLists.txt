@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 #find_package(Boost REQUIRED)
 #find_package(Eigen REQUIRED)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV 2.4.8 REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -91,7 +91,7 @@ target_link_libraries(image_processing_util
  )
 target_link_libraries(image_extractor
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 
 #############
