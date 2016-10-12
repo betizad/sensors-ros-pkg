@@ -34,8 +34,8 @@
  *  Author : Dula Nad
  *  Created: 23.01.2013.
  *********************************************************************/
-#include <labust/seatrac/seatrac_serial.h>
 #include <labust/seatrac/seatrac_factory.h>
+#include <labust/seatrac/seatrac_serial.h>
 #include <pluginlib/class_list_macros.h>
 
 #include <std_msgs/String.h>
@@ -45,130 +45,130 @@
 
 using namespace labust::seatrac;
 
-SeatracSerial::SeatracSerial():
-		io(),
-		port(io){}
+SeatracSerial::SeatracSerial() : io(), port(io)
+{
+}
 
 SeatracSerial::~SeatracSerial()
 {
-	io.stop();
-	runner.join();
+  io.stop();
+  runner.join();
 }
 
 bool SeatracSerial::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
-	std::string port_name("/dev/ttyS0");
-	int baud(115200);
+  std::string port_name("/dev/ttyS0");
+  int baud(115200);
 
-	ph.param("port_name",port_name, port_name);
-	ph.param("baud", baud, baud);
+  ph.param("port_name", port_name, port_name);
+  ph.param("baud", baud, baud);
 
-	raw_out = nh.advertise<std_msgs::String>("usbl_raw_msg",1);
+  raw_out = nh.advertise<std_msgs::String>("usbl_raw_msg", 1);
+  raw_in = nh.advertise<std_msgs::String>("usbl_raw_msg_in", 1);
 
-	return this->connect(port_name, baud);
+  return this->connect(port_name, baud);
 }
 
-bool SeatracSerial::connect(const std::string& port_name, int baud)
-try
+bool SeatracSerial::connect(const std::string& port_name, int baud) try
 {
-	using namespace boost::asio;
-	port.open(port_name);
-	port.set_option(serial_port::baud_rate(baud));
-	port.set_option(serial_port::flow_control(
-			serial_port::flow_control::none));
+  using namespace boost::asio;
+  port.open(port_name);
+  port.set_option(serial_port::baud_rate(baud));
+  port.set_option(serial_port::flow_control(serial_port::flow_control::none));
 
-	bool setupOk = port.is_open();
+  bool setupOk = port.is_open();
 
-	if (setupOk)
-	{
-		//Start the receive cycle
-		this->startReceive();
-		runner = boost::thread(boost::bind(&boost::asio::io_service::run,&io));
-	}
+  if (setupOk)
+  {
+    // Start the receive cycle
+    this->startReceive();
+    runner = boost::thread(boost::bind(&boost::asio::io_service::run, &io));
+  }
 
-	return setupOk;
+  return setupOk;
 }
 catch (std::exception& e)
 {
-	std::cerr<<e.what()<<std::endl;
-	return false;
+  std::cerr << e.what() << std::endl;
+  return false;
 }
-
 
 void SeatracSerial::startReceive()
 {
-	using namespace boost::asio;
-	async_read_until(port, buffer,
-			"\r\n",
-			boost::bind(&SeatracSerial::onData, this, _1,_2));
+  using namespace boost::asio;
+  async_read_until(port, buffer, "\r\n",
+                   boost::bind(&SeatracSerial::onData, this, _1, _2));
 }
 
-bool SeatracSerial::send(const SeatracMessage::ConstPtr& msg)
-try
+bool SeatracSerial::send(const SeatracMessage::ConstPtr& msg) try
 {
-	SeatracFactory::encodePacket(msg, &out);
-	ROS_INFO("Sending:%s",out.c_str());
-	boost::asio::write(port, boost::asio::buffer(out));
-	return true;
+  SeatracFactory::encodePacket(msg, &out);
+  ROS_INFO("Sending:%s", out.c_str());
+  // ROS debug output
+  std_msgs::String::Ptr outraw(new std_msgs::String());
+  outraw->data = out;
+  raw_in.publish(outraw);
+  boost::asio::write(port, boost::asio::buffer(out));
+  return true;
 }
 catch (std::exception& e)
 {
-	ROS_WARN("%s", e.what());
-	return false;
+  ROS_WARN("%s", e.what());
+  return false;
 }
 
-bool SeatracSerial::resend()
-try
+bool SeatracSerial::resend() try
 {
-	ROS_DEBUG("SeatracSerial: Re-sending data: %s", out.c_str());
-	boost::asio::write(port, boost::asio::buffer(out));
-	return true;
+  ROS_DEBUG("SeatracSerial: Re-sending data: %s", out.c_str());
+  boost::asio::write(port, boost::asio::buffer(out));
+  return true;
 }
 catch (std::exception& e)
 {
-	std::cerr<<e.what()<<std::endl;
-	return false;
+  std::cerr << e.what() << std::endl;
+  return false;
 }
 
 void SeatracSerial::onData(const boost::system::error_code& e,
-		std::size_t size)
+                           std::size_t size)
 {
-	if (!e)
-	{
-		std::istream is(&buffer);
-		std::string data(size,'\0');
-		is.read(&data[0],size);
+  if (!e)
+  {
+    std::istream is(&buffer);
+    std::string data(size, '\0');
+    is.read(&data[0], size);
 
-		//ROS debug output
-		std_msgs::String::Ptr outraw(new std_msgs::String());
-		outraw->data = data;
-		raw_out.publish(outraw);
+    // ROS debug output
+    std_msgs::String::Ptr outraw(new std_msgs::String());
+    outraw->data = data;
+    raw_out.publish(outraw);
 
-		SeatracMessage::Ptr msg;
-		try
-		{
-			if (SeatracFactory::decodePacket(data, msg))
-			{
-				boost::mutex::scoped_lock l(callback_mux);
-				if (!callback.empty()) callback(msg);
-			}
-			else
-			{
-				ROS_WARN("SeatracSerial: Message encoding failed.");
-			}
-		}
-		catch (std::exception& e)
-		{
-			ROS_WARN("SeatracSerial: %s",e.what());
-		}
-	}
-	else
-	{
-		ROS_WARN("SeatracSerial: Comms reception failed.");
-	};
+    SeatracMessage::Ptr msg;
+    try
+    {
+      if (SeatracFactory::decodePacket(data, msg))
+      {
+        boost::mutex::scoped_lock l(callback_mux);
+        if (!callback.empty())
+          callback(msg);
+      }
+      else
+      {
+        ROS_WARN("SeatracSerial: Message encoding failed.");
+      }
+    }
+    catch (std::exception& e)
+    {
+      ROS_WARN("SeatracSerial: %s", e.what());
+    }
+  }
+  else
+  {
+    ROS_WARN("SeatracSerial: Comms reception failed.");
+  };
 
-	this->startReceive();
+  this->startReceive();
 }
 
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::SeatracSerial, labust::seatrac::SeatracComms)
-
+PLUGINLIB_EXPORT_CLASS(labust::seatrac::SeatracSerial,
+                       labust::seatrac::SeatracComms)

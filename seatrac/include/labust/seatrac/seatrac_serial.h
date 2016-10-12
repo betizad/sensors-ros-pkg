@@ -36,8 +36,8 @@
 #include <labust/seatrac/seatrac_comms.h>
 
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 #include <boost/function.hpp>
+#include <boost/thread.hpp>
 
 #include <ros/ros.h>
 
@@ -45,100 +45,114 @@
 
 namespace labust
 {
-	namespace seatrac
-	{
-		/**
-		 * The class implements the Seatrac ASCII serial protocol.
-		 * \todo Change to use the SeatracFactory methods for decoding and encoding
-		 */
-		class SeatracSerial : public virtual SeatracComms
-		{
-			enum {CID_START=1, CID_LEN=1};
-			enum {DATA_START = 1, DATA_TRUNC = 3};
-			enum {CRC_REM_POS = 4, CRC_BYTES = 2};
+namespace seatrac
+{
+/**
+ * The class implements the Seatrac ASCII serial protocol.
+ * \todo Change to use the SeatracFactory methods for decoding and encoding
+ */
+class SeatracSerial : public virtual SeatracComms
+{
+  enum
+  {
+    CID_START = 1,
+    CID_LEN = 1
+  };
+  enum
+  {
+    DATA_START = 1,
+    DATA_TRUNC = 3
+  };
+  enum
+  {
+    CRC_REM_POS = 4,
+    CRC_BYTES = 2
+  };
 
-		public:
-			/**
-			 * Main constructor
-			 */
-			SeatracSerial();
-			/**
-			 * Generic destructor.
-			 */
-			virtual ~SeatracSerial();
-			/**
-			 * Configures the serial port based on the ROS node handle.
-			 */
-			virtual bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
-			/**
-			 * Iternal function for setting up the serial port.
-			 * @param portName Serial port name.
-			 * @param baud Serial baud rate.
-			 * @return
-			 */
-			bool connect(const std::string& port_name, int baud);
+public:
+  /**
+   * Main constructor
+   */
+  SeatracSerial();
+  /**
+   * Generic destructor.
+   */
+  virtual ~SeatracSerial();
+  /**
+   * Configures the serial port based on the ROS node handle.
+   */
+  virtual bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph);
+  /**
+   * Iternal function for setting up the serial port.
+   * @param portName Serial port name.
+   * @param baud Serial baud rate.
+   * @return
+   */
+  bool connect(const std::string& port_name, int baud);
 
-			/**
-			 * Register the message handler.
-			 */
-			virtual void registerCallback(const CallbackType& callback)
-			{
-				boost::mutex::scoped_lock l(callback_mux);
-				this->callback = callback;
-			};
-			/**
-			 * Message send
-			 */
-			virtual bool send(const SeatracMessage::ConstPtr& msg);
+  /**
+   * Register the message handler.
+   */
+  virtual void registerCallback(const CallbackType& callback)
+  {
+    boost::mutex::scoped_lock l(callback_mux);
+    this->callback = callback;
+  };
+  /**
+   * Message send
+   */
+  virtual bool send(const SeatracMessage::ConstPtr& msg);
 
-			///Resend last message
-			virtual bool resend();
+  /// Resend last message
+  virtual bool resend();
 
-		private:
-			/**
-			 * Hepler method for binary conversion
-			 * @param data In ASCII format
-			 * @param binary The vector for binary data
-			 * \return Returns the binary encoded data in the binary parameter.
-			 */
-			void convertToBinary(const std::string& data, SeatracMessage::DataBuffer& binary);
-			/**
-			 * Helper method for ascii conversion
-			 * @param binary
-			 * @param data
-			 */
-			void convertToAscii(const SeatracMessage::DataBuffer& binary);
+private:
+  /**
+   * Hepler method for binary conversion
+   * @param data In ASCII format
+   * @param binary The vector for binary data
+   * \return Returns the binary encoded data in the binary parameter.
+   */
+  void convertToBinary(const std::string& data,
+                       SeatracMessage::DataBuffer& binary);
+  /**
+   * Helper method for ascii conversion
+   * @param binary
+   * @param data
+   */
+  void convertToAscii(const SeatracMessage::DataBuffer& binary);
 
-			/**
-			 * Handle the incoming serial data stream.
-			 * @param e	Serial error indicator
-			 * @param size Size of the received message.
-			 */
-			void onData(const boost::system::error_code& e, std::size_t size);
+  /**
+   * Handle the incoming serial data stream.
+   * @param e	Serial error indicator
+   * @param size Size of the received message.
+   */
+  void onData(const boost::system::error_code& e, std::size_t size);
 
-			///Receive startup helper function.
-			void startReceive();
+  /// Receive startup helper function.
+  void startReceive();
 
-			///Debug publisher of raw messages
-			ros::Publisher raw_out;
+  /// Debug publishers of raw messages
+  ros::Publisher raw_out;
+  ros::Publisher raw_in;
 
-			///Hardware i/o service.
-			boost::asio::io_service io;
-			///The serial input port
-			boost::asio::serial_port port;
-			///The main operation thread.
-			boost::thread runner;
-			///The input buffer.
-			boost::asio::streambuf buffer;
+  /// Hardware i/o service.
+  boost::asio::io_service io;
+  /// The serial input port
+  boost::asio::serial_port port;
+  /// The main operation thread.
+  boost::thread runner;
+  /// The input buffer.
+  boost::asio::streambuf buffer;
 
-			///The message callback
-			CallbackType callback;
-			///Muxer for the callback
-			boost::mutex callback_mux;
-			///Last encoded packet
-			std::string out;
-		};
-	}
+  /// The message callback
+  CallbackType callback;
+  /// Muxer for the callback
+  boost::mutex callback_mux;
+  /// Last encoded packet
+  std::string out;
+};
+}
 }
 
 /* SEATRAC_SEATRACSERIAL_H */
