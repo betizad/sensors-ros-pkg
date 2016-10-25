@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   labust_navigation
   message_generation
   underwater_msgs
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -72,6 +73,8 @@ find_package(catkin REQUIRED COMPONENTS
 #   Action2.action
 # )
 
+generate_dynamic_reconfigure_options(cfg/SonarDetector.cfg)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
@@ -115,6 +118,7 @@ include_directories(
 add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
 add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 
+add_dependencies(sonar_object_tracker_node ${PROJECT_NAME}_gencfg)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
