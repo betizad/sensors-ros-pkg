@@ -203,6 +203,8 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
   Eigen::Vector3d offset_ned(0, 0, 0);
   try
   {
+    if (!msg->header.frame_id.empty())
+    {
     geometry_msgs::TransformStamped transformLocal = buffer.lookupTransform(
         msg->header.frame_id, tf_prefix + sim_frame_id, ros::Time(0));
     Eigen::Quaterniond rot(transformLocal.transform.rotation.w,
@@ -211,6 +213,11 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
                            transformLocal.transform.rotation.z);
 
     offset_ned = rot.matrix() * offset;
+    }
+    else
+    {
+      ROS_ERROR("SeatracSim: position frame_id is empty.");
+    }
   }
   catch (tf2::TransformException& ex)
   {
@@ -229,6 +236,8 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
 
   try
   {
+    if (!msg->header.frame_id.empty())
+    {
     geometry_msgs::TransformStamped transformLocal = buffer.lookupTransform(
         msg->header.frame_id, tf_prefix + sim_frame_id,
         ros::Time(msg->header.stamp -
@@ -255,6 +264,11 @@ void SeatracSim::onNavSts(const auv_msgs::NavSts::ConstPtr& msg)
     navstate_delayed.orientation.pitch = pitch;
     navstate_delayed.orientation.yaw = yaw;
     ls.unlock();
+    }
+    else
+    {
+      ROS_ERROR("SeatracSim: position frame_id is empty.");
+    }
   }
   catch (tf2::TransformException& ex)
   {
