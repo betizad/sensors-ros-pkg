@@ -10,7 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   image_transport
-  libfreenect
   snippets
 )
 
@@ -104,6 +103,7 @@ include_directories(
   ${FREENECT_INCLUDE_DIRS}
   ${LIBUSB_1_INCLUDE_DIRS}
 )
+link_directories(${LINK_DIRECTORIES} ${FREENECT_LIBRARY_DIRS})
 
 ## Declare a cpp library
 # add_library(image_processing_util
@@ -118,7 +118,6 @@ add_executable(kinect_ir_node src/kinect_ir_node.cpp)
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-message("HELLLLLLLLLLLLLLLLLLLLLLLLLLLLLL" ${FREENECT_LIBRARY_DIRS} ${FREENECT_LIBRARIES})
 target_link_libraries(kinect_ir_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
