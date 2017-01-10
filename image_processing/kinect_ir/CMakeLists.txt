@@ -117,6 +117,7 @@ add_executable(kinect_ir_node src/kinect_ir_node.cpp)
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
+link_directories(${FREENECT_LIBRARY_DIRS})
 target_link_libraries(kinect_ir_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
