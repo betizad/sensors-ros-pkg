@@ -34,6 +34,7 @@
 #ifndef OBJECTTRACKERNODE_HPP_
 #define OBJECTTRACKERNODE_HPP_
 #include <ros/ros.h>
+#include <labust/sensors/image/SonarDetector.hpp>
 #include <labust/sensors/image/SonarImageUtil.hpp>
 
 #include <cv_bridge/cv_bridge.h>
@@ -45,38 +46,55 @@
 #include <underwater_msgs/SonarFix.h>
 #include <underwater_msgs/USBLFix.h>
 
+#include <dynamic_reconfigure/server.h>
+#include <sonar_image_processing/SonarDetectorConfig.h>
 
-namespace labust {
-  namespace sensors {
-    namespace image {
+#include <boost/thread.hpp>
 
-      /**
-       * ROS node for object tracking from sonar image.
-       */
-      class ObjectTrackerNode {
+namespace labust
+{
+namespace sensors
+{
+namespace image
+{
+/**
+ * ROS node for object tracking from sonar image.
+ */
+class ObjectTrackerNode
+{
+  typedef dynamic_reconfigure::Server<
+      sonar_image_processing::SonarDetectorConfig>
+      ReconfigureServer;
+  typedef ReconfigureServer::CallbackType CallbackType;
 
-      public:
-        ObjectTrackerNode();
-        ~ObjectTrackerNode();
-      private:
-        void onInit();
-        void adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix);
-        void setNavFilterEstimate(const navcon_msgs::RelativePosition& nav_filter_estimate);
-        void setHeading(const auv_msgs::NavSts& position_estimate);
-        void setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg);
-        void setSonarImage(const sensor_msgs::ImageConstPtr &img);
-        void processFrame(const std::string& frame_id);
-        ros::NodeHandle nh;
-        ros::Subscriber sonar_info_sub, usbl_fix_sub, nav_filter_estimate_sub, position_sub;
-        ros::Publisher sonar_fix_pub;
-        image_transport::ImageTransport it;
-        image_transport::Subscriber image_sub;
-        ArisSonar aris;
-        SonarDetector sonar_detector;
-      };
+public:
+  ObjectTrackerNode();
+  ~ObjectTrackerNode();
 
-    }
-  }
+private:
+  void onInit();
+  void adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix);
+  void setNavFilterEstimate(
+      const navcon_msgs::RelativePosition& nav_filter_estimate);
+  void setHeading(const auv_msgs::NavSts& position_estimate);
+  void setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr& msg);
+  void setSonarImage(const sensor_msgs::ImageConstPtr& img);
+  void processFrame(const std::string& frame_id);
+  void updateConfig(sonar_image_processing::SonarDetectorConfig& config,
+                    uint32_t level);
+  ros::NodeHandle nh;
+  ros::Subscriber sonar_info_sub, usbl_fix_sub, nav_filter_estimate_sub,
+      position_sub;
+  ros::Publisher sonar_fix_pub;
+  image_transport::ImageTransport it;
+  image_transport::Subscriber image_sub;
+  ArisSonar aris;
+  SonarDetector sonar_detector;
+  ReconfigureServer server;
+  boost::recursive_mutex dynrec_mux;
+};
+}
+}
 }
 
 /* OBJECTTRACKERNODE_HPP_ */

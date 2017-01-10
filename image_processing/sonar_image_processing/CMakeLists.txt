@@ -14,11 +14,15 @@ find_package(catkin REQUIRED COMPONENTS
   labust_navigation
   message_generation
   underwater_msgs
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
+#message("Found opencv: ${OpenCV_VERSION}")
+#message("Found opencv: ${OpenCV_INCLUDE_DIRS}")
+#message("Found opencv: ${OpenCV_LIBRARIES}")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -69,6 +73,8 @@ find_package(OpenCV REQUIRED)
 #   Action2.action
 # )
 
+generate_dynamic_reconfigure_options(cfg/SonarDetector.cfg)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
@@ -100,7 +106,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+#  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -112,6 +118,7 @@ include_directories(
 add_executable(sonar_object_tracker_node src/ObjectTrackerNode.cpp)
 add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 
+add_dependencies(sonar_object_tracker_node ${PROJECT_NAME}_gencfg)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(image_processing_util_node image_processing_util_generate_messages_cpp)
@@ -119,11 +126,11 @@ add_executable(sonar_bathymetry_node src/BathymetryNode.cpp)
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sonar_object_tracker_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 target_link_libraries(sonar_bathymetry_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
+#  ${OpenCV_LIBRARIES}
 )
 
 #############

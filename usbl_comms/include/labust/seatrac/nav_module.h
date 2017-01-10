@@ -50,100 +50,115 @@ using labust::comms::caddy::DiverReport;
 
 namespace labust
 {
-	namespace seatrac
-	{
-		/**
-		 * The class implements the navigation data module. The module handles
-		 * acquisition of navigation data for CADDY agents.
-		 */
-		class NavModule
-		{
-	      enum {n=0,e,d};
-	      typedef boost::function<void(void)> TriggerFunctor;
-		public:
-			///Main constructor
-			NavModule():has_diver(false)
-		    {};
-			///Default destructor
-			~NavModule(){};
+namespace seatrac
+{
+/**
+ * The class implements the navigation data module. The module handles
+ * acquisition of navigation data for CADDY agents.
+ */
+class NavModule
+{
+  enum
+  {
+    n = 0,
+    e,
+    d
+  };
+  typedef boost::function<void(void)> TriggerFunctor;
 
-			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-			{
-			  nav_sub = nh.subscribe("agent_position_out", 1, &NavModule::onEstimatedPos, this);
-			  diver_sub = nh.subscribe("diver_position_out", 1, &NavModule::onDiverPos, this);
-			  return true;
-			}
+public:
+  /// Main constructor
+  NavModule() : has_diver(false){};
+  /// Default destructor
+  ~NavModule(){};
 
-			///Pull the newest data in the report message the offset is the acoustic frame location
-			template <class ReportMessage>
-			void updateReport(ReportMessage& message , const Eigen::Vector3d& offset);
+  /// Listener configuration.
+  bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+  {
+    nav_sub = nh.subscribe("agent_position_out", 1, &NavModule::onEstimatedPos,
+                           this);
+    diver_sub =
+        nh.subscribe("diver_position_out", 1, &NavModule::onDiverPos, this);
+    return true;
+  }
 
-			///Register trigger callback
-			void registerTrigger(TriggerFunctor callback)
-			{
-			  this->callback = callback;
-			}
+  /// Pull the newest data in the report message the offset is the acoustic
+  /// frame location
+  template <class ReportMessage>
+  void updateReport(ReportMessage& message, const Eigen::Vector3d& offset);
 
-		protected:
-			///Handle the estimated position.
-			void onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
-			{
-			  boost::mutex::scoped_lock l(data_mux);
-			  navdata = *msg;
-			  l.unlock();
+  /// Register trigger callback
+  void registerTrigger(TriggerFunctor callback)
+  {
+    this->callback = callback;
+  }
 
-			  if (!callback.empty()) callback();
-			}
+protected:
+  /// Handle the estimated position.
+  void onEstimatedPos(const auv_msgs::NavSts::ConstPtr& msg)
+  {
+    boost::mutex::scoped_lock l(data_mux);
+    navdata = *msg;
+    l.unlock();
 
-            ///Handle the estimated position.
-            void onDiverPos(const auv_msgs::NavSts::ConstPtr& msg)
-            {
-              boost::mutex::scoped_lock l(data_mux);
-              has_diver = true;
-              diverdata = *msg;
-            }
+    if (!callback.empty())
+      callback();
+  }
 
-            template <class ReportMessage>
-			void getSpeedCourse(ReportMessage& message)
-            {
-			  double u = navdata.gbody_velocity.x;
-			  double v = navdata.gbody_velocity.y;
-			  double heading = labust::math::wrapRad(navdata.orientation.yaw)*180/M_PI;
-			  double course = atan2(v,u)*180/M_PI;
-			  double U = sqrt(u*u+v*v);
-			  //For overactuated
-			  const double min_speed(0.1);
-			  message.speed = U;
-			  message.course = (message.speed < min_speed?heading:course);
-            }
+  /// Handle the estimated position.
+  void onDiverPos(const auv_msgs::NavSts::ConstPtr& msg)
+  {
+    boost::mutex::scoped_lock l(data_mux);
+    has_diver = true;
+    diverdata = *msg;
+  }
 
-			///Position estimate subscriber.
-			ros::Subscriber nav_sub;
-			///Diver estimate subscriber.
-			ros::Subscriber diver_sub;
-			///Save the navigation status
-			auv_msgs::NavSts navdata;
-			///Save the diver status
-			auv_msgs::NavSts diverdata;
-			///The diver flag
-			bool has_diver;
-			/// The trigger callback for async operations
-			TriggerFunctor callback;
-			/// Data protection
-			boost::mutex data_mux;
-		};
+  template <class ReportMessage>
+  void getSpeedCourse(ReportMessage& message)
+  {
+    double u = navdata.gbody_velocity.x;
+    double v = navdata.gbody_velocity.y;
+    double heading =
+        labust::math::wrapRad(navdata.orientation.yaw) * 180 / M_PI;
+    double course =
+        labust::math::wrapRad(navdata.orientation.yaw + atan2(v, u)) * 180 /
+        M_PI;
+    double U = sqrt(u * u + v * v);
+    // For overactuated
+    const double min_speed(0.1);
+    message.speed = U;
+    message.course = (message.speed < min_speed ? heading : course);
+  }
 
-	    ///Buddy specialization
-	    template <>
-	    void NavModule::updateReport<BuddyReport>(BuddyReport& message, const Eigen::Vector3d& offset);
-	    ///Surface specialization
-	    template <>
-	    void NavModule::updateReport<SurfaceReport>(SurfaceReport& message, const Eigen::Vector3d& offset);
-	    ///Diver specialization
-	    template <>
-	    void NavModule::updateReport<DiverReport>(DiverReport& message, const Eigen::Vector3d& offset);
-	}
+  /// Position estimate subscriber.
+  ros::Subscriber nav_sub;
+  /// Diver estimate subscriber.
+  ros::Subscriber diver_sub;
+  /// Save the navigation status
+  auv_msgs::NavSts navdata;
+  /// Save the diver status
+  auv_msgs::NavSts diverdata;
+  /// The diver flag
+  bool has_diver;
+  /// The trigger callback for async operations
+  TriggerFunctor callback;
+  /// Data protection
+  boost::mutex data_mux;
+};
+
+/// Buddy specialization
+template <>
+void NavModule::updateReport<BuddyReport>(BuddyReport& message,
+                                          const Eigen::Vector3d& offset);
+/// Surface specialization
+template <>
+void NavModule::updateReport<SurfaceReport>(SurfaceReport& message,
+                                            const Eigen::Vector3d& offset);
+/// Diver specialization
+template <>
+void NavModule::updateReport<DiverReport>(DiverReport& message,
+                                          const Eigen::Vector3d& offset);
+}
 }
 
 /* USBL_COMMS_NAV_MODULE_H */

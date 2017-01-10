@@ -31,34 +31,36 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-#include <labust/seatrac/diver_modem.h>
-#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/comms/caddy/buddy_handler.h>
+#include <labust/comms/caddy/caddy_messages.h>
 #include <labust/comms/caddy/surface_handler.h>
-#include <labust/seatrac/seatrac_messages.h>
-#include <labust/seatrac/seatrac_definitions.h>
+#include <labust/seatrac/diver_modem.h>
 #include <labust/seatrac/mediator.h>
+#include <labust/seatrac/seatrac_definitions.h>
+#include <labust/seatrac/seatrac_messages.h>
 #include <labust/tools/packer.h>
 #include <labust/math/NumberManipulation.hpp>
 
 #include <pluginlib/class_list_macros.h>
 
-#include <std_msgs/UInt8.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <std_msgs/UInt8.h>
 
 #include <string>
 
 using namespace labust::seatrac;
 using namespace labust::comms::caddy;
 
-DiverModem::DiverModem():
-        surface_master(false)
+DiverModem::DiverModem()
+  : surface_master(false), last_payload(ros::Time::now())
 {
   registrations[DatReceive::CID].push_back(Mediator<DatReceive>::makeCallback(
-      boost::bind(&DiverModem::onData,this,_1)));
+      boost::bind(&DiverModem::onData, this, _1)));
 }
 
-DiverModem::~DiverModem(){}
+DiverModem::~DiverModem()
+{
+}
 
 bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 {
@@ -72,6 +74,7 @@ bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
   nav.configure(nh, ph);
   command.configure(nh, ph);
   chat.configure(nh, ph);
+  payload.configure(nh, ph);
 
   // Incoming ACOUSTIC message handlers
   buddyhandler.configure(nh, ph);
@@ -85,14 +88,15 @@ bool DiverModem::configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
 
 void DiverModem::onData(const labust::seatrac::DatReceive& msg)
 {
-  HandlerMap::iterator it=handlers.find(msg.acofix.src);
+  HandlerMap::iterator it = handlers.find(msg.acofix.src);
   if (it != handlers.end())
   {
     handlers[msg.acofix.src](msg.data);
   }
   else
   {
-    ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",msg.acofix.src);
+    ROS_WARN("No acoustic data handler found in DiverModem for ID=%d.",
+             msg.acofix.src);
   }
 }
 
@@ -107,22 +111,27 @@ void DiverModem::onBuddyData(const std::vector<uint8_t>& data)
 
   init.updateInit(message);
 
-  double dt(data.size()*delay.per_byte);
+  double dt(data.size() * delay.per_byte);
   // Specify the data time delay for this message
   if (!surface_master)
   {
-      // For master operation the ping overhead is added
-      dt += delay.ping_duration;
+    // For master operation the ping overhead is added
+    dt += delay.ping_duration;
   }
   else
   {
-      // For slave operation the ping reply overhead and the usbl processing
-      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+    // For slave operation the ping reply overhead and the usbl processing
+    dt += delay.ping_reply_duration + delay.usbl_processing_duration;
   }
   buddyhandler(message, init.offset(), dt);
 
-  //Confirmation for commands
+  // Confirmation for commands
   command.currentStatus(message.command);
+  // Confirmation for payload
+  if ((last_payload - ros::Time::now()).toSec() > 11.0)
+  {
+    last_payload = ros::Time::now();
+  }
 }
 
 void DiverModem::onSurfaceData(const std::vector<uint8_t>& data)
@@ -134,24 +143,24 @@ void DiverModem::onSurfaceData(const std::vector<uint8_t>& data)
     return;
   }
 
-  if (message.is_master) init.updateInit(message);
+  if (message.is_master)
+    init.updateInit(message);
 
-  double dt(data.size()*delay.per_byte);
+  double dt(data.size() * delay.per_byte);
   // Specify the data time delay for this message
   if ((surface_master = message.is_master))
   {
-      // For master operation the ping overhead is added
-      dt += delay.ping_duration;
+    // For master operation the ping overhead is added
+    dt += delay.ping_duration;
   }
   else
   {
-      // For slave operation the ping reply overhead and the usbl processing
-      dt += delay.ping_reply_duration + delay.usbl_processing_duration;
+    // For slave operation the ping reply overhead and the usbl processing
+    dt += delay.ping_reply_duration + delay.usbl_processing_duration;
   }
 
   surfacehandler(message, init.offset(), dt);
 }
-
 
 void DiverModem::assembleMessage()
 {
@@ -159,8 +168,18 @@ void DiverModem::assembleMessage()
   nav.updateReport(report, init.offset());
   chat.updateReport(report);
   command.updateReport(report, init.offset());
+  payload.updateReport(report);
 
-  //TODO: Determine if chat will actually be sent
+  if ((last_payload - ros::Time::now()).toSec() > 10.0)
+  {
+    report.optional_data = 1;
+  }
+  else
+  {
+    report.optional_data = 1;
+  }
+
+  // TODO: Determine if chat will actually be sent
   DatQueueClearCmd::Ptr clr(new DatQueueClearCmd());
   DatQueueSetCmd::Ptr cmd(new DatQueueSetCmd());
   SeatracMessage::DataBuffer buf;
@@ -175,4 +194,5 @@ void DiverModem::assembleMessage()
   }
 }
 
-PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem, labust::seatrac::DeviceController)
+PLUGINLIB_EXPORT_CLASS(labust::seatrac::DiverModem,
+                       labust::seatrac::DeviceController)

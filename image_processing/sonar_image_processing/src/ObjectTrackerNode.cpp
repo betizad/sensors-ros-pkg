@@ -32,42 +32,48 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *
  *  Author : Ivor Rendulic
- *  Created: 15.03.2015. 
+ *  Created: 15.03.2015.
  *********************************************************************/
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
-#include <std_msgs/Float64MultiArray.h>
+#include <image_transport/image_transport.h>
+#include <ros/ros.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/Float64MultiArray.h>
 
-#include <labust/sensors/image/SonarImageUtil.hpp>
-#include <labust/sensors/image/SonarDetector.hpp>
 #include <labust/sensors/image/ArisSonar.hpp>
-#include <labust/sensors/image/ObjectTrackerNode.hpp>
 #include <labust/sensors/image/ImageProcessingUtil.hpp>
+#include <labust/sensors/image/ObjectTrackerNode.hpp>
+#include <labust/sensors/image/SonarDetector.hpp>
+#include <labust/sensors/image/SonarImageUtil.hpp>
 
 #include <opencv2/opencv.hpp>
 
 using namespace labust::sensors::image;
 
-ObjectTrackerNode::ObjectTrackerNode() : 
-    it(nh) {
+ObjectTrackerNode::ObjectTrackerNode() : it(nh), server(dynrec_mux)
+{
   this->onInit();
 };
 
-ObjectTrackerNode::~ObjectTrackerNode() {};
+ObjectTrackerNode::~ObjectTrackerNode(){};
 
-void ObjectTrackerNode::onInit() {
+void ObjectTrackerNode::onInit()
+{
   ros::Rate rate(1);
   ros::NodeHandle ph("~");
 
-  //usbl_fix_sub = nh.subscribe("/USBLFix", 1, &ObjectTrackerNode::adjustRangeFromUSBL, this);
-  nav_filter_estimate_sub = nh.subscribe("buddy/relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
-  position_sub = nh.subscribe("buddy/position", 1, &ObjectTrackerNode::setHeading, this);
-  sonar_info_sub = nh.subscribe("/soundmetrics_aris3000/sonar_info", 1, &ObjectTrackerNode::setSonarInfo, this);
-  image_sub = it.subscribe("/soundmetrics_aris3000/cartesian", 1, &ObjectTrackerNode::setSonarImage, this);
+  // usbl_fix_sub = nh.subscribe("/USBLFix", 1,
+  // &ObjectTrackerNode::adjustRangeFromUSBL, this);
+  nav_filter_estimate_sub = nh.subscribe(
+      "relative_position", 1, &ObjectTrackerNode::setNavFilterEstimate, this);
+  position_sub =
+      nh.subscribe("position", 1, &ObjectTrackerNode::setHeading, this);
+  sonar_info_sub = nh.subscribe("soundmetrics_aris3000/sonar_info", 1,
+                                &ObjectTrackerNode::setSonarInfo, this);
+  image_sub = it.subscribe("soundmetrics_aris3000/cartesian", 1,
+                           &ObjectTrackerNode::setSonarImage, this);
   sonar_fix_pub = nh.advertise<navcon_msgs::RelativePosition>("sonar_fix", 1);
-  
+
   int target_size, max_connected_distance, min_contour_size;
   int blur_size, threshold_size, threshold_offset;
   int target_distance_threshold;
@@ -83,50 +89,87 @@ void ObjectTrackerNode::onInit() {
   ph.param("reject_multiple_targets", reject_multiple_targets, false);
   ph.param("range_only_distance", range_only_distance, false);
   ph.param("target_distance_threshold", target_distance_threshold);
-  sonar_detector.setContourClusteringParams(
-      max_connected_distance, min_contour_size); 
+  sonar_detector.setContourClusteringParams(max_connected_distance,
+                                            min_contour_size);
   sonar_detector.setTargetSize(target_size);
-  sonar_detector.setBinarizationParams(
-      blur_size, threshold_size, threshold_offset);
+  sonar_detector.setBinarizationParams(blur_size, threshold_size,
+                                       threshold_offset);
   sonar_detector.setRejectMultipleTargets(reject_multiple_targets);
   sonar_detector.setRangeOnlyDistance(range_only_distance);
   sonar_detector.setTargetDistanceThreshold(target_distance_threshold);
-  if (enable_visualization) {
+
+  if (enable_visualization)
+  {
     sonar_detector.setEnableVisualization(enable_visualization);
-    sonar_detector.startDebugWindow();
+    // sonar_detector.startDebugWindow();
   }
+
+  // Update the config based on param defaults
+  boost::lock_guard<boost::recursive_mutex> l(dynrec_mux);
+  sonar_image_processing::SonarDetectorConfig conf;
+  conf.blur_size = blur_size;
+  conf.threshold_size = threshold_size;
+  conf.threshold_offset = threshold_offset;
+  conf.target_size = target_size;
+  server.updateConfig(conf);
+  // Setup server
+  CallbackType f = boost::bind(&ObjectTrackerNode::updateConfig, this, _1, _2);
+  server.setCallback(f);
 }
 
-void ObjectTrackerNode::setSonarInfo(const underwater_msgs::SonarInfo::ConstPtr &msg) {
+void ObjectTrackerNode::updateConfig(
+    sonar_image_processing::SonarDetectorConfig& config, uint32_t level)
+{
+  boost::lock_guard<boost::recursive_mutex> l(dynrec_mux);
+  ROS_INFO("Reconfigure Request: %d %d %d %d", config.blur_size,
+           config.threshold_size, config.threshold_offset, config.target_size);
+  sonar_detector.setTargetSize(config.target_size);
+  sonar_detector.setBinarizationParams(config.blur_size, config.threshold_size,
+                                       config.threshold_offset);
+}
+
+void ObjectTrackerNode::setSonarInfo(
+    const underwater_msgs::SonarInfo::ConstPtr& msg)
+{
   aris.saveSonarInfo(*msg);
   cv_bridge::CvImagePtr frame = aris.getSonarImage();
-  if (frame == 0) return;
-  if (frame->header.stamp == msg->header.stamp) {
+  if (frame == 0)
+    return;
+  if (frame->header.stamp == msg->header.stamp)
+  {
     processFrame(msg->header.frame_id);
   }
 }
 
-void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr &img) {
+void ObjectTrackerNode::setSonarImage(const sensor_msgs::Image::ConstPtr& img)
+{
   aris.saveSonarImage(img);
   underwater_msgs::SonarInfo si = aris.getSonarInfo();
-  if (img->header.stamp == si.header.stamp) {
+  if (img->header.stamp == si.header.stamp)
+  {
     processFrame(si.header.frame_id);
   }
 }
 
-void ObjectTrackerNode::setNavFilterEstimate(const navcon_msgs::RelativePosition& nav_filter_estimate) {
+void ObjectTrackerNode::setNavFilterEstimate(
+    const navcon_msgs::RelativePosition& nav_filter_estimate)
+{
   sonar_detector.adjustROIFromFilterEstimate(nav_filter_estimate);
 }
 
-void ObjectTrackerNode::setHeading(const auv_msgs::NavSts& position_estimate) {
+void ObjectTrackerNode::setHeading(const auv_msgs::NavSts& position_estimate)
+{
   sonar_detector.setHeading(position_estimate.orientation.yaw * 180 / M_PI);
 }
 
-void ObjectTrackerNode::adjustRangeFromUSBL(const underwater_msgs::USBLFix& usbl_fix) {
+void ObjectTrackerNode::adjustRangeFromUSBL(
+    const underwater_msgs::USBLFix& usbl_fix)
+{
   aris.setRangeOfInterest(0.75 * usbl_fix.range, 1.5 * usbl_fix.range);
 }
 
-void ObjectTrackerNode::processFrame(const std::string& frame_id) {
+void ObjectTrackerNode::processFrame(const std::string& frame_id)
+{
   cv_bridge::CvImagePtr cv_image_bgr = aris.getSonarImage();
   cv::Point2f center;
   double area;
@@ -141,15 +184,16 @@ void ObjectTrackerNode::processFrame(const std::string& frame_id) {
   sonar_fix.range = range;
   sonar_fix.bearing = bearing;
   sonar_fix.header = aris.getSonarInfo().header;
-  if (range > 0) {
+  if (range > 0)
+  {
     sonar_fix_pub.publish(sonar_fix);
   }
 }
 
-int main(int argc, char **argv) {
-
-  ros::init(argc, argv, "sonar_object_tracker_node"); 
-  ObjectTrackerNode node; 
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "sonar_object_tracker_node");
+  ObjectTrackerNode node;
   ros::spin();
 
   return 0;

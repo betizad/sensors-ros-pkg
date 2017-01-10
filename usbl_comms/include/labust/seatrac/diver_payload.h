@@ -42,58 +42,54 @@ using labust::comms::caddy::DiverReport;
 
 namespace labust
 {
-	namespace seatrac
-	{
-		/**
-		 * The class implements the dive payload handling module.
-		 */
-		class DiverPayload
-		{
-		public:
-			///Main constructor
-			DiverPayload():confirmed(false){};
-			///Default destructor
-			~DiverPayload(){};
+namespace seatrac
+{
+/**
+ * The class implements the dive payload handling module.
+ */
+class DiverPayload
+{
+public:
+  /// Main constructor
+  DiverPayload() : confirmed(false){};
+  /// Default destructor
+  ~DiverPayload(){};
 
-			///Listener configuration.
-			bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
-			{
-			  diverinfo_sub = nh.subscribe("diver_info", 1, &DiverPayload::onDiverInfo, this);
-			  return true;
-			}
+  /// Listener configuration.
+  bool configure(ros::NodeHandle& nh, ros::NodeHandle& ph)
+  {
+    diverinfo_sub =
+        nh.subscribe("diver_info", 1, &DiverPayload::onDiverInfo, this);
+    return true;
+  }
 
-			///Pull the newest data in the report message the offset is the acoustic frame location
-			void updateReport(DiverReport& message)
-			{
-			  message.alarm = payload.alarm;
-			  message.avg_flipper_rate = payload.average_flipper_rate;
-			  message.hearth_rate = payload.hearth_rate;
-			  message.breathing_rate = payload.breathing_rate;
-			  message.motion_rate = payload.motion_rate;
-			  message.pad_space = payload.pad_space;
-			}
+  /// Pull the newest data in the report message the offset is the acoustic
+  /// frame location
+  void updateReport(DiverReport& message)
+  {
+    message.alarms = payload.alarm;
+    message.avg_flipper_rate = payload.average_flipper_rate;
+    message.hearth_rate = payload.hearth_rate;
+    message.breathing_rate = payload.breathing_rate;
+    message.motion_rate = payload.motion_rate;
+    message.pad_space = payload.pad_space;
+  }
 
-            /// Set confirmation
-            void setConfirmation(bool flag)
-            {
-              this->confirmed = flag;
-            }
+protected:
+  /// Handle the payload information.
+  void onDiverInfo(const caddy_msgs::DiverPayload::ConstPtr& msg)
+  {
+    payload = *msg;
+  }
 
-		protected:
-            ///Handle the leak warning.
-            void onDiverInfo(const caddy_msgs::DiverPayload::ConstPtr& msg)
-            {
-                payload = *msg;
-            }
-
-			///Diver info subscription.
-			ros::Subscriber diverinfo_sub;
-			///Leak information
-			caddy_msgs::DiverPayload payload;
-			/// Delivery confirmation
-			bool confirmed;
-		};
-	}
+  /// Diver info subscription.
+  ros::Subscriber diverinfo_sub;
+  /// Leak information
+  caddy_msgs::DiverPayload payload;
+  /// Delivery confirmation
+  bool confirmed;
+};
+}
 }
 
 /* USBL_COMMS_BUDDY_PAYLOAD_H */
