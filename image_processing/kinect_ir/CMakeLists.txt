@@ -10,7 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   image_transport
-  libfreenect
   snippets
 )
 
