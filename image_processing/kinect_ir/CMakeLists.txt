@@ -84,13 +84,10 @@ find_package(libusb-1.0 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS 
-#include
-=======
 #  INCLUDE_DIRS include
 #  LIBRARIES image_processing_util
 #  CATKIN_DEPENDS image_processing_util
-  #CATKIN_DEPENDS snippets 
+#  CATKIN_DEPENDS snippets 
 #  DEPENDS system_lib
 )
 
